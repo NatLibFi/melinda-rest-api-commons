@@ -4,7 +4,6 @@ const {readEnvironmentVariable, parseBoolean} = Utils; // eslint-disable-line no
 
 // Rabbit variables
 export const AMQP_URL = readEnvironmentVariable('AMQP_URL', {format: v => JSON.parse(v)});
-export const POLL_WAIT_TIME = readEnvironmentVariable('POLL_WAIT_TIME', {defaultValue: 1000});
 
 // Mongo variables
 export const MONGO_URI = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mongodb://localhost:27017/db'});

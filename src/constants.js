@@ -27,3 +27,9 @@ export const OPERATIONS = [
 ];
 
 export const CHUNK_SIZE = 50;
+
+export const conversionFormats = {
+	MARCXML: 1,
+	ISO2709: 2,
+	JSON: 3
+};

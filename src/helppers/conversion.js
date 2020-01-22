@@ -30,25 +30,20 @@
 
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import ConversionError from '@natlibfi/melinda-commons';
+import {conversionFormats} from '../constants';
 
 export {ConversionError};
-
-export const FORMATS = {
-	MARCXML: 1,
-	ISO2709: 2,
-	JSON: 3
-};
 
 export default function () {
 	return {serialize, unserialize};
 
 	function serialize(record, format) {
 		switch (format) {
-			case FORMATS.MARCXML:
+			case conversionFormats.MARCXML:
 				return MARCXML.to(record);
-			case FORMATS.ISO2709:
+			case conversionFormats.ISO2709:
 				return ISO2709.to(record);
-			case FORMATS.JSON:
+			case conversionFormats.JSON:
 				return Json.to(record);
 			default:
 				throw new Error();
@@ -58,11 +53,11 @@ export default function () {
 	function unserialize(data, format) {
 		try {
 			switch (format) {
-				case FORMATS.MARCXML:
+				case conversionFormats.MARCXML:
 					return MARCXML.from(data);
-				case FORMATS.ISO2709:
+				case conversionFormats.ISO2709:
 					return ISO2709.from(data);
-				case FORMATS.JSON:
+				case conversionFormats.JSON:
 					return Json.from(data);
 				default:
 					break;

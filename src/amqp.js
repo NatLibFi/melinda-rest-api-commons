@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import amqplib from 'amqplib';
-import {EventEmitter} from 'events';
 import HttpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import RabbitError, {Utils} from '@natlibfi/melinda-commons';
@@ -10,8 +9,6 @@ import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
 import {logError, checkIfOfflineHours} from './utils';
 
 const {createLogger} = Utils;
-class ReplyEmitter extends EventEmitter {}
-export const replyEmitter = new ReplyEmitter();
 
 export default async function () {
 	const {REPLY, CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
@@ -19,7 +16,7 @@ export default async function () {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, replyErrors};
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
@@ -62,26 +59,28 @@ export default async function () {
 		// Debug: logger.log('debug', `Prepared to consume from queue: ${queue}`);
 		try {
 			await channel.assertQueue(queue, {durable: true});
-			const queDatas = await getData(queue);
+			const queMessages = await getData(queue);
+			const nacks = [];
 			// Console.log(queDatas);
 
-			const {cataloger, operation} = getHeaderInfo(queDatas[0]);
+			const {cataloger, operation} = getHeaderInfo(queMessages[0]);
 
 			// Check that cataloger match! headers
-			const datas = queDatas.filter(data => {
-				return (data.properties.headers.cataloger === cataloger);
+			const messages = queMessages.filter(message => {
+				if (message.properties.headers.cataloger === cataloger) {
+					return true;
+				}
+
+				nacks.push(message);
+				return false;
 			});
 
-			const records = datasToRecords(datas);
+			const records = messagesToRecords(messages);
 
 			// Nack unwanted ones to back in queue;
-			const nacks = queDatas.filter(data => {
-				return (!datas.includes(data));
-			});
-
 			nackMessages(nacks);
 
-			return {cataloger, operation, records, datas};
+			return {cataloger, operation, records, messages};
 		} catch (error) {
 			logError(error);
 		}
@@ -90,10 +89,10 @@ export default async function () {
 	async function consumeOne(queue) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
-			const datas = [await channel.get(queue)];
-			const {cataloger, operation} = getHeaderInfo(datas[0]);
-			const records = datasToRecords(datas);
-			return {cataloger, operation, records, datas};
+			const messages = [await channel.get(queue)];
+			const {cataloger, operation} = getHeaderInfo(messages[0]);
+			const records = messagesToRecords(messages);
+			return {cataloger, operation, records, messages};
 		} catch (error) {
 			logError(error);
 		}
@@ -109,35 +108,35 @@ export default async function () {
 	}
 
 	// ACK records
-	async function ackMessages({queue, datas, results}) {
+	async function ackMessages({queue, messages, results}) {
 		if (queue === CREATE || queue === UPDATE) {
-			datas.forEach((data, index) => {
-				const {cataloger, operation} = getHeaderInfo(data);
+			messages.forEach((message, index) => {
+				const {cataloger, operation} = getHeaderInfo(message);
 				const status = (queue === CREATE) ? RECORD_IMPORT_STATE.CREATED : RECORD_IMPORT_STATE.UPDATED;
 				sendToQueue({
 					queue: REPLY,
-					correlationId: data.properties.correlationId,
+					correlationId: message.properties.correlationId,
 					cataloger,
 					operation,
 					data: {status, id: results.ids[index]}
 				});
 				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
 
-				channel.ack(data);
+				channel.ack(message);
 			});
 		} else {
 			// Bulk has no unwanted ones
 			// TODO?: Add ids to mongo metadata?
-			datas.forEach(data => {
-				channel.ack(data);
+			messages.forEach(message => {
+				channel.ack(message);
 			});
 		}
 	}
 
-	async function nackMessages(datas) {
-		datas.forEach(data => {
+	async function nackMessages(messages) {
+		messages.forEach(message => {
 			// Message, allUpTo, reQueue
-			channel.nack(data, false, true);
+			channel.nack(message, false, true);
 		});
 	}
 
@@ -163,64 +162,64 @@ export default async function () {
 		}
 	}
 
-	// ----------------
-	// Helper functions
-	// ----------------
-
-	function datasToRecords(datas) {
-		datas.map(data => {
-			data.content = JSON.parse(data.content.toString());
-			data.content.record = new MarcRecord(data.content.data);
-			return data;
-		});
-
-		// Collect datas.content.record to one array
-		return datas.flatMap(data => {
-			return data.content.record;
-		});
-	}
-
-	async function replyErrors(queue, err) {
+	async function replyErrors({queue, errorStatus, errorPayload = ''}) {
 		try {
-			const error = new RabbitError(err);
-			const queDatas = await getData(queue);
+			const error = new RabbitError(errorStatus, errorPayload);
+			const messages = await getData(queue);
 			const promises = [];
 
-			queDatas.forEach(data => {
-				const headers = getHeaderInfo(data);
-				promises.push(sendReply({correlationId: data.properties.correlationId, ...headers, data: error}));
+			messages.forEach(message => {
+				const headers = getHeaderInfo(message);
+				promises.push(sendToQueue({correlationId: message.properties.correlationId, headers, data: error}));
 			});
 
 			await Promise.all(promises);
-			queDatas.forEach(data => {
-				channel.ack(data);
+			messages.forEach(message => {
+				channel.ack(message);
 			});
 		} catch (error) {
 			logError(error);
 		}
 	}
 
+	// ----------------
+	// Helper functions
+	// ----------------
+
+	function messagesToRecords(messages) {
+		messages.map(message => {
+			message.content = JSON.parse(message.content.toString());
+			message.content.record = new MarcRecord(message.content.data);
+			return message;
+		});
+
+		// Collect datas.content.record to one array
+		return messages.flatMap(message => {
+			return message.content.record;
+		});
+	}
+
 	async function getData(queue) {
-		let queDatas = [];
+		let messages = [];
 
 		try {
 			const {messageCount} = await channel.checkQueue(queue);
-			const messages = (messageCount >= CHUNK_SIZE) ? CHUNK_SIZE : messageCount;
+			const messagesToGet = (messageCount >= CHUNK_SIZE) ? CHUNK_SIZE : messageCount;
 			const promises = [];
-			for (let i = 0; i < messages; i++) {
+			for (let i = 0; i < messagesToGet; i++) {
 				promises.push(get());
 			}
 
 			await Promise.all(promises);
-			return queDatas;
+			return messages;
 		} catch (error) {
 			logError(error);
 		}
 
 		async function get() {
 			const message = await channel.get(queue);
-			if (!queDatas.includes(message)) {
-				queDatas.push(message);
+			if (!messages.includes(message)) {
+				messages.push(message);
 			}
 		}
 	}

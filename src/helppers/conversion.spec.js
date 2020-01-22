@@ -33,6 +33,7 @@ import path from 'path';
 import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
 import * as testContext from './conversion';
+import {conversionFormats} from '../constants';
 
 const FIXTURES_PATH = path.join(__dirname, '../../test-fixtures/conversion');
 
@@ -66,21 +67,21 @@ describe('services/conversion', () => {
 
 			it('Should serialize to MARCXML', () => {
 				const service = testContext.default();
-				const data = service.serialize(record1, testContext.FORMATS.MARCXML);
+				const data = service.serialize(record1, conversionFormats.MARCXML);
 
 				expect(data).to.equal(marcxml1);
 			});
 
 			it('Should serialize to ISO2709', () => {
 				const service = testContext.default();
-				const data = service.serialize(record1, testContext.FORMATS.ISO2709);
+				const data = service.serialize(record1, conversionFormats.ISO2709);
 
 				expect(data).to.equal(iso2709_1);
 			});
 
 			it('Should serialize to JSON', () => {
 				const service = testContext.default();
-				const data = service.serialize(record1, testContext.FORMATS.JSON);
+				const data = service.serialize(record1, conversionFormats.JSON);
 
 				expect(data).to.equal(json1);
 			});
@@ -94,21 +95,21 @@ describe('services/conversion', () => {
 
 			it('Should unserialize from MARCXML', () => {
 				const service = testContext.default();
-				const record = service.unserialize(marcxml1, testContext.FORMATS.MARCXML);
+				const record = service.unserialize(marcxml1, conversionFormats.MARCXML);
 
 				expect(record.equalsTo(record1)).to.equal(true);
 			});
 
 			it('Should unserialize from ISO2709', () => {
 				const service = testContext.default();
-				const record = service.unserialize(iso2709_1, testContext.FORMATS.ISO2709);
+				const record = service.unserialize(iso2709_1, conversionFormats.ISO2709);
 
 				expect(record.equalsTo(record1)).to.equal(true);
 			});
 
 			it('Should unserialize from JSON', () => {
 				const service = testContext.default();
-				const record = service.unserialize(json1, testContext.FORMATS.JSON);
+				const record = service.unserialize(json1, conversionFormats.JSON);
 
 				expect(record.equalsTo(record1)).to.equal(true);
 			});
@@ -117,7 +118,7 @@ describe('services/conversion', () => {
 				const service = testContext.default();
 
 				expect(() => {
-					service.unserialize('', testContext.FORMATS.JSON);
+					service.unserialize('', conversionFormats.JSON);
 				}).to.throw(testContext.ConversionError);
 			});
 		});
