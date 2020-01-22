@@ -1,13 +1,17 @@
 /* eslint-disable no-unused-vars */
 import amqplib from 'amqplib';
-import RabbitError, {Utils} from '@natlibfi/melinda-commons';
-import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
-import {logError, checkIfOfflineHours} from './utils';
+import {EventEmitter} from 'events';
 import HttpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
+import RabbitError, {Utils} from '@natlibfi/melinda-commons';
+import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
 import {AMQP_URL, OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
 import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
+import {logError, checkIfOfflineHours} from './utils';
+
 const {createLogger} = Utils;
+class ReplyEmitter extends EventEmitter {}
+export const replyEmitter = new ReplyEmitter();
 
 export default async function () {
 	const {REPLY, CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
