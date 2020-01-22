@@ -124,7 +124,7 @@ export default async function () {
 		});
 	}
 
-	async function sendToQueue({queue, correlationId, cataloger, operation, data}) {
+	async function sendToQueue({queue, correlationId, headers, data}) {
 		try {
 			// Logger.log('debug', `Record cataloger ${cataloger}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
@@ -138,10 +138,7 @@ export default async function () {
 				{
 					correlationId,
 					persistent: true,
-					headers: {
-						cataloger,
-						operation
-					}
+					headers
 				}
 			);
 		} catch (error) {
