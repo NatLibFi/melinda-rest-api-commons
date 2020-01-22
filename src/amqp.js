@@ -108,7 +108,8 @@ export default async function (AMQP_URL) {
 					correlationId: message.properties.correlationId,
 					cataloger,
 					operation,
-					data: {status, id: results.ids[index]}
+					data: {status, id: results.ids[index],
+					expiration: 100000}
 				});
 				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
 
@@ -130,7 +131,7 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function sendToQueue({queue, correlationId, headers, data}) {
+	async function sendToQueue({queue, correlationId, headers, data, expiration}) {
 		try {
 			// Logger.log('debug', `Record cataloger ${cataloger}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
@@ -138,15 +139,28 @@ export default async function (AMQP_URL) {
 			// logger.log('debug', `Record operation ${operation}`);
 
 			await channel.assertQueue(queue, {durable: true});
-			channel.sendToQueue(
-				queue,
-				Buffer.from(JSON.stringify({data})),
-				{
-					correlationId,
-					persistent: true,
-					headers
-				}
-			);
+			if (expiration) {
+				channel.sendToQueue(
+					queue,
+					Buffer.from(JSON.stringify({data})),
+					{
+						correlationId,
+						persistent: true,
+						headers,
+						expiration
+					}
+				);
+			} else {
+				channel.sendToQueue(
+					queue,
+					Buffer.from(JSON.stringify({data})),
+					{
+						correlationId,
+						persistent: true,
+						headers
+					}
+				);
+			}
 		} catch (error) {
 			logError(error);
 		}
