@@ -36,6 +36,10 @@ export default async function () {
 				return false;
 			}
 
+			if (channelInfo.messageCount < 1) {
+				return false;
+			}
+
 			if (one) {
 				return consumeOne(queue);
 			}
