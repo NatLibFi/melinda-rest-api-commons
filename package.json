@@ -17,7 +17,7 @@
 	"version": "1.0.0",
 	"main": "./dist/index.js",
 	"engines": {
-		"node": "10"
+		"node": ">=8"
 	},
 	"private": true,
 	"scripts": {
