@@ -5,6 +5,7 @@ import RabbitError, {Utils} from '@natlibfi/melinda-commons';
 import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
 import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
 import {logError} from './utils';
+import moment from 'moment';
 
 const {createLogger} = Utils;
 
@@ -108,8 +109,10 @@ export default async function (AMQP_URL) {
 					correlationId: message.properties.correlationId,
 					cataloger,
 					operation,
-					data: {status, id: results.ids[index],
-					expiration: "100000"}
+					data: {
+						status, id: results.ids[index],
+						expiration: "100000"
+					}
 				});
 				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
 
@@ -131,7 +134,7 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function sendToQueue({queue, correlationId, headers, data, expiration}) {
+	async function sendToQueue({queue, correlationId, headers, data}) {
 		try {
 			// Logger.log('debug', `Record cataloger ${cataloger}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
@@ -139,28 +142,18 @@ export default async function (AMQP_URL) {
 			// logger.log('debug', `Record operation ${operation}`);
 
 			await channel.assertQueue(queue, {durable: true});
-			if (expiration !== undefined) {
-				channel.sendToQueue(
-					queue,
-					Buffer.from(JSON.stringify({data})),
-					{
-						correlationId,
-						persistent: true,
-						headers,
-						expiration
-					}
-				);
-			} else {
-				channel.sendToQueue(
-					queue,
-					Buffer.from(JSON.stringify({data})),
-					{
-						correlationId,
-						persistent: true,
-						headers
-					}
-				);
-			}
+
+			channel.sendToQueue(
+				queue,
+				Buffer.from(JSON.stringify({data})),
+				{
+					correlationId,
+					persistent: true,
+					headers,
+					timestamp: moment().toDate()
+				}
+			);
+
 		} catch (error) {
 			logError(error);
 		}
