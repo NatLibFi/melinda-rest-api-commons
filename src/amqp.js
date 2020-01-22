@@ -139,7 +139,7 @@ export default async function (AMQP_URL) {
 			// logger.log('debug', `Record operation ${operation}`);
 
 			await channel.assertQueue(queue, {durable: true});
-			if (expiration) {
+			if (expiration !== undefined) {
 				channel.sendToQueue(
 					queue,
 					Buffer.from(JSON.stringify({data})),
