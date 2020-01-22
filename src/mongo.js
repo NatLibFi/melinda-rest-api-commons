@@ -2,7 +2,6 @@
 
 import {MongoClient, GridFSBucket} from 'mongodb';
 import DatabaseError, {Utils} from '@natlibfi/melinda-commons';
-import {MONGO_URI} from './config';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
@@ -20,7 +19,7 @@ const {createLogger} = Utils;
 }
 */
 
-export default async function () {
+export default async function (MONGO_URI) {
 	const logger = createLogger(); // eslint-disable-line no-unused-vars
 	// Connect to mongo (MONGO)
 	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: logMongo});

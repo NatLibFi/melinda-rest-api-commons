@@ -1,8 +1,6 @@
 import {Utils} from '@natlibfi/melinda-commons';
 import moment from 'moment';
 
-import {OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
-
 const {createLogger} = Utils;
 const logger = createLogger();
 
@@ -14,7 +12,7 @@ export function logError(err) {
 	}
 }
 
-export function checkIfOfflineHours() {
+export function checkIfOfflineHours(OFFLINE_BEGIN, OFFLINE_DURATION) {
 	const now = moment();
 	const start = moment(now).startOf('day').add(OFFLINE_BEGIN, 'hours');
 	const end = moment(start).add(OFFLINE_DURATION, 'hours');

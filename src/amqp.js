@@ -4,13 +4,13 @@ import HttpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import RabbitError, {Utils} from '@natlibfi/melinda-commons';
 import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
-import {AMQP_URL, OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
+import {OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
 import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
 import {logError, checkIfOfflineHours} from './utils';
 
 const {createLogger} = Utils;
 
-export default async function () {
+export default async function (AMQP_URL) {
 	const {REPLY, CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
 	const connection = await amqplib.connect(AMQP_URL);
 	const channel = await connection.createChannel();
@@ -28,14 +28,6 @@ export default async function () {
 
 			let channelInfo = await channel.checkQueue(queue);
 			logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
-
-			// If Service is in offline
-			const isOfflineHours = checkIfOfflineHours();
-			if (isOfflineHours && channelInfo.messageCount > 0) {
-				replyErrors(HttpStatus.SERVICE_UNAVAILABLE, `${HttpStatus['503_MESSAGE']} Offline hours begin at ${OFFLINE_BEGIN} and will last next ${OFFLINE_DURATION} hours.`);
-			} else if (isOfflineHours) {
-				return false;
-			}
 
 			if (channelInfo.messageCount < 1) {
 				return false;

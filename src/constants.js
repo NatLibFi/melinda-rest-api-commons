@@ -1,8 +1,4 @@
 // Rest-import-queue-constants
-import {OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
-
-export {OFFLINE_BEGIN, OFFLINE_DURATION};
-
 // Flow: UPLOADING -> PENDING_QUEUING -> QUEUING_IN_PROGRESS -> IN_QUEUE -> IN_PROCESS -> DONE or ERROR
 export const QUEUE_ITEM_STATE = {
 	DONE: 'DONE',
