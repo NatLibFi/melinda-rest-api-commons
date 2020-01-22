@@ -15,9 +15,9 @@ export default async function () {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, ackMesages, nackMessages, sendToQueue};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackMesages, nackMessages, sendToQueue};
 
-	async function checkQueue(queue, one = false, purge = false) {
+	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
 
@@ -40,8 +40,12 @@ export default async function () {
 				return false;
 			}
 
-			if (one) {
+			if (style = 'one') {
 				return consumeOne(queue);
+			}
+
+			if (style = 'reply') {
+				return consumeReply();
 			}
 
 			return consume(queue);
@@ -86,6 +90,15 @@ export default async function () {
 			const {cataloger, operation} = getHeaderInfo(datas[0]);
 			const records = datasToRecords(datas);
 			return {cataloger, operation, records, datas};
+		} catch (error) {
+			logError(error);
+		}
+	}
+
+	async function consumeRaw() {
+		try {
+			await channel.assertQueue(REPLY, {durable: true});
+			return await channel.get(REPLY);
 		} catch (error) {
 			logError(error);
 		}
