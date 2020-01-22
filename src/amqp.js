@@ -15,7 +15,7 @@ export default async function () {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, ackMesages, nackMessages, sendReply};
+	return {checkQueue, consume, consumeOne, ackMesages, nackMessages, sendToQueue};
 
 	async function checkQueue(queue, one = false, purge = false) {
 		try {
@@ -93,7 +93,8 @@ export default async function () {
 			datas.forEach((data, index) => {
 				const {cataloger, operation} = getHeaderInfo(data);
 				const status = (queue === CREATE) ? RECORD_IMPORT_STATE.CREATED : RECORD_IMPORT_STATE.UPDATED;
-				sendReply({
+				sendToQueue({
+					queue: REPLY,
 					correlationId: data.properties.correlationId,
 					cataloger,
 					operation,
@@ -119,16 +120,16 @@ export default async function () {
 		});
 	}
 
-	async function sendReply({correlationId, cataloger, operation, data}) {
+	async function sendToQueue({queue, correlationId, cataloger, operation, data}) {
 		try {
 			// Logger.log('debug', `Record cataloger ${cataloger}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
 			// logger.log('debug', `Record data ${data}`);
 			// logger.log('debug', `Record operation ${operation}`);
 
-			await channel.assertQueue(REPLY, {durable: true});
+			await channel.assertQueue(queue, {durable: true});
 			channel.sendToQueue(
-				REPLY,
+				queue,
 				Buffer.from(JSON.stringify({data})),
 				{
 					correlationId,
