@@ -109,7 +109,7 @@ export default async function (AMQP_URL) {
 					cataloger,
 					operation,
 					data: {status, id: results.ids[index],
-					expiration: 100000}
+					expiration: "100000"}
 				});
 				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
 
