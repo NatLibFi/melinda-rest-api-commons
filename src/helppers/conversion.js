@@ -29,19 +29,13 @@
 */
 
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
+import ConversionError from '@natlibfi/melinda-commons';
 
 export const FORMATS = {
 	MARCXML: 1,
 	ISO2709: 2,
 	JSON: 3
 };
-
-export class ConversionError extends Error {
-	constructor(status, ...params) {
-		super(params);
-		this.status = status;
-	}
-}
 
 export default function () {
 	return {serialize, unserialize};
@@ -72,10 +66,11 @@ export default function () {
 					break;
 			}
 		} catch (err) {
-			throw new ConversionError();
+			// Internal server error
+			throw new ConversionError(500);
 		}
 
-		// No supported format found
-		throw new Error();
+		// No supported format found (415 Unsupported Media Type)
+		throw new ConversionError(415);
 	}
 }

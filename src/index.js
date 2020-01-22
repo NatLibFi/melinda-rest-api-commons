@@ -1,7 +1,7 @@
-import MongoFactory from './mongo';
-import AmqpFactory from './amqp';
-import * as Conversions from './helppers/conversion'
+import mongoFactory from './mongo';
+import amqpFactory from './amqp';
+import conversions, {FORMATS as conversionFormats} from './helppers/conversion'
 
-export {MongoFactory, AmqpFactory, Conversions};
+export {mongoFactory, amqpFactory, conversions, conversionFormats};
 export * from './constants';
 
