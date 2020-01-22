@@ -15,7 +15,7 @@ export default async function () {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, consumeRaw, ackMesages, nackMessages, sendToQueue};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue};
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
@@ -105,7 +105,7 @@ export default async function () {
 	}
 
 	// ACK records
-	async function ackMesages({queue, datas, results}) {
+	async function ackMessages({queue, datas, results}) {
 		if (queue === CREATE || queue === UPDATE) {
 			datas.forEach((data, index) => {
 				const {cataloger, operation} = getHeaderInfo(data);
