@@ -31,6 +31,8 @@
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import ConversionError from '@natlibfi/melinda-commons';
 
+export {ConversionError};
+
 export const FORMATS = {
 	MARCXML: 1,
 	ISO2709: 2,

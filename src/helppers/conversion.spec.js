@@ -26,7 +26,7 @@
 *
 */
 
-/* eslint-disable camelcase, max-nested-callbacks */
+/* eslint-disable camelcase, max-nested-callbacks, no-undef */
 
 import fs from 'fs';
 import path from 'path';
