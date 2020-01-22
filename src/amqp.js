@@ -40,12 +40,12 @@ export default async function () {
 				return false;
 			}
 
-			if (style = 'one') {
+			if (style === 'one') {
 				return consumeOne(queue);
 			}
 
-			if (style = 'reply') {
-				return consumeReply();
+			if (style === 'raw') {
+				return consumeRaw();
 			}
 
 			return consume(queue);
