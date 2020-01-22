@@ -1,12 +1,10 @@
 /* eslint-disable no-unused-vars */
 import amqplib from 'amqplib';
-import HttpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import RabbitError, {Utils} from '@natlibfi/melinda-commons';
 import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
-import {OFFLINE_BEGIN, OFFLINE_DURATION} from './config';
 import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
-import {logError, checkIfOfflineHours} from './utils';
+import {logError} from './utils';
 
 const {createLogger} = Utils;
 
