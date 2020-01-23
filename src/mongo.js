@@ -132,12 +132,11 @@ export default async function (MONGO_URI) {
 		}
 	}
 
-	async function setState({correlationId, cataloger, operation, state}) {
+	async function setState({correlationId, headers, state}) {
 		logger.log('debug', 'Setting queue item state');
 		await db.collection('queue-items').updateOne({
-			cataloger,
 			correlationId,
-			operation
+			...headers
 		}, {
 			$set: {
 				queueItemState: state,
