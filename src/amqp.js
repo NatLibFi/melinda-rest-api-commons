@@ -5,12 +5,11 @@ import RabbitError, {Utils} from '@natlibfi/melinda-commons';
 import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
 import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
 import {logError} from './utils';
-import moment from 'moment';
 
 const {createLogger} = Utils;
 
 export default async function (AMQP_URL) {
-	const {REPLY, CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
+	const {CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
 	const connection = await amqplib.connect(AMQP_URL);
 	const channel = await connection.createChannel();
 	const logger = createLogger();
@@ -37,7 +36,7 @@ export default async function (AMQP_URL) {
 			}
 
 			if (style === 'raw') {
-				return consumeRaw();
+				return consumeRaw(queue);
 			}
 
 			return consume(queue);
