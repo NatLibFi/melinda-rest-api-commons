@@ -11,7 +11,7 @@ const {createLogger} = Utils;
 {
 	"correlationId":"FOO",
 	"cataloger":"xxx0000",
-	"operation":"update",
+	"operation":"UPDATE",
 	"contentType":"application/json",
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",
@@ -126,7 +126,7 @@ export default async function (MONGO_URI) {
 			await getFileMetadata({gridFSBucket, filename: correlationId});
 
 			// Transform gridFSBucket stream to MarcRecords -> to queue
-			return {stream: gridFSBucket.openDownloadStreamByName(correlationId)};
+			return gridFSBucket.openDownloadStreamByName(correlationId);
 		} catch (error) {
 			logError(error);
 		}

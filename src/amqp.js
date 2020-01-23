@@ -192,7 +192,6 @@ export default async function (AMQP_URL) {
 
 		messages.map(message => {
 			message.content = JSON.parse(message.content.toString());
-			console.log(message.content)
 			message.content.record = new MarcRecord(message.content.data);
 			return message;
 		});
