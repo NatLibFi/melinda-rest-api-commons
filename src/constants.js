@@ -10,16 +10,12 @@ export const QUEUE_ITEM_STATE = {
 	UPLOADING: 'UPLOADING'
 };
 
-export const PRIO_IMPORT_QUEUES = {
+export const REQUESTS = 'REQUESTS';
+
+export const OPERATIONS = {
 	CREATE: 'CREATE',
-	REQUESTS: 'REQUESTS',
 	UPDATE: 'UPDATE'
 };
-
-export const OPERATIONS = [
-	'create',
-	'update'
-];
 
 export const CHUNK_SIZE = 50;
 
