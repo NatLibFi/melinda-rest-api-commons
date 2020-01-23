@@ -89,10 +89,10 @@ export default async function (AMQP_URL) {
 		}
 	}
 
-	async function consumeRaw() {
+	async function consumeRaw(queue) {
 		try {
-			await channel.assertQueue(REPLY, {durable: true});
-			return await channel.get(REPLY);
+			await channel.assertQueue(queue, {durable: true});
+			return await channel.get(queue);
 		} catch (error) {
 			logError(error);
 		}
@@ -102,16 +102,14 @@ export default async function (AMQP_URL) {
 	async function ackMessages({queue, messages, results}) {
 		if (queue === CREATE || queue === UPDATE) {
 			messages.forEach((message, index) => {
-				const {cataloger, operation} = getHeaderInfo(message);
+				const headers = getHeaderInfo(message);
 				const status = (queue === CREATE) ? RECORD_IMPORT_STATE.CREATED : RECORD_IMPORT_STATE.UPDATED;
 				sendToQueue({
-					queue: REPLY,
+					queue: message.properties.correlationId,
 					correlationId: message.properties.correlationId,
-					cataloger,
-					operation,
+					headers,
 					data: {
-						status, id: results.ids[index],
-						expiration: "100000"
+						status, id: results.ids[index]
 					}
 				});
 				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
