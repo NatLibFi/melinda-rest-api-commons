@@ -107,8 +107,13 @@ export default async function (MONGO_URI) {
 	}
 
 	async function getOne({operation, queueItemState}) {
-		logger.log('debug', `Checking DB for ${operation} + ${queueItemState}`);
 		try {
+			if (operation === undefined) {
+				logger.log('debug', `Checking DB for ${queueItemState}`);
+				return db.collection('queue-items').findOne({queueItemState});
+			}
+
+			logger.log('debug', `Checking DB for ${operation} + ${queueItemState}`);
 			return db.collection('queue-items').findOne({operation, queueItemState});
 		} catch (error) {
 			logError(error);

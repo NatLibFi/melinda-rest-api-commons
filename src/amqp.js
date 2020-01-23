@@ -2,14 +2,12 @@
 import amqplib from 'amqplib';
 import {MarcRecord} from '@natlibfi/marc-record';
 import RabbitError, {Utils} from '@natlibfi/melinda-commons';
-import {RECORD_IMPORT_STATE} from '@natlibfi/melinda-record-import-commons';
-import {CHUNK_SIZE, PRIO_IMPORT_QUEUES} from './constants';
+import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
 
 const {createLogger} = Utils;
 
 export default async function (AMQP_URL) {
-	const {CREATE, UPDATE} = PRIO_IMPORT_QUEUES;
 	const connection = await amqplib.connect(AMQP_URL);
 	const channel = await connection.createChannel();
 	const logger = createLogger();
@@ -18,14 +16,12 @@ export default async function (AMQP_URL) {
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
-			await channel.assertQueue(queue, {durable: true});
+			const channelInfo = await channel.assertQueue(queue, {durable: true});
+			logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
 
 			if (purge) {
 				await channel.purgeQueue(queue);
 			}
-
-			let channelInfo = await channel.checkQueue(queue);
-			logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
 
 			if (channelInfo.messageCount < 1) {
 				return false;
@@ -39,7 +35,12 @@ export default async function (AMQP_URL) {
 				return consumeRaw(queue);
 			}
 
-			return consume(queue);
+			if (style === 'basic') {
+				return consume(queue);
+			}
+
+			// Defaults:
+			throw new RabbitError(422);
 		} catch (error) {
 			logError(error);
 		}
