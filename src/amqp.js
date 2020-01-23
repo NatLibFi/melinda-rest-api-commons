@@ -54,11 +54,12 @@ export default async function (AMQP_URL) {
 			const nacks = [];
 			// Console.log(queDatas);
 
-			const {cataloger, operation} = getHeaderInfo(queMessages[0]);
+			const headers = getHeaderInfo(queMessages[0]);
+			logger.log('debug', `Filtering messages by ${JSON.stringify(headers)}`);
 
 			// Check that cataloger match! headers
 			const messages = queMessages.filter(message => {
-				if (message.properties.headers.cataloger === cataloger) {
+				if (message.properties.headers.cataloger === headers.cataloger) {
 					return true;
 				}
 
@@ -71,7 +72,7 @@ export default async function (AMQP_URL) {
 			// Nack unwanted ones to back in queue;
 			nackMessages(nacks);
 
-			return {cataloger, operation, records, messages};
+			return {headers, records, messages};
 		} catch (error) {
 			logError(error);
 		}
@@ -187,8 +188,11 @@ export default async function (AMQP_URL) {
 	// ----------------
 
 	function messagesToRecords(messages) {
+		logger.log('debug', 'Parsing messages to records');
+
 		messages.map(message => {
 			message.content = JSON.parse(message.content.toString());
+			console.log(message.content)
 			message.content.record = new MarcRecord(message.content.data);
 			return message;
 		});
