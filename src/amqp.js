@@ -132,7 +132,7 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function sendToQueue({queue, correlationId, headers, data}) {
+	async function sendToQueue({queue, correlationId, headers = {}, data}) {
 		try {
 			// Logger.log('debug', `Record cataloger ${cataloger}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
@@ -148,7 +148,7 @@ export default async function (AMQP_URL) {
 					correlationId,
 					persistent: true,
 					headers,
-					timestamp: moment().toDate()
+					timestamp: moment().format('x')
 				}
 			);
 
