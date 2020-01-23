@@ -83,9 +83,9 @@ export default async function (AMQP_URL) {
 			// Returns false if 0 items in queue
 			const message = await channel.get(queue);
 			if (message) {
-				const {cataloger, operation} = getHeaderInfo(message);
+				const headers = getHeaderInfo(message);
 				const records = messagesToRecords([message]);
-				return {cataloger, operation, records, messages: [message]};
+				return {headers, records, messages: [message]};
 			}
 
 			return message;
@@ -138,10 +138,10 @@ export default async function (AMQP_URL) {
 
 	async function sendToQueue({queue, correlationId, headers = {}, data}) {
 		try {
-			// Logger.log('debug', `Record cataloger ${cataloger}`)
+			// Logger.log('debug', `Record queue ${queue}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
 			// logger.log('debug', `Record data ${data}`);
-			// logger.log('debug', `Record operation ${operation}`);
+			// logger.log('debug', `Record headers ${headers}`);
 
 			await channel.assertQueue(queue, {durable: true});
 
@@ -222,6 +222,6 @@ export default async function (AMQP_URL) {
 	}
 
 	function getHeaderInfo(data) {
-		return {cataloger: data.properties.headers.cataloger, operation: data.properties.headers.operation};
+		return data.properties.headers;
 	}
 }
