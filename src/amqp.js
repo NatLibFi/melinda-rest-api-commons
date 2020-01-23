@@ -95,6 +95,7 @@ export default async function (AMQP_URL) {
 	async function consumeRaw(queue) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
+			// Returns false if 0 items in queue
 			return await channel.get(queue);
 		} catch (error) {
 			logError(error);
