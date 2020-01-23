@@ -66,9 +66,9 @@ export default async function (MONGO_URI) {
 		return result;
 	}
 
-	async function remove(params) {
+	async function remove(correlationId) {
 		try {
-			await getFileMetadata({gridFSBucket, filename: params.correlationId});
+			await getFileMetadata({gridFSBucket, filename: correlationId});
 			throw new DatabaseError(400);
 		} catch (err) {
 			if (!(err instanceof DatabaseError && err.status === 404)) {
@@ -76,20 +76,20 @@ export default async function (MONGO_URI) {
 			}
 		}
 
-		await db.collection('queue-items').deleteOne(params);
+		await db.collection('queue-items').deleteOne(correlationId);
 		return true;
 	}
 
-	async function readContent(params) {
-		const result = await db.collection('queue-items').findOne(params);
+	async function readContent(correlationId) {
+		const result = await db.collection('queue-items').findOne({correlationId});
 		// Check if the file exists
 
 		if (result) {
-			await getFileMetadata({gridFSBucket, filename: params.correlationId});
+			await getFileMetadata({gridFSBucket, filename: correlationId});
 			console.log(result);
 			return {
 				contentType: result.contentType,
-				readStream: gridFSBucket.openDownloadStreamByName(params.correlationId)
+				readStream: gridFSBucket.openDownloadStreamByName(correlationId)
 			};
 		}
 
@@ -132,11 +132,10 @@ export default async function (MONGO_URI) {
 		}
 	}
 
-	async function setState({correlationId, headers, state}) {
+	async function setState({correlationId, state}) {
 		logger.log('debug', 'Setting queue item state');
 		await db.collection('queue-items').updateOne({
-			correlationId,
-			...headers
+			correlationId
 		}, {
 			$set: {
 				queueItemState: state,
@@ -144,9 +143,7 @@ export default async function (MONGO_URI) {
 			}
 		});
 		return db.collection('queue-items').findOne({
-			cataloger,
-			correlationId,
-			operation
+			correlationId
 		}, {projection: {_id: 0}});
 	}
 
