@@ -14,7 +14,7 @@ export default async function (AMQP_URL) {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, replyErrors};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, replyErrors};
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
@@ -79,10 +79,14 @@ export default async function (AMQP_URL) {
 	async function consumeOne(queue) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
-			const messages = [await channel.get(queue)];
-			const {cataloger, operation} = getHeaderInfo(messages[0]);
-			const records = messagesToRecords(messages);
-			return {cataloger, operation, records, messages};
+			// Returns false if 0 items in queue
+			const message = await channel.get(queue);
+			if (message) {
+				const {cataloger, operation} = getHeaderInfo(message);
+				const records = messagesToRecords([message]);
+				return {cataloger, operation, records, messages: [message]};
+			}
+			return message;
 		} catch (error) {
 			logError(error);
 		}
