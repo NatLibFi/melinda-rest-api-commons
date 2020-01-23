@@ -147,8 +147,7 @@ export default async function (AMQP_URL) {
 				{
 					correlationId,
 					persistent: true,
-					headers,
-					timestamp: moment().format('x')
+					headers
 				}
 			);
 
