@@ -86,6 +86,7 @@ export default async function (AMQP_URL) {
 				const records = messagesToRecords([message]);
 				return {cataloger, operation, records, messages: [message]};
 			}
+
 			return message;
 		} catch (error) {
 			logError(error);
@@ -152,7 +153,6 @@ export default async function (AMQP_URL) {
 					headers
 				}
 			);
-
 		} catch (error) {
 			logError(error);
 		}
