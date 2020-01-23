@@ -147,6 +147,9 @@ export default async function (AMQP_URL) {
 			// logger.log('debug', `Record data ${data}`);
 			// logger.log('debug', `Record headers ${headers}`);
 
+			if (queue === undefined) {
+				queue = correlationId
+			}
 			await channel.assertQueue(queue, {durable: true});
 
 			channel.sendToQueue(
@@ -158,6 +161,8 @@ export default async function (AMQP_URL) {
 					headers
 				}
 			);
+
+			console.log(`record send to queue ${queue}`);
 		} catch (error) {
 			logError(error);
 		}
