@@ -106,6 +106,7 @@ export default async function (AMQP_URL) {
 
 	// ACK records
 	async function ackNReplyMessages({status, messages, ids}) {
+		logger.log('debug', 'Ack and reply messages!');
 		messages.forEach((message, index) => {
 			const headers = getHeaderInfo(message);
 			sendToQueue({
@@ -122,7 +123,8 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function ackMessages({messages}) {
+	async function ackMessages(messages) {
+		logger.log('debug', 'Ack messages!');
 		// TODO?: Add ids to mongo metadata?
 		messages.forEach(message => {
 			channel.ack(message);
@@ -130,6 +132,7 @@ export default async function (AMQP_URL) {
 	}
 
 	async function nackMessages(messages) {
+		logger.log('debug', 'Nack messages!');
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
 			channel.nack(message, false, true);

@@ -12,7 +12,6 @@ export const QUEUE_ITEM_STATE = {
 
 export const PRIO_IMPORT_QUEUES = {
 	CREATE: 'CREATE',
-	REPLY: 'REPLY',
 	REQUESTS: 'REQUESTS',
 	UPDATE: 'UPDATE'
 };
