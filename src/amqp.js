@@ -98,30 +98,28 @@ export default async function (AMQP_URL) {
 	}
 
 	// ACK records
-	async function ackMessages({queue, messages, results}) {
-		if (queue === CREATE || queue === UPDATE) {
-			messages.forEach((message, index) => {
-				const headers = getHeaderInfo(message);
-				const status = (queue === CREATE) ? RECORD_IMPORT_STATE.CREATED : RECORD_IMPORT_STATE.UPDATED;
-				sendToQueue({
-					queue: message.properties.correlationId,
-					correlationId: message.properties.correlationId,
-					headers,
-					data: {
-						status, id: results.ids[index]
-					}
-				});
-				// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
+	async function ackNReplyMessages({status, messages, ids}) {
+		messages.forEach((message, index) => {
+			const headers = getHeaderInfo(message);
+			sendToQueue({
+				queue: message.properties.correlationId,
+				correlationId: message.properties.correlationId,
+				headers,
+				data: {
+					status, id: ids[index]
+				}
+			});
+			// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
 
-				channel.ack(message);
-			});
-		} else {
-			// Bulk has no unwanted ones
-			// TODO?: Add ids to mongo metadata?
-			messages.forEach(message => {
-				channel.ack(message);
-			});
-		}
+			channel.ack(message);
+		});
+	}
+
+	async function ackMessages({messages}) {
+		// TODO?: Add ids to mongo metadata?
+		messages.forEach(message => {
+			channel.ack(message);
+		});
 	}
 
 	async function nackMessages(messages) {
