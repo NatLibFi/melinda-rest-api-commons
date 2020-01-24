@@ -169,26 +169,6 @@ export default async function (AMQP_URL) {
 		}
 	}
 
-	async function replyErrors({queue, errorStatus, errorPayload = ''}) {
-		try {
-			const error = new RabbitError(errorStatus, errorPayload);
-			const messages = await getData(queue);
-			const promises = [];
-
-			messages.forEach(message => {
-				const headers = getHeaderInfo(message);
-				promises.push(sendToQueue({correlationId: message.properties.correlationId, headers, data: error}));
-			});
-
-			await Promise.all(promises);
-			messages.forEach(message => {
-				channel.ack(message);
-			});
-		} catch (error) {
-			logError(error);
-		}
-	}
-
 	// ----------------
 	// Helper functions
 	// ----------------
