@@ -110,7 +110,7 @@ export default async function (AMQP_URL) {
 	}
 
 	// ACK records
-	async function ackNReplyMessages({status, messages, ids}) {
+	async function ackNReplyMessages({status, messages, payloads}) {
 		logger.log('debug', 'Ack and reply messages!');
 		messages.forEach((message, index) => {
 			const headers = getHeaderInfo(message);
@@ -119,10 +119,10 @@ export default async function (AMQP_URL) {
 				correlationId: message.properties.correlationId,
 				headers,
 				data: {
-					status, id: ids[index]
+					status, payload: payloads[index]
 				}
 			});
-			// Reply consumer gets: {"data":{"status":"UPDATED","id":"0"}}
+			// Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
 
 			channel.ack(message);
 		});
@@ -144,7 +144,7 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function sendToQueue({queue, correlationId, headers = {}, data}) {
+	async function sendToQueue({queue, correlationId, headers, data}) {
 		try {
 			// Logger.log('debug', `Record queue ${queue}`)
 			// logger.log('debug', `Record correlationId ${correlationId}`);
