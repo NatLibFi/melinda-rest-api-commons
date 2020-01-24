@@ -12,7 +12,7 @@ export default async function (AMQP_URL) {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, replyErrors};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue};
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
