@@ -169,7 +169,7 @@ export default async function (AMQP_URL) {
 	}
 
 	async function removeQueue(queue) {
-		await chennel.deleteQueue(queue);
+		await channel.deleteQueue(queue);
 	}
 
 	// ----------------
