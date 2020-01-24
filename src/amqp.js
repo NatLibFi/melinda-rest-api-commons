@@ -56,7 +56,6 @@ export default async function (AMQP_URL) {
 			await channel.assertQueue(queue, {durable: true});
 			const queMessages = await getData(queue);
 			const nacks = [];
-			// Console.log(queDatas);
 
 			const headers = getHeaderInfo(queMessages[0]);
 			logger.log('debug', `Filtering messages by ${JSON.stringify(headers)}`);
@@ -163,7 +162,7 @@ export default async function (AMQP_URL) {
 				}
 			);
 
-			console.log(`record send to queue ${queue}`);
+			logger.log('debug',`Message send to queue ${queue}`);
 		} catch (error) {
 			logError(error);
 		}

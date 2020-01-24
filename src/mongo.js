@@ -45,7 +45,7 @@ export default async function (MONGO_URI) {
 				throw err;
 			}
 
-			console.log('queue-item created');
+			logger.log('debug', 'Queue-item created to Mongo');
 		});
 
 		return new Promise((resolve, reject) => {
@@ -62,7 +62,7 @@ export default async function (MONGO_URI) {
 
 	async function query(params) {
 		const result = await db.collection('queue-items').find(params, {projection: {_id: 0}}).toArray();
-		console.log(result);
+		logger.log('debug', `Query result: ${JSON.stringify(result)}`);
 		return result;
 	}
 
@@ -81,12 +81,12 @@ export default async function (MONGO_URI) {
 	}
 
 	async function readContent(correlationId) {
+		logger.log('info', `Reading content for id: ${correlationId}`);
 		const result = await db.collection('queue-items').findOne({correlationId});
 		// Check if the file exists
 
 		if (result) {
 			await getFileMetadata({gridFSBucket, filename: correlationId});
-			console.log(result);
 			return {
 				contentType: result.contentType,
 				readStream: gridFSBucket.openDownloadStreamByName(correlationId)
@@ -97,10 +97,10 @@ export default async function (MONGO_URI) {
 	}
 
 	async function removeContent(params) {
+		logger.log('info', `Removing content for id: ${params.correlationId}`);
 		const result = await db.collection('queue-items').findOne(params);
 		if (result) {
 			const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: params.correlationId});
-			console.log(fileId);
 			await gridFSBucket.delete(fileId);
 			return true;
 		}
@@ -121,6 +121,8 @@ export default async function (MONGO_URI) {
 	}
 
 	async function getStream(correlationId) {
+		logger.log('info', `Forming stream from db: ${correlationId}`);
+
 		try {
 			// Check that content is there
 			await getFileMetadata({gridFSBucket, filename: correlationId});
@@ -133,7 +135,7 @@ export default async function (MONGO_URI) {
 	}
 
 	async function setState({correlationId, state}) {
-		logger.log('debug', 'Setting queue item state');
+		logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
 		await db.collection('queue-items').updateOne({
 			correlationId
 		}, {
