@@ -10,7 +10,7 @@ export const QUEUE_ITEM_STATE = {
 	UPLOADING: 'UPLOADING'
 };
 
-export const OPERATIONS = ['CREATE','UPDATE'];
+export const OPERATIONS = ['CREATE', 'UPDATE'];
 
 export const CHUNK_SIZE = 50;
 

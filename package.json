@@ -17,14 +17,17 @@
 	"version": "1.0.0",
 	"main": "./dist/index.js",
 	"engines": {
-		"node": ">=8"
+		"node": "12"
 	},
 	"private": true,
 	"scripts": {
 		"prepare": "npm run build",
 		"check-deps": "npm-check || exit 0",
 		"lint": "eslint --fix src",
-		"test": "npm run lint",
+		"test": "npm run lint && npm run test:base -- src/**/*.spec.js && npm run coverage",
+		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
+		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js && npm run coverage",
+		"coverage": "nyc check-coverage --per-file",
 		"build": "babel src --source-maps --delete-dir-on-start --out-dir=dist",
 		"build:dev": "npm run build && npm run check-deps",
 		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'",
@@ -46,13 +49,18 @@
 		"@babel/preset-env": "^7.8.3",
 		"babel-eslint": "^10.0.3",
 		"babel-plugin-dynamic-import-node": "^2.3.0",
+		"babel-plugin-istanbul": "^5.2.0",
+		"babel-plugin-rewire": "^1.2.0",
+		"chai": "^4.2.0",
 		"cross-env": "^6.0.3",
 		"eslint": "^6.8.0",
 		"eslint-config-xo": ">=0.27.2 <1.0.0",
 		"eslint-plugin-import": "^2.20.0",
+		"istanbul": ">=0.4.5 <1.0.0",
+		"mocha": "^7.0.0",
 		"nodemon": "^2.0.2",
 		"npm-check": "^5.9.0",
-		"chai": "^4.2.0"
+		"nyc": "^15.0.0"
 	},
 	"eslintConfig": {
 		"parser": "babel-eslint",
@@ -75,7 +83,7 @@
 				"@babel/preset-env",
 				{
 					"targets": {
-						"node": "10"
+						"node": "12"
 					}
 				}
 			]
@@ -83,6 +91,32 @@
 		"plugins": [
 			"@babel/plugin-syntax-dynamic-import",
 			"dynamic-import-node"
-		]
+		],
+		"env": {
+			"test": {
+				"plugins": [
+					"istanbul",
+					"rewire"
+				]
+			}
+		}
+	},
+	"nyc": {
+		"exclude": [
+			"**/*.spec.js"
+		],
+		"reporter": [
+			"lcov",
+			"html"
+		],
+		"require": [
+			"@babel/register"
+		],
+		"sourceMap": false,
+		"instrument": false,
+		"lines": 80,
+		"statements": 80,
+		"functions": 80,
+		"branches": 80
 	}
 }

@@ -12,7 +12,7 @@ export default async function (AMQP_URL) {
 	const channel = await connection.createChannel();
 	const logger = createLogger();
 
-	return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue};
+	return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue};
 
 	async function checkQueue(queue, style = 'basic', purge = false) {
 		try {
@@ -162,10 +162,14 @@ export default async function (AMQP_URL) {
 				}
 			);
 
-			logger.log('debug',`Message send to queue ${queue}`);
+			logger.log('debug', `Message send to queue ${queue}`);
 		} catch (error) {
 			logError(error);
 		}
+	}
+
+	async function removeQueue(queue) {
+		await chennel.deleteQueue(queue);
 	}
 
 	// ----------------
