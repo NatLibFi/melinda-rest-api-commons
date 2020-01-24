@@ -27,6 +27,10 @@ export default async function (AMQP_URL) {
 				return false;
 			}
 
+			if (style === 'messages') {
+				return channelInfo.messageCount;
+			}
+
 			if (style === 'one') {
 				return consumeOne(queue);
 			}
@@ -147,9 +151,6 @@ export default async function (AMQP_URL) {
 			// logger.log('debug', `Record data ${data}`);
 			// logger.log('debug', `Record headers ${headers}`);
 
-			if (queue === undefined) {
-				queue = correlationId
-			}
 			await channel.assertQueue(queue, {durable: true});
 
 			channel.sendToQueue(
