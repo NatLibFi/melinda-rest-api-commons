@@ -143,7 +143,8 @@ export default async function (MONGO_URI) {
 			}
 		});
 		return db.collection('queue-items').findOne({
-			correlationId
+			correlationId,
+			queueItemState: state
 		}, {projection: {_id: 0}});
 	}
 

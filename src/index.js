@@ -1,7 +1,7 @@
 import mongoFactory from './mongo';
 import amqpFactory from './amqp';
 import conversions from './helppers/conversion';
-import {checkIfOfflineHours} from './utils';
+import {checkIfOfflineHours, logError} from './utils';
 
-export {mongoFactory, amqpFactory, conversions, checkIfOfflineHours};
+export {mongoFactory, amqpFactory, conversions, checkIfOfflineHours, logError};
 export * from './constants';
