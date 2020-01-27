@@ -22,7 +22,7 @@ const {createLogger} = Utils;
 export default async function (MONGO_URI) {
 	const logger = createLogger(); // eslint-disable-line no-unused-vars
 	// Connect to mongo (MONGO)
-	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: logMongo});
+	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: {error: logMongoError, log: logMongoLog, debug: logMongoDebug}});
 	const db = client.db('rest-api');
 	const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
@@ -160,17 +160,15 @@ export default async function (MONGO_URI) {
 	}
 
 	// TODO: Make work properly (https://mongodb.github.io/node-mongodb-native/driver-articles/mongoclient.html logger)
-	function logMongo({error = {}, log = {}, debug = {}}) {
-		if (error) {
-			logger.log('error', error);
-		}
+	function logMongoDebug(message, object) {
+		logger.log('debug', message);
+	}
 
-		if (log) {
-			logger.log('info', log);
-		}
+	function logMongoError(message, object) {
+		logger.log('error', message);
+	}
 
-		if (debug) {
-			logger.log('debug', debug);
-		}
+	function logMongoLog(message, object) {
+		logger.log('info', message);
 	}
 }
