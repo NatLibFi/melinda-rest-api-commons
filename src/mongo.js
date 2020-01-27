@@ -145,7 +145,7 @@ export default async function (MONGO_URI) {
 				modificationTime: moment().toDate()
 			},
 			$push: {
-				handledIds: { $each: ids}
+				handledIds: {$each: ids}
 			}
 		});
 	}

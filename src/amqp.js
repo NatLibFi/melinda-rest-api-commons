@@ -161,7 +161,7 @@ export default async function (AMQP_URL) {
 				}
 			);
 
-			logger.log('debug', `Message send to queue ${queue}`);
+			// Spams: logger.log('debug', `Message send to queue ${queue}`);
 		} catch (error) {
 			logError(error);
 		}
