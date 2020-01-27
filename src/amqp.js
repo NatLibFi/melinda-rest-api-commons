@@ -129,7 +129,6 @@ export default async function (AMQP_URL) {
 
 	async function ackMessages(messages) {
 		logger.log('debug', 'Ack messages!');
-		// TODO?: Add ids to mongo metadata?
 		messages.forEach(message => {
 			channel.ack(message);
 		});

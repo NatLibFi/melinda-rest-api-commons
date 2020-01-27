@@ -15,7 +15,8 @@ const {createLogger} = Utils;
 	"contentType":"application/json",
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",
-	"modificationTime":"2020-01-01T00:00:01.000Z"
+	"modificationTime":"2020-01-01T00:00:01.000Z",
+	"ids": []
 }
 */
 
@@ -26,7 +27,7 @@ export default async function (MONGO_URI) {
 	const db = client.db('rest-api');
 	const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
-	return {create, query, remove, readContent, removeContent, getOne, getStream, setState};
+	return {create, query, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
 	async function create({correlationId, cataloger, operation, contentType, stream}) {
 		// Create QueueItem
@@ -37,7 +38,8 @@ export default async function (MONGO_URI) {
 			contentType,
 			queueItemState: QUEUE_ITEM_STATE.UPLOADING,
 			creationTime: moment().toDate(),
-			modificationTime: moment().toDate()
+			modificationTime: moment().toDate(),
+			handledIds: []
 		};
 
 		db.collection('queue-items').insertOne(newQueueItem, (err, res) => {
@@ -132,6 +134,20 @@ export default async function (MONGO_URI) {
 		} catch (error) {
 			logError(error);
 		}
+	}
+
+	async function pushIds({correlationId, ids}) {
+		logger.log('info', `Push queue-item ids to list: ${correlationId}, ${ids}`);
+		await db.collection('queue-items').updateOne({
+			correlationId
+		}, {
+			$set: {
+				modificationTime: moment().toDate()
+			},
+			$push: {
+				handledIds: { $each: ids}
+			}
+		});
 	}
 
 	async function setState({correlationId, state}) {
