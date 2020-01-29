@@ -207,15 +207,14 @@ export default async function (AMQP_URL) {
 	function messagesToRecords(messages) {
 		logger.log('debug', 'Parsing messages to records');
 
-		messages.map(message => {
+		const records = messages.map(message => {
 			const content = JSON.parse(message.content.toString());
-			const record = new MarcRecord(content.data);
-			return record.toObject();
+			return new MarcRecord(content.data);
 		});
 
 		// Collect datas.content.record to one array
-		return messages.flatMap(message => {
-			return message.content.record;
+		return records.flatMap(record => {
+			return record;
 		});
 	}
 
