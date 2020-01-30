@@ -58,13 +58,14 @@ export default async function (MONGO_URI) {
 
 	return {create, query, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
-	async function create({correlationId, cataloger, operation, contentType, stream}) {
+	async function create({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
 		// Create QueueItem
 		const newQueueItem = {
 			correlationId,
 			cataloger,
 			operation,
 			contentType,
+			recordLoadParams,
 			queueItemState: QUEUE_ITEM_STATE.UPLOADING,
 			creationTime: moment().toDate(),
 			modificationTime: moment().toDate(),
