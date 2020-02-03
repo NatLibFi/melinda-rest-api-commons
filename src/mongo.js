@@ -42,6 +42,21 @@ const {createLogger} = Utils;
 	"cataloger":"xxx0000",
 	"operation":"UPDATE",
 	"contentType":"application/json",
+	"recordLoadParams": {
+        "library": "XXX00",
+        "inputFile": filename.seq,
+        "method": "NEW",
+        "fixRoutine": "INSB",
+        "space": "",
+        "indexing": "FULL",
+        "updateAction": "APP",
+        "mode": "M",
+        "charConversion": "",
+        "mergeRoutine": "",
+        "cataloger": "$operator",
+        "catalogerLevel": "",
+        "indexingPriority": "2099"
+      },
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",
 	"modificationTime":"2020-01-01T00:00:01.000Z",
@@ -115,9 +130,9 @@ export default async function (MONGO_URI) {
 	async function readContent(correlationId) {
 		logger.log('info', `Reading content for id: ${correlationId}`);
 		const result = await db.collection('queue-items').findOne({correlationId});
-		// Check if the file exists
 
 		if (result) {
+			// Check if the file exists
 			await getFileMetadata({gridFSBucket, filename: correlationId});
 			return {
 				contentType: result.contentType,
