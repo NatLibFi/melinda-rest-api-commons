@@ -156,14 +156,14 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	async function ackMessages(messages) {
+	function ackMessages(messages) {
 		logger.log('debug', 'Ack messages!');
 		messages.forEach(message => {
 			channel.ack(message);
 		});
 	}
 
-	async function nackMessages(messages) {
+	function nackMessages(messages) {
 		logger.log('debug', 'Nack messages!');
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
