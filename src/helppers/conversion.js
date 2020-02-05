@@ -29,6 +29,7 @@
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import ConversionError from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
+import {logError} from '../utils';
 
 export {ConversionError};
 
@@ -60,8 +61,9 @@ export default function () {
 				default:
 					break;
 			}
-		} catch (err) {
+		} catch (error) {
 			// Internal server error
+			logError(error);
 			throw new ConversionError(500);
 		}
 

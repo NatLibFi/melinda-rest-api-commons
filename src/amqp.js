@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -113,6 +111,7 @@ export default async function (AMQP_URL) {
 	async function consumeOne(queue) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
+
 			// Returns false if 0 items in queue
 			const message = await channel.get(queue);
 			if (message) {
@@ -142,6 +141,8 @@ export default async function (AMQP_URL) {
 		logger.log('debug', 'Ack and reply messages!');
 		messages.forEach((message, index) => {
 			const headers = getHeaderInfo(message);
+
+			// Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
 			sendToQueue({
 				queue: message.properties.correlationId,
 				correlationId: message.properties.correlationId,
@@ -150,7 +151,6 @@ export default async function (AMQP_URL) {
 					status, payload: payloads[index]
 				}
 			});
-			// Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
 
 			channel.ack(message);
 		});

@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -28,7 +26,7 @@
 *
 */
 
-import {MongoClient, GridFSBucket} from 'mongodb';
+import {MongoClient, GridFSBucket, Logger} from 'mongodb';
 import DatabaseError, {Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
@@ -44,7 +42,7 @@ const {createLogger} = Utils;
 	"contentType":"application/json",
 	"recordLoadParams": {
         "library": "XXX00",
-        "inputFile": filename.seq,
+        "inputFile": "filename.seq",
         "method": "NEW",
         "fixRoutine": "INSB",
         "space": "",
@@ -66,8 +64,13 @@ const {createLogger} = Utils;
 
 export default async function (MONGO_URI) {
 	const logger = createLogger(); // eslint-disable-line no-unused-vars
+	Logger.setLevel('debug');
+	Logger.setCurrentLogger((msg, context) => {
+		logger.log('debug', msg);
+		logger.log('debug', context);
+	});
 	// Connect to mongo (MONGO)
-	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: {error: logMongoError, log: logMongoLog, debug: logMongoDebug}});
+	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: Logger});
 	const db = client.db('rest-api');
 	const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
@@ -86,14 +89,13 @@ export default async function (MONGO_URI) {
 			modificationTime: moment().toDate(),
 			handledIds: []
 		};
-
-		db.collection('queue-items').insertOne(newQueueItem, (err, res) => {
-			if (err) {
-				throw err;
-			}
-
-			logger.log('debug', 'Queue-item created to Mongo');
-		});
+		try {
+			db.collection('queue-items').insertOne(newQueueItem);
+			logger.log('info', 'New queue item has been made!');
+		} catch (error) {
+			logError(error);
+			throw new DatabaseError(500);
+		}
 
 		return new Promise((resolve, reject) => {
 			const outputStream = gridFSBucket.openUploadStream(correlationId);
@@ -174,7 +176,7 @@ export default async function (MONGO_URI) {
 			// Check that content is there
 			await getFileMetadata({gridFSBucket, filename: correlationId});
 
-			// Transform gridFSBucket stream to MarcRecords -> to queue
+			// Return content stream
 			return gridFSBucket.openDownloadStreamByName(correlationId);
 		} catch (error) {
 			logError(error);
@@ -218,18 +220,5 @@ export default async function (MONGO_URI) {
 				.on('data', resolve)
 				.on('end', () => reject(new DatabaseError(404)));
 		});
-	}
-
-	// TODO: Make work properly (https://mongodb.github.io/node-mongodb-native/driver-articles/mongoclient.html logger)
-	function logMongoDebug(message, object) {
-		logger.log('debug', message);
-	}
-
-	function logMongoError(message, object) {
-		logger.log('error', message);
-	}
-
-	function logMongoLog(message, object) {
-		logger.log('info', message);
 	}
 }
