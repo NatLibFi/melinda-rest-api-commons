@@ -28,13 +28,12 @@
 		"test": "npm run lint && npm run test:base -- src/**/*.spec.js",
 		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
 		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
-		"build": "babel src --source-maps --delete-dir-on-start --out-dir=dist",
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
 		"build:dev": "npm run build && npm run check-deps",
 		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'",
 		"watch:dev": "nodemon -w src --exec 'npm run lint && npm run build'"
 	},
 	"dependencies": {
-		"@babel/core": "^7.8.3",
 		"@natlibfi/melinda-commons": "^7.1.0",
 		"amqplib": ">=0.5.5 <1.0.0",
 		"http-status": "^1.4.2",
@@ -44,9 +43,10 @@
 		"uuid": "^3.4.0"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.8.3",
+		"@babel/cli": "^7.8.4",
+		"@babel/core": "^7.8.4",
 		"@babel/plugin-syntax-dynamic-import": "^7.8.3",
-		"@babel/preset-env": "^7.8.3",
+		"@babel/preset-env": "^7.8.4",
 		"babel-eslint": "^10.0.3",
 		"babel-plugin-dynamic-import-node": "^2.3.0",
 		"babel-plugin-istanbul": "^5.2.0",
