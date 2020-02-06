@@ -22,7 +22,6 @@
 	"private": true,
 	"scripts": {
 		"prepare": "npm run build",
-		"postinstall": "npm run build",
 		"check-deps": "npm-check || exit 0",
 		"lint": "eslint --fix src",
 		"test": "npm run lint && npm run test:base -- src/**/*.spec.js",
