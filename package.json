@@ -33,7 +33,7 @@
 		"watch:dev": "nodemon -w src --exec 'npm run lint && npm run build'"
 	},
 	"dependencies": {
-		"@natlibfi/melinda-commons": "^7.1.0",
+		"@natlibfi/melinda-commons": "^7.2.0",
 		"amqplib": ">=0.5.5 <1.0.0",
 		"http-status": "^1.4.2",
 		"moment": "^2.24.0",
