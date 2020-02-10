@@ -39,6 +39,8 @@ export const QUEUE_ITEM_STATE = {
 
 export const OPERATIONS = {CREATE: 'CREATE', UPDATE: 'UPDATE'};
 
+export const CHUNK_SIZE = 100;
+
 export const conversionFormats = {
 	MARCXML: 1,
 	ISO2709: 2,
