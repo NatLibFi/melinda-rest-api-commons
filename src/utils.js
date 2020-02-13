@@ -43,7 +43,7 @@ export function logError(err) {
 		return;
 	}
 
-	logger.log('error', 'stack' in err ? err.stack : err);
+	logger.log('error', err.stack === undefined ? err : err.stack);
 }
 
 export function checkIfOfflineHours(OFFLINE_BEGIN, OFFLINE_DURATION) {
