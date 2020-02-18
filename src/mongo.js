@@ -199,18 +199,14 @@ export default async function (MONGO_URI) {
 
 	async function setState({correlationId, state}) {
 		logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
-		await db.collection('queue-items').updateOne({
+		return db.collection('queue-items').findOneAndUpdate({
 			correlationId
 		}, {
 			$set: {
 				queueItemState: state,
 				modificationTime: moment().toDate()
 			}
-		});
-		return db.collection('queue-items').findOne({
-			correlationId,
-			queueItemState: state
-		}, {projection: {_id: 0}});
+		}, {projection: {_id: 0}, returnNewDocument: true});
 	}
 
 	async function getFileMetadata({gridFSBucket, filename}) {
