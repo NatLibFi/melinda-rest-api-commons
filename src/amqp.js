@@ -82,7 +82,6 @@ export default async function (AMQP_URL) {
 		try {
 			await channel.assertQueue(queue, {durable: true});
 			const queMessages = await getData(queue);
-			const nacks = [];
 
 			const headers = getHeaderInfo(queMessages[0]);
 			logger.log('debug', `Filtering messages by ${JSON.stringify(headers, null, '\t')}`);
@@ -93,14 +92,12 @@ export default async function (AMQP_URL) {
 					return true;
 				}
 
-				nacks.push(message);
+				// nack unwanted ones
+				channel.nack(message, false, true);
 				return false;
 			});
 
 			const records = messagesToRecords(messages);
-
-			// Nack unwanted ones to back in queue;
-			await nackMessages(nacks);
 
 			return {headers, records, messages};
 		} catch (error) {
@@ -156,22 +153,19 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	 function ackMessages(messages) {
+	function ackMessages(messages) {
 		logger.log('debug', 'Ack messages!');
-		 messages.forEach(message => {
+		messages.forEach(message => {
 			channel.ack(message);
 		});
 	}
 
-	 async function nackMessages(messages) {
+	function nackMessages(messages) {
 		logger.log('debug', 'Nack messages!');
-		promises = [];
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
-			promises.push(channel.reject(message, true));
+			channel.reject(message, true);
 		});
-
-		await Promise.all(promises);
 	}
 
 	async function sendToQueue({queue, correlationId, headers, data}) {
