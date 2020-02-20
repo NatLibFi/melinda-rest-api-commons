@@ -162,7 +162,7 @@ export default async function (AMQP_URL) {
 		await messages.forEach(message => {
 			promises.push(channel.ack(message));
 		});
-		await Promise.all(promises);
+		return Promise.all(promises);
 	}
 
 	async function nackMessages(messages) {
@@ -172,7 +172,7 @@ export default async function (AMQP_URL) {
 			// Message, allUpTo, reQueue
 			promises.push(channel.nack(message, false, true));
 		});
-		await Promise.all(promises);
+		return Promise.all(promises);
 	}
 
 	async function sendToQueue({queue, correlationId, headers, data}) {
