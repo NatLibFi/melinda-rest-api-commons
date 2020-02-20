@@ -156,19 +156,23 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	function ackMessages(messages) {
+	async function ackMessages(messages) {
 		logger.log('debug', 'Ack messages!');
+		promises = [];
 		messages.forEach(message => {
-			channel.ack(message);
+			promises.push(channel.ack(message));
 		});
+		await Promise.all(promises);
 	}
 
-	function nackMessages(messages) {
+	async function nackMessages(messages) {
 		logger.log('debug', 'Nack messages!');
+		promises = [];
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
-			channel.nack(message, false, true);
+			promises.push(channel.nack(message, false, true));
 		});
+		await Promise.all(promises);
 	}
 
 	async function sendToQueue({queue, correlationId, headers, data}) {
