@@ -100,7 +100,7 @@ export default async function (AMQP_URL) {
 			const records = messagesToRecords(messages);
 
 			// Nack unwanted ones to back in queue;
-			nackMessages(nacks);
+			await nackMessages(nacks);
 
 			return {headers, records, messages};
 		} catch (error) {
@@ -163,12 +163,15 @@ export default async function (AMQP_URL) {
 		});
 	}
 
-	 function nackMessages(messages) {
+	 async function nackMessages(messages) {
 		logger.log('debug', 'Nack messages!');
+		promises = [];
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
-			channel.reject(message, true);
+			promises.push(channel.reject(message, true));
 		});
+
+		await Promise.all(promises);
 	}
 
 	async function sendToQueue({queue, correlationId, headers, data}) {
