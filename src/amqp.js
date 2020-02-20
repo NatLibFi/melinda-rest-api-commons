@@ -158,7 +158,7 @@ export default async function (AMQP_URL) {
 
 	async function ackMessages(messages) {
 		logger.log('debug', 'Ack messages!');
-		promises = [];
+		const promises = [];
 		messages.forEach(message => {
 			promises.push(channel.ack(message));
 		});
@@ -167,7 +167,7 @@ export default async function (AMQP_URL) {
 
 	async function nackMessages(messages) {
 		logger.log('debug', 'Nack messages!');
-		promises = [];
+		const promises = [];
 		messages.forEach(message => {
 			// Message, allUpTo, reQueue
 			promises.push(channel.nack(message, false, true));
