@@ -43,7 +43,7 @@ export const OPERATIONS = {
 	UPDATE: 'UPDATE'
 };
 
-export const CHUNK_SIZE = 75;
+export const CHUNK_SIZE = 100;
 
 export const conversionFormats = {
 	MARCXML: 1,
