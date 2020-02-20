@@ -85,7 +85,7 @@ export default async function (AMQP_URL) {
 			const nacks = [];
 
 			const headers = getHeaderInfo(queMessages[0]);
-			logger.log('debug', `Filtering messages by ${JSON.stringify(headers)}`);
+			logger.log('debug', `Filtering messages by ${JSON.stringify(headers, null, '\t')}`);
 
 			// Check that cataloger match! headers
 			const messages = queMessages.filter(message => {

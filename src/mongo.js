@@ -41,19 +41,10 @@ const {createLogger} = Utils;
 	"operation":"UPDATE",
 	"contentType":"application/json",
 	"recordLoadParams": {
-        "library": "XXX00",
-        "inputFile": "filename.seq",
-        "method": "NEW",
-        "fixRoutine": "INSB",
-        "space": "",
-        "indexing": "FULL",
-        "updateAction": "APP",
-        "mode": "M",
-        "charConversion": "",
-        "mergeRoutine": "",
-        "cataloger": "$operator",
-        "catalogerLevel": "",
-        "indexingPriority": "2099"
+        "pActiveLibrary": "XXX00",
+        "pInputFile": "filename.seq",
+        "pRejectFile": "filename.rej",
+        "pLogFile": "filename.syslog"
       },
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",
@@ -111,7 +102,7 @@ export default async function (MONGO_URI) {
 
 	async function query(params) {
 		const result = await db.collection('queue-items').find(params, {projection: {_id: 0}}).toArray();
-		logger.log('debug', `Query result: ${JSON.stringify(result)}`);
+		logger.log('debug', `Query result: ${(result.length > 0) ? 'Found!' : 'Not found!'}`);
 		return result;
 	}
 

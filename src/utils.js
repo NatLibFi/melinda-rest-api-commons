@@ -34,7 +34,7 @@ const logger = createLogger();
 
 export function logError(err) {
 	if (err instanceof Error) {
-		logger.log('error', err);
+		logger.log('error', JSON.stringify(err, null, '\t'));
 		return;
 	}
 
