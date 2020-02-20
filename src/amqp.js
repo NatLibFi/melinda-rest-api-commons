@@ -170,7 +170,7 @@ export default async function (AMQP_URL) {
 		const promises = [];
 		await messages.forEach(message => {
 			// Message, allUpTo, reQueue
-			promises.push(channel.nack(message, false, true));
+			promises.push(channel.reject(message, true));
 		});
 		return Promise.all(promises);
 	}
