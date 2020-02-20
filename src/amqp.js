@@ -163,7 +163,7 @@ export default async function (AMQP_URL) {
 			promises.push(channel.ack(message));
 		});
 
-		return Promise.all(promises);
+		return promises;
 	}
 
 	 function nackMessages(messages) {
@@ -174,7 +174,7 @@ export default async function (AMQP_URL) {
 			promises.push(channel.reject(message, true));
 		});
 
-		return Promise.all(promises);
+		return promises;
 	}
 
 	async function sendToQueue({queue, correlationId, headers, data}) {
