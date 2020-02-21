@@ -92,7 +92,7 @@ export default async function (AMQP_URL) {
 					return true;
 				}
 
-				// nack unwanted ones
+				// Nack unwanted ones
 				channel.nack(message, false, true);
 				return false;
 			});

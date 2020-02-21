@@ -17,29 +17,26 @@
 	"version": "1.0.0",
 	"main": "./dist/index.js",
 	"engines": {
-		"node": ">=10"
+		"node": ">=12"
 	},
 	"private": true,
 	"scripts": {
 		"prepare": "npm run build",
-		"check-deps": "npm-check || exit 0",
-		"lint": "eslint --fix src",
-		"test": "npm run lint && npm run test:base -- src/**/*.spec.js",
+		"lint": "eslint ./src",
+		"lint:dev": "eslint ./src --fix",
+		"check-deps": "npm-check;exit 0",
+		"test": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
 		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
-		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
-		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
-		"build:dev": "npm run build && npm run check-deps",
-		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'",
-		"watch:dev": "nodemon -w src --exec 'npm run lint && npm run build'"
+		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon",
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified"
 	},
 	"dependencies": {
+		"@natlibfi/marc-record": "^4.0.1",
+		"@natlibfi/marc-record-serializers": "^5.0.1",
 		"@natlibfi/melinda-commons": "^7.2.0",
 		"amqplib": ">=0.5.5 <1.0.0",
-		"http-status": "^1.4.2",
 		"moment": "^2.24.0",
-		"mongodb": "^3.5.2",
-		"rimraf": "^3.0.1",
-		"uuid": "^3.4.0"
+		"mongodb": "^3.5.3"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.8.4",
@@ -53,7 +50,7 @@
 		"chai": "^4.2.0",
 		"cross-env": "^7.0.0",
 		"eslint": "^6.8.0",
-		"eslint-config-xo": ">=0.27.2 <1.0.0",
+		"eslint-config-xo": ">=0.29.1 <1.0.0",
 		"eslint-plugin-import": "^2.20.1",
 		"istanbul": ">=0.4.5 <1.0.0",
 		"mocha": "^7.0.1",
@@ -120,5 +117,13 @@
 		"statements": 80,
 		"functions": 80,
 		"branches": 80
+	},
+	"nodemonConfig": {
+		"exec": "npm run lint:dev && npm test",
+		"watch": [
+			"src/*"
+		],
+		"ext": "js",
+		"delay": 2.5
 	}
 }
