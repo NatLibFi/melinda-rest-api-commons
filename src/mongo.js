@@ -44,7 +44,8 @@ const {createLogger} = Utils;
         "pActiveLibrary": "XXX00",
         "pInputFile": "filename.seq",
         "pRejectFile": "filename.rej",
-        "pLogFile": "filename.syslog"
+		"pLogFile": "filename.syslog",
+		"pOldNew": "NEW"
       },
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",
