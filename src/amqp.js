@@ -28,7 +28,7 @@
 
 import amqplib from 'amqplib';
 import {MarcRecord} from '@natlibfi/marc-record';
-import RabbitError, {Utils} from '@natlibfi/melinda-commons';
+import {Error, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
 
@@ -71,7 +71,7 @@ export default async function (AMQP_URL) {
 			}
 
 			// Defaults:
-			throw new RabbitError(422);
+			throw new Error(422);
 		} catch (error) {
 			logError(error);
 		}

@@ -26,8 +26,7 @@
 *
 */
 
-import Error, {Utils} from '@natlibfi/melinda-commons';
-import moment from 'moment';
+import {Error, Utils} from '@natlibfi/melinda-commons';
 
 const {createLogger} = Utils;
 const logger = createLogger();
@@ -44,20 +43,4 @@ export function logError(err) {
 	}
 
 	logger.log('error', err.stack === undefined ? err : err.stack);
-}
-
-export function checkIfOfflineHours(OFFLINE_BEGIN, OFFLINE_DURATION) {
-	const now = moment();
-	const start = moment(now).startOf('day').add(OFFLINE_BEGIN, 'hours');
-	const end = moment(start).add(OFFLINE_DURATION, 'hours');
-	if (now.hours() < OFFLINE_BEGIN && start.format('DDD') < end.format('DDD')) { // Offline hours pass midnight (DDD = day of the year)
-		start.subtract(1, 'days');
-		end.subtract(1, 'days');
-	}
-
-	if (now.isBetween(start, end)) {
-		return true;
-	}
-
-	return false;
 }

@@ -27,7 +27,7 @@
 */
 
 import {MongoClient, GridFSBucket, Logger} from 'mongodb';
-import DatabaseError, {Utils} from '@natlibfi/melinda-commons';
+import {Error, Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
@@ -55,7 +55,7 @@ const {createLogger} = Utils;
 */
 
 export default async function (MONGO_URI) {
-	const logger = createLogger(); // eslint-disable-line no-unused-vars
+	const logger = createLogger();
 	Logger.setLevel('debug');
 	Logger.setCurrentLogger((msg, context) => {
 		logger.log('debug', msg);
@@ -86,7 +86,7 @@ export default async function (MONGO_URI) {
 			logger.log('info', 'New queue item has been made!');
 		} catch (error) {
 			logError(error);
-			throw new DatabaseError(500);
+			throw new Error(500);
 		}
 
 		return new Promise((resolve, reject) => {
@@ -110,9 +110,9 @@ export default async function (MONGO_URI) {
 	async function remove(correlationId) {
 		try {
 			await getFileMetadata({gridFSBucket, filename: correlationId});
-			throw new DatabaseError(400);
+			throw new Error(400);
 		} catch (err) {
-			if (!(err instanceof DatabaseError && err.status === 404)) {
+			if (!(err instanceof Error && err.status === 404)) {
 				throw err;
 			}
 		}
@@ -134,7 +134,7 @@ export default async function (MONGO_URI) {
 			};
 		}
 
-		throw new DatabaseError(404);
+		throw new Error(404);
 	}
 
 	async function removeContent(params) {
@@ -206,7 +206,7 @@ export default async function (MONGO_URI) {
 			gridFSBucket.find({filename})
 				.on('error', reject)
 				.on('data', resolve)
-				.on('end', () => reject(new DatabaseError(404)));
+				.on('end', () => reject(new Error(404)));
 		});
 	}
 }

@@ -33,7 +33,7 @@
 	"dependencies": {
 		"@natlibfi/marc-record": "^4.0.1",
 		"@natlibfi/marc-record-serializers": "^5.0.1",
-		"@natlibfi/melinda-commons": "^7.2.0",
+		"@natlibfi/melinda-commons": "^7.2.1",
 		"amqplib": ">=0.5.5 <1.0.0",
 		"moment": "^2.24.0",
 		"mongodb": "^3.5.3"

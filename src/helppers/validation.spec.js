@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -90,7 +88,7 @@ describe('services/validation', () => {
 
 			it.skip('Should fail to validate the record', async () => {
 				/* TestContext.default.__Rewire__('validateFactory', sinon.fake.returns(
-					sinon.fake.rejects(new testContext.ValidationError(['foo']))
+					sinon.fake.rejects(new testContext.Error(['foo']))
 				)); */
 
 				const record = new MarcRecord(JSON.parse(inputRecord1));
@@ -100,7 +98,7 @@ describe('services/validation', () => {
 					await service.validate(record);
 					throw new Error('Should throw');
 				} catch (err) {
-					if (!(err instanceof testContext.ValidationError)) {
+					if (!(err instanceof testContext.Error)) {
 						throw err;
 					}
 				}

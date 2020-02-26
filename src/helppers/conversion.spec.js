@@ -1,4 +1,4 @@
-/* eslint-disable camelcase, max-nested-callbacks, no-undef */
+/* eslint-disable camelcase, max-nested-callbacks */
 
 /**
 *
@@ -119,7 +119,7 @@ describe('services/conversion', () => {
 
 				expect(() => {
 					service.unserialize('', conversionFormats.JSON);
-				}).to.throw(testContext.ConversionError);
+				}).to.throw(testContext.Error);
 			});
 		});
 	});

@@ -31,9 +31,9 @@
 // import validateFactory from '@natlibfi/marc-record-validate';
 // Import {} from '@natlibfi/marc-record-validators-melinda';
 
-import ValidationError from '@natlibfi/melinda-commons';
+import Error from '@natlibfi/melinda-commons';
 
-export {ValidationError};
+export {Error};
 
 export default async function () {
 //	Const validateFunc = await validateFactory([]);
@@ -48,7 +48,7 @@ export default async function () {
 			return results.messages;
 		}
 
-		throw new ValidationError(results.messages);
+		throw new Error(results.messages);
 		*/
 	}
 }
