@@ -27,7 +27,7 @@
 */
 
 import {MongoClient, GridFSBucket, Logger} from 'mongodb';
-import {Error, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
@@ -86,7 +86,7 @@ export default async function (MONGO_URI) {
 			logger.log('info', 'New queue item has been made!');
 		} catch (error) {
 			logError(error);
-			throw new Error(500);
+			throw new ApiError(500);
 		}
 
 		return new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ export default async function (MONGO_URI) {
 	async function remove(correlationId) {
 		try {
 			await getFileMetadata({gridFSBucket, filename: correlationId});
-			throw new Error(400);
+			throw new ApiError(400);
 		} catch (err) {
 			if (!(err instanceof Error && err.status === 404)) {
 				throw err;
@@ -134,7 +134,7 @@ export default async function (MONGO_URI) {
 			};
 		}
 
-		throw new Error(404);
+		throw new ApiError(404);
 	}
 
 	async function removeContent(params) {

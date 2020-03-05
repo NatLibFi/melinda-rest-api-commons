@@ -26,13 +26,13 @@
 *
 */
 
-import {Error, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 
 const {createLogger} = Utils;
 const logger = createLogger();
 
 export function logError(err) {
-	if (err instanceof Error) {
+	if (err instanceof ApiError) {
 		logger.log('error', JSON.stringify(err, null, '\t'));
 		return;
 	}

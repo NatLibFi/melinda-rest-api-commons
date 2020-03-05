@@ -27,11 +27,11 @@
 */
 
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
-import {Error} from '@natlibfi/melinda-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
 import {logError} from '../utils';
 
-export {Error};
+export {ApiError};
 
 export default function () {
 	return {serialize, unserialize};
@@ -46,7 +46,7 @@ export default function () {
 				return Json.to(record);
 			default:
 				// No supported format found (415 Unsupported Media Type)
-				throw new Error(415);
+				throw new ApiError(415);
 		}
 	}
 
@@ -65,10 +65,10 @@ export default function () {
 		} catch (error) {
 			// Internal server error
 			logError(error);
-			throw new Error(500);
+			throw new ApiError(500);
 		}
 
 		// No supported format found (415 Unsupported Media Type)
-		throw new Error(415);
+		throw new ApiError(415);
 	}
 }

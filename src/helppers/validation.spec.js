@@ -98,7 +98,7 @@ describe('services/validation', () => {
 					await service.validate(record);
 					throw new Error('Should throw');
 				} catch (err) {
-					if (!(err instanceof testContext.Error)) {
+					if (!(err instanceof testContext.ApiError)) {
 						throw err;
 					}
 				}

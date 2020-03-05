@@ -28,7 +28,7 @@
 
 import amqplib from 'amqplib';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {Error, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
 
@@ -46,9 +46,7 @@ export default async function (AMQP_URL) {
 			const channelInfo = await channel.assertQueue(queue, {durable: true});
 			logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
 
-			if (purge) {
-				await channel.purgeQueue(queue);
-			}
+			await purgeQueue(purge);
 
 			if (channelInfo.messageCount < 1) {
 				return false;
@@ -71,9 +69,15 @@ export default async function (AMQP_URL) {
 			}
 
 			// Defaults:
-			throw new Error(422);
+			throw new ApiError(422);
 		} catch (error) {
 			logError(error);
+		}
+
+		function purgeQueue(purge) {
+			if (purge) {
+				return channel.purgeQueue(queue);
+			}
 		}
 	}
 
@@ -230,7 +234,7 @@ export default async function (AMQP_URL) {
 		async function get() {
 			const message = await channel.get(queue);
 			if (!messages.includes(message)) {
-				messages.push(message);
+				return messages.push(message);
 			}
 		}
 	}

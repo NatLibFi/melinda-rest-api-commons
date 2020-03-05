@@ -119,7 +119,7 @@ describe('services/conversion', () => {
 
 				expect(() => {
 					service.unserialize('', conversionFormats.JSON);
-				}).to.throw(testContext.Error);
+				}).to.throw(testContext.ApiError);
 			});
 		});
 	});
