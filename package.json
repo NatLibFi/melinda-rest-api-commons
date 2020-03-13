@@ -33,6 +33,8 @@
 	"dependencies": {
 		"@natlibfi/marc-record": "^4.0.1",
 		"@natlibfi/marc-record-serializers": "^5.0.1",
+		"@natlibfi/marc-record-validate": "^5.0.1",
+		"@natlibfi/marc-record-validators-melinda": "^8.2.2",
 		"@natlibfi/melinda-commons": "^7.2.1",
 		"amqplib": ">=0.5.5 <1.0.0",
 		"moment": "^2.24.0",
@@ -50,7 +52,7 @@
 		"chai": "^4.2.0",
 		"cross-env": "^7.0.0",
 		"eslint": "^6.8.0",
-		"eslint-config-xo": ">=0.29.1 <1.0.0",
+		"@natlibfi/eslint-config-melinda-backend": ">1.0.0-alpha.1",
 		"eslint-plugin-import": "^2.20.1",
 		"istanbul": ">=0.4.5 <1.0.0",
 		"mocha": "^7.0.1",
@@ -64,7 +66,7 @@
 			"import"
 		],
 		"extends": [
-			"xo",
+			"@natlibfi/melinda-backend",
 			"plugin:import/errors"
 		],
 		"rules": {
@@ -82,7 +84,7 @@
 				"@babel/preset-env",
 				{
 					"targets": {
-						"node": "10"
+						"node": "12"
 					}
 				}
 			]

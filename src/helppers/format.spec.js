@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -28,22 +26,24 @@
 *
 */
 
-/* eslint-disable new-cap */
-import validateFactory from '@natlibfi/marc-record-validate';
-import {
-  FieldExclusion
-} from '@natlibfi/marc-record-validators-melinda';
+import fs from 'fs';
+import path from 'path';
+import {expect} from 'chai';
+import {MarcRecord} from '@natlibfi/marc-record';
+import {formatRecord, BIB_FORMAT_SETTINGS} from './format';
 
-export default async () => {
-  const validate = validateFactory([await FieldExclusion([{tag: /^003$/u, value: /^(.(?<!FI-MELINDA))*?$/u}])]); // eslint-disable-line prefer-named-capture-group
+const FIXTURES_PATH = path.join(__dirname, '../../test-fixtures/format');
 
-  return async unvalidRecord => {
-    const {record, valid, report} = await validate(unvalidRecord, {fix: true, validateFixes: true});
+describe('services/format', () => {
+  fs.readdirSync(path.join(FIXTURES_PATH, 'in')).forEach(file => {
+    it(file, () => {
+      const record = new MarcRecord(JSON.parse(fs.readFileSync(path.join(FIXTURES_PATH, 'in', file), 'utf8')));
 
-    return {
-      record,
-      failed: valid === false,
-      messages: report
-    };
-  };
-};
+      const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
+      const expectedPath = path.join(FIXTURES_PATH, 'out', file);
+      const stringResult = JSON.stringify(result, undefined, 2);
+
+      expect(stringResult).to.eql(fs.readFileSync(expectedPath, 'utf8'));
+    });
+  });
+});

@@ -26,7 +26,7 @@
 *
 */
 
-import {MongoClient, GridFSBucket, Logger} from 'mongodb';
+import {MongoClient, GridFSBucket} from 'mongodb';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
@@ -36,177 +36,173 @@ const {createLogger} = Utils;
 
 /* QueueItem:
 {
-	"correlationId":"FOO",
-	"cataloger":"xxx0000",
-	"operation":"UPDATE",
-	"contentType":"application/json",
-	"recordLoadParams": {
-        "pActiveLibrary": "XXX00",
-        "pInputFile": "filename.seq",
-        "pRejectFile": "filename.rej",
-		"pLogFile": "filename.syslog",
-		"pOldNew": "NEW"
-      },
-	"queueItemState":"PENDING_QUEUING",
-	"creationTime":"2020-01-01T00:00:00.000Z",
-	"modificationTime":"2020-01-01T00:00:01.000Z",
-	"handledIds": []
+  "correlationId":"FOO",
+  "cataloger":"xxx0000",
+  "operation":"UPDATE",
+  "contentType":"application/json",
+  "recordLoadParams": {
+    "pActiveLibrary": "XXX00",
+    "pInputFile": "filename.seq",
+    "pRejectFile": "filename.rej",
+    "pLogFile": "filename.syslog",
+    "pOldNew": "NEW"
+  },
+  "queueItemState":"PENDING_QUEUING",
+  "creationTime":"2020-01-01T00:00:00.000Z",
+  "modificationTime":"2020-01-01T00:00:01.000Z",
+  "handledIds": []
 }
 */
 
 export default async function (MONGO_URI) {
-	const logger = createLogger();
-	Logger.setLevel('debug');
-	Logger.setCurrentLogger((msg, context) => {
-		logger.log('debug', msg);
-		logger.log('debug', context);
-	});
-	// Connect to mongo (MONGO)
-	const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true, logger: Logger});
-	const db = client.db('rest-api');
-	const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
+  const logger = createLogger();
+  // Connect to mongo (MONGO)
+  const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+  const db = client.db('rest-api');
+  const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
-	return {create, query, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
+  return {create, query, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
-	async function create({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
-		// Create QueueItem
-		const newQueueItem = {
-			correlationId,
-			cataloger,
-			operation,
-			contentType,
-			recordLoadParams,
-			queueItemState: QUEUE_ITEM_STATE.UPLOADING,
-			creationTime: moment().toDate(),
-			modificationTime: moment().toDate(),
-			handledIds: []
-		};
-		try {
-			db.collection('queue-items').insertOne(newQueueItem);
-			logger.log('info', 'New queue item has been made!');
-		} catch (error) {
-			logError(error);
-			throw new ApiError(500);
-		}
+  function create({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
+    // Create QueueItem
+    const newQueueItem = {
+      correlationId,
+      cataloger,
+      operation,
+      contentType,
+      recordLoadParams,
+      queueItemState: QUEUE_ITEM_STATE.UPLOADING,
+      creationTime: moment().toDate(),
+      modificationTime: moment().toDate(),
+      handledIds: []
+    };
+    try {
+      db.collection('queue-items').insertOne(newQueueItem);
+      logger.log('info', 'New queue item has been made!');
+    } catch (error) {
+      logError(error);
+      throw new ApiError(500);
+    }
 
-		return new Promise((resolve, reject) => {
-			const outputStream = gridFSBucket.openUploadStream(correlationId);
+    return new Promise((resolve, reject) => {
+      const outputStream = gridFSBucket.openUploadStream(correlationId);
 
-			stream
-				.on('error', reject)
-				.on('data', chunk => outputStream.write(chunk))
-				.on('end', () => outputStream.end(undefined, undefined, () => {
-					resolve(correlationId);
-				}));
-		});
-	}
+      stream
+        .on('error', reject)
+        .on('data', chunk => outputStream.write(chunk))
+        .on('end', () => outputStream.end(undefined, undefined, () => {
+          resolve(correlationId);
+        }));
+    });
+  }
 
-	async function query(params) {
-		const result = await db.collection('queue-items').find(params, {projection: {_id: 0}}).toArray();
-		logger.log('debug', `Query result: ${(result.length > 0) ? 'Found!' : 'Not found!'}`);
-		return result;
-	}
+  async function query(params) {
+    const result = await db.collection('queue-items').find(params, {projection: {_id: 0}})
+      .toArray();
+    logger.log('debug', `Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    return result;
+  }
 
-	async function remove(correlationId) {
-		try {
-			await getFileMetadata({gridFSBucket, filename: correlationId});
-			throw new ApiError(400);
-		} catch (err) {
-			if (!(err instanceof Error && err.status === 404)) {
-				throw err;
-			}
-		}
+  async function remove(correlationId) {
+    try {
+      await getFileMetadata({gridFSBucket, filename: correlationId});
+      throw new ApiError(400);
+    } catch (err) {
+      if (!(err instanceof Error && err.status === 404)) { // eslint-disable-line functional/no-conditional-statement
+        throw err;
+      }
+    }
 
-		await db.collection('queue-items').deleteOne(correlationId);
-		return true;
-	}
+    await db.collection('queue-items').deleteOne(correlationId);
+    return true;
+  }
 
-	async function readContent(correlationId) {
-		logger.log('info', `Reading content for id: ${correlationId}`);
-		const result = await db.collection('queue-items').findOne({correlationId});
+  async function readContent(correlationId) {
+    logger.log('info', `Reading content for id: ${correlationId}`);
+    const result = await db.collection('queue-items').findOne({correlationId});
 
-		if (result) {
-			// Check if the file exists
-			await getFileMetadata({gridFSBucket, filename: correlationId});
-			return {
-				contentType: result.contentType,
-				readStream: gridFSBucket.openDownloadStreamByName(correlationId)
-			};
-		}
+    if (result) {
+      // Check if the file exists
+      await getFileMetadata({gridFSBucket, filename: correlationId});
+      return {
+        contentType: result.contentType,
+        readStream: gridFSBucket.openDownloadStreamByName(correlationId)
+      };
+    }
 
-		throw new ApiError(404);
-	}
+    throw new ApiError(404);
+  }
 
-	async function removeContent(params) {
-		logger.log('info', `Removing content for id: ${params.correlationId}`);
-		const result = await db.collection('queue-items').findOne(params);
-		if (result) {
-			const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: params.correlationId});
-			await gridFSBucket.delete(fileId);
-			return true;
-		}
-	}
+  async function removeContent(params) {
+    logger.log('info', `Removing content for id: ${params.correlationId}`);
+    const result = await db.collection('queue-items').findOne(params);
+    if (result) {
+      const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: params.correlationId});
+      await gridFSBucket.delete(fileId);
+      return true;
+    }
+  }
 
-	async function getOne({operation, queueItemState}) {
-		try {
-			if (operation === undefined) {
-				logger.log('debug', `Checking DB for ${queueItemState}`);
-				return db.collection('queue-items').findOne({queueItemState});
-			}
+  function getOne({operation, queueItemState}) {
+    try {
+      if (operation === undefined) {
+        logger.log('debug', `Checking DB for ${queueItemState}`);
+        return db.collection('queue-items').findOne({queueItemState});
+      }
 
-			logger.log('debug', `Checking DB for ${operation} + ${queueItemState}`);
-			return db.collection('queue-items').findOne({operation, queueItemState});
-		} catch (error) {
-			logError(error);
-		}
-	}
+      logger.log('debug', `Checking DB for ${operation} + ${queueItemState}`);
+      return db.collection('queue-items').findOne({operation, queueItemState});
+    } catch (error) {
+      logError(error);
+    }
+  }
 
-	async function getStream(correlationId) {
-		logger.log('info', `Forming stream from db: ${correlationId}`);
+  async function getStream(correlationId) {
+    logger.log('info', `Forming stream from db: ${correlationId}`);
 
-		try {
-			// Check that content is there
-			await getFileMetadata({gridFSBucket, filename: correlationId});
+    try {
+      // Check that content is there
+      await getFileMetadata({gridFSBucket, filename: correlationId});
 
-			// Return content stream
-			return gridFSBucket.openDownloadStreamByName(correlationId);
-		} catch (error) {
-			logError(error);
-		}
-	}
+      // Return content stream
+      return gridFSBucket.openDownloadStreamByName(correlationId);
+    } catch (error) {
+      logError(error);
+    }
+  }
 
-	async function pushIds({correlationId, ids}) {
-		logger.log('info', `Push queue-item ids to list: ${correlationId}, ${ids}`);
-		await db.collection('queue-items').updateOne({
-			correlationId
-		}, {
-			$set: {
-				modificationTime: moment().toDate()
-			},
-			$push: {
-				handledIds: {$each: ids}
-			}
-		});
-	}
+  async function pushIds({correlationId, ids}) {
+    logger.log('info', `Push queue-item ids to list: ${correlationId}, ${ids}`);
+    await db.collection('queue-items').updateOne({
+      correlationId
+    }, {
+      $set: {
+        modificationTime: moment().toDate()
+      },
+      $push: {
+        handledIds: {$each: ids}
+      }
+    });
+  }
 
-	async function setState({correlationId, state}) {
-		logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
-		return db.collection('queue-items').findOneAndUpdate({
-			correlationId
-		}, {
-			$set: {
-				queueItemState: state,
-				modificationTime: moment().toDate()
-			}
-		}, {projection: {_id: 0}, returnNewDocument: true});
-	}
+  function setState({correlationId, state}) {
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
+    return db.collection('queue-items').findOneAndUpdate({
+      correlationId
+    }, {
+      $set: {
+        queueItemState: state,
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+  }
 
-	async function getFileMetadata({gridFSBucket, filename}) {
-		return new Promise((resolve, reject) => {
-			gridFSBucket.find({filename})
-				.on('error', reject)
-				.on('data', resolve)
-				.on('end', () => reject(new Error(404)));
-		});
-	}
+  function getFileMetadata({gridFSBucket, filename}) {
+    return new Promise((resolve, reject) => {
+      gridFSBucket.find({filename})
+        .on('error', reject)
+        .on('data', resolve)
+        .on('end', () => reject(new Error(404)));
+    });
+  }
 }

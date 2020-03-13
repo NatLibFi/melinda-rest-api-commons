@@ -34,41 +34,45 @@ import {logError} from '../utils';
 export {ApiError};
 
 export default function () {
-	return {serialize, unserialize};
+  return {serialize, unserialize};
 
-	function serialize(record, format) {
-		switch (format) {
-			case conversionFormats.MARCXML:
-				return MARCXML.to(record);
-			case conversionFormats.ISO2709:
-				return ISO2709.to(record);
-			case conversionFormats.JSON:
-				return Json.to(record);
-			default:
-				// No supported format found (415 Unsupported Media Type)
-				throw new ApiError(415);
-		}
-	}
+  function serialize(record, format) {
+    try {
+      switch (format) {
+      case conversionFormats.MARCXML:
+        return MARCXML.to(record);
+      case conversionFormats.ISO2709:
+        return ISO2709.to(record);
+      case conversionFormats.JSON:
+        return Json.to(record);
+      default: // eslint-disable-line functional/no-conditional-statement
+        // No supported format found (415 Unsupported Media Type)
+        throw new ApiError(415);
+      }
+    } catch (error) {
+      // Internal server error
+      logError(error);
+      throw new ApiError(500);
+    }
+  }
 
-	function unserialize(data, format) {
-		try {
-			switch (format) {
-				case conversionFormats.MARCXML:
-					return MARCXML.from(data);
-				case conversionFormats.ISO2709:
-					return ISO2709.from(data);
-				case conversionFormats.JSON:
-					return Json.from(data);
-				default:
-					break;
-			}
-		} catch (error) {
-			// Internal server error
-			logError(error);
-			throw new ApiError(500);
-		}
-
-		// No supported format found (415 Unsupported Media Type)
-		throw new ApiError(415);
-	}
+  function unserialize(data, format) {
+    try {
+      switch (format) {
+      case conversionFormats.MARCXML:
+        return MARCXML.from(data);
+      case conversionFormats.ISO2709:
+        return ISO2709.from(data);
+      case conversionFormats.JSON:
+        return Json.from(data);
+      default: // eslint-disable-line functional/no-conditional-statement
+        // No supported format found (415 Unsupported Media Type)
+        throw new ApiError(415);
+      }
+    } catch (error) {
+      // Internal server error
+      logError(error);
+      throw new ApiError(500);
+    }
+  }
 }
