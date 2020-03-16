@@ -124,7 +124,7 @@
 		"branches": 80
 	},
 	"nodemonConfig": {
-		"exec": "npm run lint:dev && npm test",
+		"exec": "npm run test:dev",
 		"watch": [
 			"src/*"
 		],
