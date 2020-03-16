@@ -19,13 +19,16 @@
 	"engines": {
 		"node": ">=12"
 	},
-	"private": true,
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"prepare": "npm run build",
 		"lint": "eslint ./src",
 		"lint:dev": "eslint ./src --fix",
 		"check-deps": "npm-check;exit 0",
-		"test": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
+		"test": "npm run lint && npm run test:base -- src/**/*.spec.js",
+		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
 		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
 		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified"
