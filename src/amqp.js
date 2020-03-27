@@ -224,7 +224,9 @@ export default async function (AMQP_URL) {
 
       await Promise.all(messages);
 
+      console.log(JSON.stringify(messages)); // eslint-disable-line no-console
       const uniqueMessages = messages.filter(onlyUniques);
+      console.log(JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
 
       return uniqueMessages;
     } catch (error) {
