@@ -26,53 +26,48 @@
 *
 */
 
+import HttpStatus from 'http-status';
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
-import {logError} from '../utils';
-
-export {ApiError};
 
 export default function () {
   return {serialize, unserialize};
 
   function serialize(record, format) {
-    try {
-      switch (format) {
-      case conversionFormats.MARCXML:
-        return MARCXML.to(record);
-      case conversionFormats.ISO2709:
-        return ISO2709.to(record);
-      case conversionFormats.JSON:
-        return Json.to(record);
-      default: // eslint-disable-line functional/no-conditional-statement
-        // No supported format found (415 Unsupported Media Type)
-        throw new ApiError(415);
-      }
-    } catch (error) {
-      // Internal server error
-      logError(error);
-      throw new ApiError(500);
+    if (format === conversionFormats.MARCXML) {
+      return MARCXML.to(record);
     }
+
+    if (format === conversionFormats.ISO2709) {
+      return ISO2709.to(record);
+    }
+
+    if (format === conversionFormats.JSON) {
+      return Json.to(record);
+    }
+
+    throw new ConversionError(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
   }
 
   function unserialize(data, format) {
     try {
-      switch (format) {
-      case conversionFormats.MARCXML:
+
+      if (format === conversionFormats.MARCXML) {
         return MARCXML.from(data);
-      case conversionFormats.ISO2709:
-        return ISO2709.from(data);
-      case conversionFormats.JSON:
-        return Json.from(data);
-      default: // eslint-disable-line functional/no-conditional-statement
-        // No supported format found (415 Unsupported Media Type)
-        throw new ApiError(415);
       }
-    } catch (error) {
-      // Internal server error
-      logError(error);
-      throw new ApiError(500);
+
+      if (format === conversionFormats.ISO2709) {
+        return ISO2709.from(data);
+      }
+
+      if (format === conversionFormats.JSON) {
+        return Json.from(data);
+      }
+
+      throw new ConversionError(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    } catch (err) {
+      throw new ConversionError(HttpStatus.UNPROCESSABLE_ENTITY);
     }
   }
 }
