@@ -28,17 +28,24 @@
 *
 */
 
-/* eslint-disable new-cap */
 import validateFactory from '@natlibfi/marc-record-validate';
 import {
-  FieldExclusion
+  FieldStructure as fieldStructure,
+  FieldExclusion as fieldExclusion
 } from '@natlibfi/marc-record-validators-melinda';
 
 export default async () => {
-  const validate = validateFactory([await FieldExclusion([{tag: /^003$/u, value: /^(.(?<!FI-MELINDA))*?$/u}])]); // eslint-disable-line prefer-named-capture-group
+  const validate = validateFactory([
+    await fieldStructure([{tag: /^003$/u, valuePattern: /^FI-MELINDA$/u}]),
+    await fieldExclusion([
+      {
+        tag: /^STA$/u, subfields: [{code: /a/u, value: /^DELETED$/u}]
+      }
+    ])
+  ]);
 
   return async unvalidRecord => {
-    const {record, valid, report} = await validate(unvalidRecord, {fix: true, validateFixes: true});
+    const {record, valid, report} = await validate(unvalidRecord, {fix: false, validateFixes: false});
 
     return {
       record,

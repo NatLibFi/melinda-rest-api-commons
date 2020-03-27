@@ -26,30 +26,85 @@
 *
 */
 
-import fs from 'fs';
-import path from 'path';
 import {expect} from 'chai';
+import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import createValidator from './validation';
 
-const FIXTURES_PATH = path.join(__dirname, '../../test-fixtures/validation');
-
 describe('services/validate', () => {
-  let validator; // eslint-disable-line functional/no-let
+  const FIXTURES_PATH = [
+    __dirname,
+    '..',
+    '..',
+    'test-fixtures',
+    'validation'
+  ];
+  const {getFixture} = fixtureFactory({root: FIXTURES_PATH});
 
-  before(async () => {
-    validator = await createValidator();
+  describe('f003-fi-melinda', () => {
+    it('Should have failed: false', async () => {
+      const validator = await createValidator();
+      const record = new MarcRecord(JSON.parse(getFixture({
+        components: [
+          'in',
+          'f003-fi-melinda.json'
+        ]
+      })));
+      const result = await validator(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'f003-fi-melinda.json'
+        ]
+      });
+      const stringResult = JSON.stringify({...result}, undefined, 2);
+      expect(stringResult).to.eql(expected);
+      expect(result.failed).to.equal(false);
+    });
   });
 
-  fs.readdirSync(path.join(FIXTURES_PATH, 'in')).forEach(file => {
-    it(file, async () => {
-      const record = new MarcRecord(JSON.parse(fs.readFileSync(path.join(FIXTURES_PATH, 'in', file), 'utf8')));
+  describe('f003-not-fi-melinda', () => {
+    it('Should have failed: true', async () => {
+      const validator = await createValidator();
+      const record = new MarcRecord(JSON.parse(getFixture({
+        components: [
+          'in',
+          'f003-not-fi-melinda.json'
+        ]
+      })));
+      const result = await validator(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'f003-not-fi-melinda.json'
+        ]
+      });
+      const stringResult = JSON.stringify({...result}, undefined, 2);
+      expect(stringResult).to.eql(expected);
+      expect(result.failed).to.equal(true);
+    });
+  });
 
-      const result = await validator(record);
-      const expectedPath = path.join(FIXTURES_PATH, 'out', file);
-      const stringResult = JSON.stringify({...result, record: result.record.toObject()}, undefined, 2);
-
-      expect(stringResult).to.eql(fs.readFileSync(expectedPath, 'utf8'));
+  describe('fSTA-DELETED', () => {
+    it('Should have failed: true', async () => {
+      const validator = await createValidator();
+      const record = new MarcRecord(JSON.parse(getFixture({
+        components: [
+          'in',
+          'fSTA-DELETED.json'
+        ]
+      })));
+      const result = await validator(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'fSTA-DELETED.json'
+        ]
+      });
+      const stringResult = JSON.stringify({...result}, undefined, 2);
+      expect(stringResult).to.eql(expected);
+      expect(result.failed).to.equal(true);
     });
   });
 });
+
