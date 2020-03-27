@@ -236,6 +236,7 @@ export default async function (AMQP_URL) {
   }
 
   function getHeaderInfo(data) {
+    console.log(data);
     return data.properties.headers;
   }
 }
