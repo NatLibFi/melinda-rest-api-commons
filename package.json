@@ -65,22 +65,7 @@
 		"nyc": "^15.0.0"
 	},
 	"eslintConfig": {
-		"parser": "babel-eslint",
-		"plugins": [
-			"import"
-		],
-		"extends": [
-			"@natlibfi/melinda-backend",
-			"plugin:import/errors"
-		],
-		"rules": {
-			"prefer-arrow-callback": [
-				"error"
-			]
-		},
-		"env": {
-			"mocha": true
-		}
+		"extends": "@natlibfi/melinda-backend"
 	},
 	"babel": {
 		"presets": [
