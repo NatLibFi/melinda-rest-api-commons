@@ -86,6 +86,7 @@ export default async function (AMQP_URL) {
     try {
       await channel.assertQueue(queue, {durable: true});
       const queMessages = await getData(queue);
+      logger.log('debug', JSON.stringify(queMessages));
 
       const headers = getHeaderInfo(queMessages[0]);
       logger.log('debug', `Filtering messages by ${JSON.stringify(headers, null, '\t')}`);
