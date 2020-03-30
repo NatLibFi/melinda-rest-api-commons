@@ -218,17 +218,17 @@ export default async function (AMQP_URL) {
   async function getData(queue) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
-      console.log('messageCount', messageCount); // eslint-disable-line no-console
+      logger.log('debug', messageCount); // eslint-disable-line no-console
       const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
-      console.log('messagesToGet', messagesToGet); // eslint-disable-line no-console
+      logger.log('debug', messagesToGet); // eslint-disable-line no-console
 
-      const messages = messagesToGet.map(async () => await channel.get(queue));
-      console.log('messages', messages);
+      const messages = messagesToGet.forEach(() => channel.get(queue));
+      logger.log('debug', messages);
       await Promise.all(messages);
 
-      console.log(JSON.stringify(messages)); // eslint-disable-line no-console
+      logger.log('debug', JSON.stringify(messages)); // eslint-disable-line no-console
       const uniqueMessages = messages.filter(onlyUniques);
-      console.log(JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
+      logger.log('debug', JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
 
       return uniqueMessages;
     } catch (error) {
@@ -241,7 +241,7 @@ export default async function (AMQP_URL) {
   }
 
   function getHeaderInfo(data) {
-    console.log(data);
+    logger.log('debug', data);
     return data.properties.headers;
   }
 }
