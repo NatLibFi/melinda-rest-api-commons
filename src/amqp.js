@@ -31,13 +31,10 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
-import {promisify} from 'util'
-import {on} from 'events';
 
-const {createLogger} = Utils;
-const setTimeoutPromise = promisify(setTimeout);
 
 export default async function (AMQP_URL) {
+  const {createLogger} = Utils;
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
   const logger = createLogger();
@@ -219,15 +216,14 @@ export default async function (AMQP_URL) {
   }
 
   async function getData(queue) {
-    let messages = [];
     try {
       const {messageCount} = await channel.checkQueue(queue);
       console.log('debug', messageCount); // eslint-disable-line no-console
-      const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE).fill(get()) : Array(messageCount).fill(get());
+      const messagesToGet = messageCount >= CHUNK_SIZE ? [...Array(CHUNK_SIZE)].map(() => get()) : [...Array(messageCount)].map(() => get());
 
       await Promise.all(messagesToGet);
 
-      const uniqMessages = messages.filter(onlyUniques);
+      const uniqMessages = messagesToGet.filter(onlyUniques);
       return uniqMessages;
     } catch (error) {
       logError(error);
@@ -235,7 +231,7 @@ export default async function (AMQP_URL) {
 
     async function get() {
       const message = await channel.get(queue);
-      return messages.push(message);
+      return message;
     }
 
     function onlyUniques(value, index, self) {
@@ -244,7 +240,6 @@ export default async function (AMQP_URL) {
   }
 
   function getHeaderInfo(data) {
-    console.log('debug', data);
     return data.properties.headers;
   }
 }
