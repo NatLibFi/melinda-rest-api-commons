@@ -238,7 +238,7 @@ export default async function (AMQP_URL) {
 
     async function getMessage() {
       const message = await channel.get(queue);
-      console.log(message);
+      console.log('message', message);
       return message;
     }
 
