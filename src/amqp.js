@@ -224,11 +224,11 @@ export default async function (AMQP_URL) {
 
       const messages = messagesToGet.map(() => getMessage());
 
-      console.log('debug', messagesToGet);
-      await Promise.all(messagesToGet);
+      console.log('debug', messages);
+      await Promise.all(messages);
 
-      console.log('debug', JSON.stringify(messagesToGet)); // eslint-disable-line no-console
-      const uniqueMessages = messagesToGet.filter(onlyUniques);
+      console.log('debug', JSON.stringify(messages)); // eslint-disable-line no-console
+      const uniqueMessages = messages.filter(onlyUniques);
       console.log('debug', JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
 
       return uniqueMessages;
