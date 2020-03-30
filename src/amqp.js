@@ -224,7 +224,7 @@ export default async function (AMQP_URL) {
 
       const messages = [];
       for (let i = 0; i > messagesToGet; i += 1) {
-        messages.push(await channel.get(queue));
+        messages.push(channel.get(queue));
       }
       console.log('debug', messages);
       await Promise.all(messages);
