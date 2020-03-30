@@ -32,6 +32,7 @@ import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
 import {promisify} from 'util'
+import {on} from 'events';
 
 const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
@@ -222,24 +223,26 @@ export default async function (AMQP_URL) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
       console.log('debug', messageCount); // eslint-disable-line no-console
-      const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
+      const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
       const promises = [];
 
-      for (let i = 0; i < messagesToGet; i++) {
-        promises.push(get());
-      }
+      messagesToGet.map(() => promises.push(get()));
 
       await Promise.all(promises);
-      return messages;
+
+      const uniqMessages = messages.filter(onlyUniques);
+      return uniqMessages;
     } catch (error) {
       logError(error);
     }
 
     async function get() {
       const message = await channel.get(queue);
-      if (!messages.includes(message)) {
-        return messages.push(message);
-      }
+      return messages.push(message);
+    }
+
+    function onlyUniques(value, index, self) {
+      return self.indexOf(value) === index;
     }
   }
 
