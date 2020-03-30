@@ -220,7 +220,10 @@ export default async function (AMQP_URL) {
       const {messageCount} = await channel.checkQueue(queue);
       const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
 
-      const messages = messagesToGet.map(() => channel.get(queue));
+      const messages = messagesToGet.map(async () => {
+        const message = await channel.get(queue);
+        return message;
+      });
 
       await Promise.all(messages);
 
