@@ -227,7 +227,7 @@ export default async function (AMQP_URL) {
 
       await Promise.all(messagesToGet);
 
-      const uniqMessages = messagesToGet.filter(onlyUniques);
+      const uniqMessages = messages.filter(onlyUniques);
       return uniqMessages;
     } catch (error) {
       logError(error);
