@@ -218,27 +218,28 @@ export default async function (AMQP_URL) {
   }
 
   async function getData(queue) {
+    let messages = [];
     try {
       const {messageCount} = await channel.checkQueue(queue);
       console.log('debug', messageCount); // eslint-disable-line no-console
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
+      const promises = [];
 
-      const messages = Array(messagesToGet).map(() => channel.get(queue));
+      for (let i = 0; i < messagesToGet; i++) {
+        promises.push(get());
+      }
 
-      await setTimeoutPromise(5000);
-      await Promise.all(messages);
-
-      console.log('debug', messages);
-      const uniqueMessages = messages.filter(onlyUniques);
-      console.log('debug', JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
-
-      return uniqueMessages;
+      await Promise.all(promises);
+      return messages;
     } catch (error) {
       logError(error);
     }
 
-    function onlyUniques(value, index, self) {
-      return self.indexOf(value) === index;
+    async function get() {
+      const message = await channel.get(queue);
+      if (!messages.includes(message)) {
+        return messages.push(message);
+      }
     }
   }
 
