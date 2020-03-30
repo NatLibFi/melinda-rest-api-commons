@@ -31,8 +31,10 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
+import {promisify} from 'util'
 
 const {createLogger} = Utils;
+const setTimeoutPromise = promisify(setTimeout);
 
 export default async function (AMQP_URL) {
   const connection = await amqplib.connect(AMQP_URL);
@@ -223,6 +225,7 @@ export default async function (AMQP_URL) {
 
       const messages = Array(messagesToGet).map(() => channel.get(queue));
 
+      await setTimeoutPromise(100);
       await Promise.all(messages);
 
       console.log('debug', messages);
@@ -232,12 +235,6 @@ export default async function (AMQP_URL) {
       return uniqueMessages;
     } catch (error) {
       logError(error);
-    }
-
-    async function getMessage() {
-      const message = await channel.get(queue);
-      console.log('message', message);
-      return message;
     }
 
     function onlyUniques(value, index, self) {
