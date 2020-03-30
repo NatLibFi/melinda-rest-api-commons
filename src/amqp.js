@@ -222,7 +222,11 @@ export default async function (AMQP_URL) {
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
       console.log('messagesToGet', messagesToGet); // eslint-disable-line no-console
 
-      const messages = Array(messagesToGet).map(() => channel.get(queue));
+      const messages = Array(messagesToGet).map(() => {
+        const message = channel.get(queue)
+        console.log('message', message);
+        return message;
+      });
       console.log('messages', messages);
       await Promise.all(messages);
 
