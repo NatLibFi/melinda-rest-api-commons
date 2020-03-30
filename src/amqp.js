@@ -218,7 +218,9 @@ export default async function (AMQP_URL) {
   async function getData(queue) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
-      const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE).fill(get()) : Array(messageCount).fill(get()); // eslint-disable-line functional/immutable-data
+      const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
+
+      messagesToGet.fill(channel.get(queue)); // eslint-disable-line functional/immutable-data
 
       await Promise.all(messagesToGet);
 
