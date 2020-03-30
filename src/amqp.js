@@ -220,11 +220,11 @@ export default async function (AMQP_URL) {
       const {messageCount} = await channel.checkQueue(queue);
       const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
 
-      messagesToGet.map(() => channel.get(queue)); // eslint-disable-line functional/immutable-data
+      const messages = messagesToGet.map(() => channel.get(queue));
 
-      await Promise.all(messagesToGet);
+      await Promise.all(messages);
 
-      const uniqMessages = messagesToGet.filter(onlyUniques);
+      const uniqMessages = messages.filter(onlyUniques);
       return uniqMessages;
     } catch (error) {
       logError(error);
