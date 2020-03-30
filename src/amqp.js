@@ -225,7 +225,7 @@ export default async function (AMQP_URL) {
 
       const messages = Array(messagesToGet).map(() => channel.get(queue));
 
-      await setTimeoutPromise(100);
+      await setTimeoutPromise(5000);
       await Promise.all(messages);
 
       console.log('debug', messages);
