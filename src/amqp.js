@@ -219,15 +219,13 @@ export default async function (AMQP_URL) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
       console.log('debug', messageCount); // eslint-disable-line no-console
-      const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
-      console.log('debug', messagesToGet); // eslint-disable-line no-console
+      const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
 
-      const messages = messagesToGet.map(() => getMessage());
+      const messages = Array(messagesToGet).map(() => channel.get(queue));
 
-      console.log('debug', messages);
       await Promise.all(messages);
 
-      console.log('debug', JSON.stringify(messages)); // eslint-disable-line no-console
+      console.log('debug', messages);
       const uniqueMessages = messages.filter(onlyUniques);
       console.log('debug', JSON.stringify(uniqueMessages)); // eslint-disable-line no-console
 
