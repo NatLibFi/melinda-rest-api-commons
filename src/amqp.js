@@ -229,11 +229,6 @@ export default async function (AMQP_URL) {
       logError(error);
     }
 
-    async function get() {
-      const message = await channel.get(queue);
-      return message;
-    }
-
     function onlyUniques(value, index, self) {
       return self.indexOf(value) === index;
     }
