@@ -52,7 +52,6 @@ export default function () {
 
   function unserialize(data, format) {
     try {
-
       if (format === conversionFormats.MARCXML) {
         return MARCXML.from(data);
       }
@@ -67,7 +66,7 @@ export default function () {
 
       throw new ConversionError(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
-      throw new ConversionError(HttpStatus.UNPROCESSABLE_ENTITY);
+      throw new ConversionError(HttpStatus.UNPROCESSABLE_ENTITY, 'Error while unserializing record');
     }
   }
 }
