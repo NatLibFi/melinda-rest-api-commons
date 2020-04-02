@@ -33,7 +33,7 @@ const logger = createLogger();
 
 export function logError(err) {
   if (err instanceof ApiError) {
-    logger.log('error', JSON.stringify(err, null, '\t'));
+    logger.log('error', JSON.stringify(err));
     return;
   }
 

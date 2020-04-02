@@ -88,7 +88,7 @@ export default async function (AMQP_URL) {
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.log('debug', `Filtering messages by ${JSON.stringify(headers, null, '\t')}`);
+      logger.log('debug', `Filtering messages by ${JSON.stringify(headers)}`);
 
       // Check that cataloger match! headers
       const messages = queMessages.filter(message => {
