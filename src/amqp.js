@@ -141,6 +141,7 @@ export default async function (AMQP_URL) {
   async function ackNReplyMessages({status, messages, payloads}) {
     logger.log('debug', 'Ack and reply messages!');
     await channel.assertQueue(messages[0].properties.correlationId, {durable: true});
+    console.log(messages[0]);
     messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
