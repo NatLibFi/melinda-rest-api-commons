@@ -106,15 +106,14 @@ export default async function (MONGO_URI) {
   async function remove(correlationId) {
     try {
       await getFileMetadata({gridFSBucket, filename: correlationId});
-      throw new ApiError(400);
+      throw new ApiError(400, 'Remove content first');
     } catch (err) {
-      if (!(err instanceof Error && err.status === 404)) { // eslint-disable-line functional/no-conditional-statement
-        throw err;
+      if (err.status === 404) { // eslint-disable-line functional/no-conditional-statement
+        await db.collection('queue-items').deleteOne(correlationId);
+        return true;
       }
+      throw err;
     }
-
-    await db.collection('queue-items').deleteOne(correlationId);
-    return true;
   }
 
   async function readContent(correlationId) {
@@ -202,7 +201,7 @@ export default async function (MONGO_URI) {
       gridFSBucket.find({filename})
         .on('error', reject)
         .on('data', resolve)
-        .on('end', () => reject(new Error(404)));
+        .on('end', () => reject(new ApiError(404, 'No content')));
     });
   }
 }
