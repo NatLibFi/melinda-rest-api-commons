@@ -212,17 +212,14 @@ export default async function (AMQP_URL) {
   function messagesToRecords(messages) {
     logger.log('debug', 'Parsing messages to records');
     logger.log('debug', 'MESSAGES');
-    logger.log('debug', messages);
+    console.log('messages', messages); // eslint-disable-line no-console
     logger.log('debug', 'MESSAGES');
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
       logger.log('debug', 'MESSAGE');
-      logger.log('debug', message);
+      console.log('message', message); // eslint-disable-line no-console
       logger.log('debug', 'MESSAGE');
-      logger.log('debug', 'CONTENT');
-      logger.log('debug', content);
-      logger.log('debug', 'CONTENT');
       return new MarcRecord(content.data);
     });
   }
@@ -236,16 +233,8 @@ export default async function (AMQP_URL) {
 
       const messages = await Promise.all(messagesToGet);
 
-      logger.log('debug', 'GETDATA');
-      logger.log('debug', messages);
-      console.log(messages); // eslint-disable-line no-console
-      logger.log('debug', 'GETDATA');
-
       const uniqMessages = messages.filter(onlyUniques);
 
-      logger.log('debug', 'GETDATA');
-      console.log('debug', uniqMessages); // eslint-disable-line no-console
-      logger.log('debug', 'GETDATA');
       return uniqMessages;
     } catch (error) {
       logError(error);
