@@ -211,10 +211,18 @@ export default async function (AMQP_URL) {
 
   function messagesToRecords(messages) {
     logger.log('debug', 'Parsing messages to records');
+    logger.log('debug', 'MESSAGES');
+    logger.log('debug', messages);
+    logger.log('debug', 'MESSAGES');
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
+      logger.log('debug', 'MESSAGE');
+      logger.log('debug', message);
+      logger.log('debug', 'MESSAGE');
+      logger.log('debug', 'CONTENT');
       logger.log('debug', content);
+      logger.log('debug', 'CONTENT');
       return new MarcRecord(content.data);
     });
   }
