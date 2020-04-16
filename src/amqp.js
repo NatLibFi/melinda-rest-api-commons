@@ -104,7 +104,7 @@ export default async function (AMQP_URL) {
       const records = await messagesToRecords(messages);
 
       logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
-      logger.log('debug', records);
+      console.log('messages', records); // eslint-disable-line no-console
       logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
 
       return {headers, records, messages};
@@ -211,15 +211,9 @@ export default async function (AMQP_URL) {
 
   function messagesToRecords(messages) {
     logger.log('debug', 'Parsing messages to records');
-    logger.log('debug', 'MESSAGES');
-    console.log('messages', messages); // eslint-disable-line no-console
-    logger.log('debug', 'MESSAGES');
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
-      logger.log('debug', 'MESSAGE');
-      console.log('message', message); // eslint-disable-line no-console
-      logger.log('debug', 'MESSAGE');
       return new MarcRecord(content.data);
     });
   }
