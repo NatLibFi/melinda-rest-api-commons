@@ -214,6 +214,7 @@ export default async function (AMQP_URL) {
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
+      logger.log('debug', content);
       return new MarcRecord(content.data);
     });
   }
