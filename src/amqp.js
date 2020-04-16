@@ -223,6 +223,8 @@ export default async function (AMQP_URL) {
 
       const messages = await Promise.all(messagesToGet);
 
+      console.log(messages); // eslint-disable-line no-console
+
       const uniqMessages = messages.filter(onlyUniques);
 
       return uniqMessages;
