@@ -101,7 +101,11 @@ export default async function (AMQP_URL) {
         return false;
       });
 
-      const records = messagesToRecords(messages);
+      const records = await messagesToRecords(messages);
+
+      logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
+      logger.log('debug', records);
+      logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
 
       return {headers, records, messages};
     } catch (error) {
