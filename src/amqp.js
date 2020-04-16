@@ -103,10 +103,6 @@ export default async function (AMQP_URL) {
 
       const records = await messagesToRecords(messages);
 
-      logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
-      console.log('messages', records); // eslint-disable-line no-console
-      logger.log('debug', 'YYYYYYYYYYYYYYYYYYYYYYYYYY');
-
       return {headers, records, messages};
     } catch (error) {
       logError(error);
