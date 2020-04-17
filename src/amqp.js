@@ -140,7 +140,7 @@ export default async function (AMQP_URL) {
   // ACK records
   async function ackNReplyMessages({status, messages, payloads}) {
     logger.log('debug', 'Ack and reply messages!');
-    messages.forEach((message, index) => {
+    await messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
       // Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
@@ -219,7 +219,7 @@ export default async function (AMQP_URL) {
       const {messageCount} = await channel.checkQueue(queue);
       const messagesToGet = messageCount >= CHUNK_SIZE ? Array(CHUNK_SIZE) : Array(messageCount);
 
-      messagesToGet.fill(await get()); // eslint-disable-line functional/immutable-data
+      messagesToGet.fill(get()); // eslint-disable-line functional/immutable-data
 
       const messages = await Promise.all(messagesToGet);
 
@@ -233,7 +233,7 @@ export default async function (AMQP_URL) {
     }
 
     async function get() {
-      const message = channel.get(queue);
+      const message = await channel.get(queue);
       return message;
     }
 
