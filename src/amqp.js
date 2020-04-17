@@ -220,7 +220,7 @@ export default async function (AMQP_URL) {
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
       const messagePromises = [];
 
-      for (let i = 0; i < messagesToGet; i++) {
+      for (let i = 0; i < messagesToGet; i += 1) { // eslint-disable-line functional/no-loop-statement, functional/no-let
         messagePromises.push(get()); // eslint-disable-line functional/immutable-data
       }
 
