@@ -31,6 +31,7 @@ import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
+import httpStatus from 'http-status';
 
 const {createLogger} = Utils;
 
@@ -81,7 +82,7 @@ export default async function (MONGO_URI) {
       logger.log('info', 'New queue item has been made!');
     } catch (error) {
       logError(error);
-      throw new ApiError(500);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     }
 
     return new Promise((resolve, reject) => {
@@ -106,9 +107,9 @@ export default async function (MONGO_URI) {
   async function remove(correlationId) {
     try {
       await getFileMetadata({gridFSBucket, filename: correlationId});
-      throw new ApiError(400, 'Remove content first');
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Remove content first');
     } catch (err) {
-      if (err.status === 404) { // eslint-disable-line functional/no-conditional-statement
+      if (err.status === httpStatus.NOT_FOUND) { // eslint-disable-line functional/no-conditional-statement
         await db.collection('queue-items').deleteOne(correlationId);
         return true;
       }
@@ -201,7 +202,7 @@ export default async function (MONGO_URI) {
       gridFSBucket.find({filename})
         .on('error', reject)
         .on('data', resolve)
-        .on('end', () => reject(new ApiError(404, 'No content')));
+        .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
     });
   }
 }

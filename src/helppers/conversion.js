@@ -26,7 +26,7 @@
 *
 */
 
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
@@ -47,7 +47,7 @@ export default function () {
       return Json.to(record);
     }
 
-    throw new ConversionError(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
   }
 
   function unserialize(data, format) {
@@ -64,9 +64,9 @@ export default function () {
         return Json.from(data);
       }
 
-      throw new ConversionError(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
-      throw new ConversionError(HttpStatus.UNPROCESSABLE_ENTITY, 'Error while unserializing record');
+      throw new ConversionError(httpStatus.UNPROCESSABLE_ENTITY, 'Error while unserializing record');
     }
   }
 }

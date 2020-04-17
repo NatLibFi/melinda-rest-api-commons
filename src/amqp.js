@@ -31,7 +31,7 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
-
+import httpStatus from 'http-status';
 
 export default async function (AMQP_URL) {
   const {createLogger} = Utils;
@@ -69,7 +69,7 @@ export default async function (AMQP_URL) {
       }
 
       // Defaults:
-      throw new ApiError(422);
+      throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY);
     } catch (error) {
       logError(error);
     }
