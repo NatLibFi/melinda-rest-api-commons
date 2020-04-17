@@ -218,13 +218,8 @@ export default async function (AMQP_URL) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
-      const messagePromises = [];
 
-      for (let i = 0; i < messagesToGet; i += 1) { // eslint-disable-line functional/no-loop-statement, functional/no-let
-        messagePromises.push(get()); // eslint-disable-line functional/immutable-data
-      }
-
-      const messages = await Promise.all(messagePromises);
+      const messages = await pump(messagesToGet);
 
       const uniqMessages = messages.filter(onlyUniques);
 
@@ -233,9 +228,13 @@ export default async function (AMQP_URL) {
       logError(error);
     }
 
-    async function get() {
+    async function pump(count, results = []) {
+      if (count === 0) {
+        return results;
+      }
+
       const message = await channel.get(queue);
-      return message;
+      return pump(count - 1, results.concat(message));
     }
 
     function onlyUniques(value, index, self) {
