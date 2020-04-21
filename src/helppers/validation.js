@@ -30,8 +30,13 @@ import validateFactory from '@natlibfi/marc-record-validate';
 import {
   FieldStructure as fieldStructure
 } from '@natlibfi/marc-record-validators-melinda';
+import {Utils} from '@natlibfi/melinda-commons';
 
 export default async () => {
+  const {createLogger} = Utils;
+  const logger = createLogger();
+
+  logger.log('verbose', 'Running validations');
   const validate = validateFactory([await fieldStructure([{tag: /^003$/u, valuePattern: /^FI-MELINDA$/u}])]);
 
   return async unvalidRecord => {

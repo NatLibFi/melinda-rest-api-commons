@@ -33,7 +33,6 @@ import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 
-const {createLogger} = Utils;
 
 /* QueueItem:
 {
@@ -56,7 +55,9 @@ const {createLogger} = Utils;
 */
 
 export default async function (MONGO_URI) {
+  const {createLogger} = Utils;
   const logger = createLogger();
+
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
@@ -100,11 +101,12 @@ export default async function (MONGO_URI) {
   async function query(params) {
     const result = await db.collection('queue-items').find(params, {projection: {_id: 0}})
       .toArray();
-    logger.log('debug', `Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    logger.log('info', `Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     return result;
   }
 
   async function remove(correlationId) {
+    logger.log('info', `Removing id: ${correlationId}`);
     try {
       await getFileMetadata({gridFSBucket, filename: correlationId});
       throw new ApiError(httpStatus.BAD_REQUEST, 'Remove content first');
@@ -172,7 +174,7 @@ export default async function (MONGO_URI) {
   }
 
   async function pushIds({correlationId, ids}) {
-    logger.log('info', `Push queue-item ids to list: ${correlationId}, ${ids}`);
+    logger.log('debug', `Push queue-item ids to list: ${correlationId}, ${ids}`);
     await db.collection('queue-items').updateOne({
       correlationId
     }, {

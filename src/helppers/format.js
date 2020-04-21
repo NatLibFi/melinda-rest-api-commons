@@ -27,8 +27,13 @@
 */
 
 import {MarcRecord} from '@natlibfi/marc-record';
+import {Utils} from '@natlibfi/melinda-commons';
 
 export function formatRecord(record, settings) {
+  const {createLogger} = Utils;
+  const logger = createLogger();
+
+  logger.log('verbose', 'Applying formating');
   const newRecord = MarcRecord.clone(record);
 
   settings.forEach(options => {

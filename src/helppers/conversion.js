@@ -28,13 +28,17 @@
 
 import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
-import {Error as ConversionError} from '@natlibfi/melinda-commons';
+import {Error as ConversionError, Utils} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
 
 export default function () {
+  const {createLogger} = Utils;
+  const logger = createLogger();
+
   return {serialize, unserialize};
 
   function serialize(record, format) {
+    logger.log('verbose', 'Serializing record');
     if (format === conversionFormats.MARCXML) {
       return MARCXML.to(record);
     }
@@ -51,6 +55,7 @@ export default function () {
   }
 
   function unserialize(data, format) {
+    logger.log('verbose', 'Unserializing record');
     try {
       if (format === conversionFormats.MARCXML) {
         return MARCXML.from(data);

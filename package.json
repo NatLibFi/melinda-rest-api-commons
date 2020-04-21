@@ -39,7 +39,7 @@
 		"@natlibfi/marc-record-serializers": "^5.0.1",
 		"@natlibfi/marc-record-validate": "^5.0.1",
 		"@natlibfi/marc-record-validators-melinda": "^8.2.2",
-		"@natlibfi/melinda-commons": "^7.3.3",
+		"@natlibfi/melinda-commons": "^8.0.0",
 		"amqplib": ">=0.5.5 <1.0.0",
 		"http-status": "^1.4.2",
 		"moment": "^2.24.0",
