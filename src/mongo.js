@@ -65,7 +65,7 @@ export default async function (MONGO_URI) {
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
-  function createPrio({correlationId, cataloger, operation}) {
+  async function createPrio({correlationId, cataloger, operation}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
@@ -77,7 +77,7 @@ export default async function (MONGO_URI) {
       handledId: ''
     };
     try {
-      const result = Promise.resolve(db.collection('queue-items').insertOne(newQueueItem));
+      const result = await db.collection('queue-items').insertOne(newQueueItem);
       console.log(result); // eslint-disable-line no-console
       if (result.acknowledged) {
         return time;
