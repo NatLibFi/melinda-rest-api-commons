@@ -79,10 +79,10 @@ export default async function (MONGO_URI) {
     try {
       const result = await db.collection('queue-items').insertOne(newQueueItem);
       console.log(result); // eslint-disable-line no-console
-      if (result.acknowledged) {
+      if (result.result.n === 1, result.result.ok === 1) {
         return time;
       }
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'no ack');
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
