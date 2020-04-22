@@ -78,6 +78,7 @@ export default async function (MONGO_URI) {
     };
     try {
       const result = db.collection('queue-items').insertOne(newQueueItem);
+      console.log(result); // eslint-disable-line no-console
       if (result.acknowledged) {
         return time;
       }
