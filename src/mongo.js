@@ -78,7 +78,7 @@ export default async function (MONGO_URI) {
     };
     try {
       const result = await db.collection('queue-items').insertOne(newQueueItem);
-      if (result.result.n === 1, result.result.ok === 1) {
+      if (result.result.n === 1 && result.result.ok === 1) {
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -138,8 +138,23 @@ export default async function (MONGO_URI) {
     return result;
   }
 
-  function queryById(correlationId) {
-    return db.collection('queue-items').findOne({correlationId});
+  async function queryById(correlationId, checkModTime) {
+    const result = await db.collection('queue-items').findOne({correlationId});
+    if (checkModTime) {
+      const timeOut = checkTimeOut(result.modificationTime);
+      if (timeOut) {
+        return setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
+      }
+      return result;
+    }
+
+    return result;
+
+    function checkTimeOut(modificationTime) {
+      const timeoutTime = moment(modificationTime).add(1, 'm');
+      logger.log('silly', `timeOut @ ${timeoutTime}`);
+      return timeoutTime.isBefore();
+    }
   }
 
   async function remove(correlationId) {
