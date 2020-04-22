@@ -143,7 +143,8 @@ export default async function (MONGO_URI) {
     if (checkModTime) {
       const timeOut = checkTimeOut(result.modificationTime);
       if (timeOut) {
-        return setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
+        const updated = await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
+        return updated;
       }
       return result;
     }
