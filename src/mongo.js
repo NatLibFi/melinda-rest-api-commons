@@ -81,7 +81,7 @@ export default async function (MONGO_URI) {
       if (result.acknowledged) {
         return time;
       }
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'no ack');
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
