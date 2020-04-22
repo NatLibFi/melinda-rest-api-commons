@@ -28,7 +28,7 @@
 
 import {MongoClient, GridFSBucket} from 'mongodb';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE} from './constants';
+import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
@@ -63,10 +63,33 @@ export default async function (MONGO_URI) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
-  return {create, query, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
+  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
-  function create({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
-    // Create QueueItem
+  function createPrio({correlationId, cataloger, operation}) {
+    const time = moment().toDate();
+    const newQueueItem = {
+      correlationId,
+      cataloger,
+      operation,
+      queueItemState: PRIO_QUEUE_ITEM_STATE.PENDING_VALIDATION,
+      creationTime: time,
+      modificationTime: time,
+      handledId: ''
+    };
+    try {
+      const result = db.collection('queue-items').insertOne(newQueueItem);
+      if (result.acknowledged) {
+        return time;
+      }
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+    } catch (error) {
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  function createBulk({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
+    const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
@@ -74,8 +97,8 @@ export default async function (MONGO_URI) {
       contentType,
       recordLoadParams,
       queueItemState: QUEUE_ITEM_STATE.UPLOADING,
-      creationTime: moment().toDate(),
-      modificationTime: moment().toDate(),
+      creationTime: time,
+      modificationTime: time,
       handledIds: []
     };
     try {
@@ -98,11 +121,25 @@ export default async function (MONGO_URI) {
     });
   }
 
+  async function checkAndSetState({correlationId, state}) {
+    const current = await db.collection('queue-items').findOne({correlationId});
+
+    if (current.queueItemState === PRIO_QUEUE_ITEM_STATE.ABORT) {
+      return current;
+    }
+
+    return setState({correlationId, state});
+  }
+
   async function query(params) {
     const result = await db.collection('queue-items').find(params, {projection: {_id: 0}})
       .toArray();
     logger.log('info', `Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     return result;
+  }
+
+  function queryById(correlationId) {
+    return db.collection('queue-items').findOne({correlationId});
   }
 
   async function remove(correlationId) {
