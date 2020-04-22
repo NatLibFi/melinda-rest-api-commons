@@ -77,7 +77,7 @@ export default async function (MONGO_URI) {
       handledId: ''
     };
     try {
-      const result = db.collection('queue-items').insertOne(newQueueItem);
+      const result = Promise.resolve(db.collection('queue-items').insertOne(newQueueItem));
       console.log(result); // eslint-disable-line no-console
       if (result.acknowledged) {
         return time;
