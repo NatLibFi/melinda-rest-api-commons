@@ -122,7 +122,7 @@ export default async function (MONGO_URI) {
   }
 
   async function checkAndSetState({correlationId, state}) {
-    const timeOut = checkTimeOut(correlationId);
+    const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
         return setState({correlationId, state});
     }
@@ -139,7 +139,7 @@ export default async function (MONGO_URI) {
   async function queryById(correlationId, checkModTime) {
     const result = await db.collection('queue-items').findOne({correlationId});
     if (checkModTime) {
-      const timeOut = checkTimeOut(correlationId);
+      const timeOut = await checkTimeOut(correlationId);
       if (timeOut) {
         return queryById(correlationId);
       }
@@ -149,7 +149,7 @@ export default async function (MONGO_URI) {
     return result;
   }
 
-  function checkTimeOut(correlationId) {
+  async function checkTimeOut(correlationId) {
     const result = await db.collection('queue-items').findOne({correlationId});
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.log('silly', `timeOut @ ${timeoutTime}`);
