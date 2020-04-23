@@ -122,13 +122,11 @@ export default async function (MONGO_URI) {
   }
 
   async function checkAndSetState({correlationId, state}) {
-    const current = await db.collection('queue-items').findOne({correlationId});
-
-    if (current.queueItemState === PRIO_QUEUE_ITEM_STATE.ABORT) {
-      return false;
+    const timeOut = checkTimeOut(correlationId);
+    if (timeOut) {
+        return setState({correlationId, state});
     }
-
-    return setState({correlationId, state});
+    return false;
   }
 
   async function query(params) {
@@ -141,21 +139,26 @@ export default async function (MONGO_URI) {
   async function queryById(correlationId, checkModTime) {
     const result = await db.collection('queue-items').findOne({correlationId});
     if (checkModTime) {
-      const timeOut = checkTimeOut(result.modificationTime);
+      const timeOut = checkTimeOut(correlationId);
       if (timeOut) {
-        await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
         return queryById(correlationId);
       }
       return result;
     }
 
     return result;
+  }
 
-    function checkTimeOut(modificationTime) {
-      const timeoutTime = moment(modificationTime).add(1, 'm');
-      logger.log('silly', `timeOut @ ${timeoutTime}`);
-      return timeoutTime.isBefore();
+  function checkTimeOut(correlationId) {
+    const result = await db.collection('queue-items').findOne({correlationId});
+    const timeoutTime = moment(result.modificationTime).add(1, 'm');
+    logger.log('silly', `timeOut @ ${timeoutTime}`);
+    if (timeoutTime.isBefore()) {
+      await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
+      return false;
     }
+
+    return true;
   }
 
   async function remove(correlationId) {
