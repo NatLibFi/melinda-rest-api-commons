@@ -125,7 +125,7 @@ export default async function (MONGO_URI) {
     const current = await db.collection('queue-items').findOne({correlationId});
 
     if (current.queueItemState === PRIO_QUEUE_ITEM_STATE.ABORT) {
-      return current;
+      return false;
     }
 
     return setState({correlationId, state});
