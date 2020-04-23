@@ -44,7 +44,7 @@ export default async function (AMQP_URL) {
   async function checkQueue(queue, style = 'basic', purge = false) {
     try {
       const channelInfo = await channel.assertQueue(queue, {durable: true});
-      logger.log('verbose', `Queue ${queue} has ${channelInfo.messageCount} records`);
+      logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
 
       await purgeQueue(purge);
 
