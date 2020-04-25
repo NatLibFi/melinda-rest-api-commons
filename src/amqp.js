@@ -67,8 +67,12 @@ export default async function (AMQP_URL) {
         return consumeRaw(queue);
       }
 
+      if (style === 'rawChunk') {
+        return consumeRawChunk(queue);
+      }
+
       if (style === 'basic') {
-        return consume(queue);
+        return consumeChunk(queue);
       }
 
       // Defaults:
@@ -84,8 +88,8 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consume(queue) {
-    logger.log('verbose', `Prepared to basic consume from queue: ${queue}`);
+  async function consumeChunk(queue) {
+    logger.log('verbose', `Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
       const queMessages = await getData(queue);
@@ -112,6 +116,32 @@ export default async function (AMQP_URL) {
     }
   }
 
+  async function consumeRawChunk(queue) {
+    logger.log('verbose', `Prepared to consumeRawChunk from queue: ${queue}`);
+    try {
+      await channel.assertQueue(queue, {durable: true});
+      const queMessages = await getData(queue);
+
+      const headers = getHeaderInfo(queMessages[0]);
+      logger.log('debug', `Filtering messages by ${JSON.stringify(headers)} and timeout`);
+
+      // Check that cataloger match! headers
+      const messages = queMessages.filter(message => {
+        if (message.properties.headers.cataloger === headers.cataloger) {
+          return true;
+        }
+
+        // Nack unwanted ones
+        channel.nack(message, false, true);
+        return false;
+      });
+
+      return messages;
+    } catch (error) {
+      logError(error);
+    }
+  }
+
   async function consumeOne(queue) {
     logger.log('verbose', `Prepared to consume one from queue: ${queue}`);
     try {
@@ -125,7 +155,7 @@ export default async function (AMQP_URL) {
         return {headers, records, messages: [message]};
       }
 
-      return message;
+      return false;
     } catch (error) {
       logError(error);
     }
