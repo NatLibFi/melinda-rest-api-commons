@@ -39,7 +39,7 @@ export default async function (AMQP_URL) {
   const channel = await connection.createChannel();
   const logger = createLogger();
 
-  return {checkQueue, consume, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue};
+  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
   async function checkQueue(queue, style = 'basic', purge = false) {
     try {
@@ -136,7 +136,7 @@ export default async function (AMQP_URL) {
         return false;
       });
 
-      return messages;
+      return {headers, messages};
     } catch (error) {
       logError(error);
     }

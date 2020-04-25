@@ -124,9 +124,9 @@ export default async function (MONGO_URI) {
   async function checkAndSetState({correlationId, state}) {
     const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
-        return setState({correlationId, state});
+      return setState({correlationId, state});
     }
-    await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT})
+    await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
     return false;
   }
 
