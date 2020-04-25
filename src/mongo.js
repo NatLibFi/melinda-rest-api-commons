@@ -126,7 +126,6 @@ export default async function (MONGO_URI) {
     if (timeOut) {
       return setState({correlationId, state});
     }
-    await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
     return false;
   }
 
