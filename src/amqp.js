@@ -195,6 +195,7 @@ export default async function (AMQP_URL) {
   function ackMessages(messages) {
     logger.log('verbose', 'Ack messages!');
     messages.forEach(message => {
+      logger.log('silly', `Ack message ${message.properties.correlationId}`);
       channel.ack(message);
     });
   }
@@ -202,6 +203,7 @@ export default async function (AMQP_URL) {
   function nackMessages(messages) {
     logger.log('verbose', 'Nack messages!');
     messages.forEach(message => {
+      logger.log('silly', `Nack message ${message.properties.correlationId}`);
       channel.reject(message, true);
     });
   }
