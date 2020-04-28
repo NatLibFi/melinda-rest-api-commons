@@ -258,7 +258,7 @@ export default async function (AMQP_URL) {
 
       const messages = await pump(messagesToGet);
 
-      const uniqMessages = messages.filter(onlyUniques);
+      const uniqMessages = messages.reduce((uniq, message) => message in uniq ? uniq : uniq.concat(message));
 
       return uniqMessages;
     } catch (error) {
@@ -272,10 +272,6 @@ export default async function (AMQP_URL) {
 
       const message = await channel.get(queue);
       return pump(count - 1, results.concat(message));
-    }
-
-    function onlyUniques(value, index, self) {
-      return self.indexOf(value) === index;
     }
   }
 

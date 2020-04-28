@@ -15,5 +15,3 @@ steps:
   when:
     branch: [master]
     event: tag
-trigger:
-  event: [push, tag]
