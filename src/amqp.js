@@ -260,6 +260,8 @@ export default async function (AMQP_URL) {
 
       const uniqMessages = messages.reduce((uniq, message) => message in uniq ? uniq : uniq.concat(message));
 
+      logger.log('debug', uniqMessages)
+
       return uniqMessages;
     } catch (error) {
       logError(error);
