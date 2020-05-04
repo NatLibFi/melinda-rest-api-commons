@@ -167,7 +167,7 @@ export default async function (MONGO_URI) {
       await getFileMetadata({gridFSBucket, filename: correlationId});
       throw new ApiError(httpStatus.BAD_REQUEST, 'Remove content first');
     } catch (err) {
-      if (err.status === httpStatus.NOT_FOUND) { // eslint-disable-line functional/no-conditional-statement
+      if (err.status === httpStatus.NOT_FOUND) {
         await db.collection('queue-items').deleteOne(correlationId);
         return true;
       }

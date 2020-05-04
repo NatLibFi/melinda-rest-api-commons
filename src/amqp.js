@@ -273,7 +273,7 @@ export default async function (AMQP_URL) {
       const message = await channel.get(queue);
 
       // Filter not unique messages
-      if (message in results) {
+      if (results.includes(message)) {
         return pump(count - 1, results);
       }
 
