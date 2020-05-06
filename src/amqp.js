@@ -258,7 +258,7 @@ export default async function (AMQP_URL) {
 
       const messages = await pump(messagesToGet);
 
-      logger.log('debug', messages);
+      logger.log('debug', `Returning ${messages.length} unique messages`);
 
       return messages;
     } catch (error) {
