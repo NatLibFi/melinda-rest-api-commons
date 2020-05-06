@@ -265,7 +265,7 @@ export default async function (AMQP_URL) {
       logError(error);
     }
 
-    async function pump(count, results = []) {
+    async function pump(count, results = [], correlationIds = []) {
       if (count === 0) {
         return results;
       }
@@ -273,11 +273,11 @@ export default async function (AMQP_URL) {
       const message = await channel.get(queue);
 
       // Filter not unique messages
-      if (results.includes(message)) {
-        return pump(count - 1, results);
+      if (correlationIds.includes(message.properties.correlationId)) {
+        return pump(count - 1, results, correlationIds);
       }
 
-      return pump(count - 1, results.concat(message));
+      return pump(count - 1, results.concat(message), correlationIds.concat(message.properties.correlationId));
     }
   }
 
