@@ -272,6 +272,7 @@ export default async function (AMQP_URL) {
 
       const message = await channel.get(queue);
 
+      console.log(message);
       // Filter not unique messages
       if (correlationIds.includes(message.properties.correlationId)) {
         return pump(count - 1, results, correlationIds);
