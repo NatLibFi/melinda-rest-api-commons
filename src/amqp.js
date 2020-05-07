@@ -265,20 +265,19 @@ export default async function (AMQP_URL) {
       logError(error);
     }
 
-    async function pump(count, results = [], correlationIds = []) {
+    async function pump(count, results = [], deiveryTags = []) {
       if (count === 0) {
         return results;
       }
 
       const message = await channel.get(queue);
 
-      console.log(message);
       // Filter not unique messages
-      if (correlationIds.includes(message.properties.correlationId)) {
-        return pump(count - 1, results, correlationIds);
+      if (deiveryTags.includes(message.fields.deliveryTag)) {
+        return pump(count - 1, results, deiveryTags);
       }
 
-      return pump(count - 1, results.concat(message), correlationIds.concat(message.properties.correlationId));
+      return pump(count - 1, results.concat(message), deiveryTags.concat(message.fields.deliveryTag));
     }
   }
 
