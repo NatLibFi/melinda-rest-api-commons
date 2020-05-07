@@ -204,7 +204,7 @@ export default async function (AMQP_URL) {
     logger.log('verbose', 'Nack messages!');
     messages.forEach(message => {
       logger.log('silly', `Nack message ${message.properties.correlationId}`);
-      channel.reject(message, true);
+      channel.nack(messages[0]);
     });
   }
 
