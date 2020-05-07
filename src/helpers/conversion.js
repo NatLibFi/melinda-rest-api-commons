@@ -39,19 +39,23 @@ export default function () {
 
   function serialize(record, format) {
     logger.log('verbose', 'Serializing record');
-    if (format === conversionFormats.MARCXML) {
-      return MARCXML.to(record);
-    }
+    try {
+      if (format === conversionFormats.MARCXML) {
+        return MARCXML.to(record);
+      }
 
-    if (format === conversionFormats.ISO2709) {
-      return ISO2709.to(record);
-    }
+      if (format === conversionFormats.ISO2709) {
+        return ISO2709.to(record);
+      }
 
-    if (format === conversionFormats.JSON) {
-      return Json.to(record);
-    }
+      if (format === conversionFormats.JSON) {
+        return Json.to(record);
+      }
 
-    throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
+      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
+    } catch (err) {
+      throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while serializing record');
+    }
   }
 
   function unserialize(data, format) {
@@ -71,7 +75,7 @@ export default function () {
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
-      throw new ConversionError(httpStatus.UNPROCESSABLE_ENTITY, 'Error while unserializing record');
+      throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while unserializing record');
     }
   }
 }
