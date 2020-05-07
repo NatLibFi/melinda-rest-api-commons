@@ -15,6 +15,6 @@ steps:
   when:
     event: tag
  ---
- kind: secret
- name: npm_token
- data: G8UAKj+YTdZ1OTpgZR1eXhQEGC4jF+2Xc/kxCfJgX3F8ah97aa66kMUGHWwqidyqvTEqrz6f4axIo3Nd7k+HLQ==
+kind: secret
+name: npm_token
+data: G8UAKj+YTdZ1OTpgZR1eXhQEGC4jF+2Xc/kxCfJgX3F8ah97aa66kMUGHWwqidyqvTEqrz6f4axIo3Nd7k+HLQ==
