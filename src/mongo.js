@@ -244,7 +244,7 @@ export default async function (MONGO_URI) {
   }
 
   async function pushId({correlationId, id}) {
-    logger.log('debug', `Push queue-item ids to list: ${correlationId}, ${ids}`);
+    logger.log('debug', `Push queue-item id: ${correlationId}, ${id}`);
     await db.collection('queue-items').updateOne({
       correlationId
     }, {

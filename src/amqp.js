@@ -274,7 +274,7 @@ export default async function (AMQP_URL) {
       const identifier = {
         correlationId: message.properties.correlationId,
         deliveryTag: message.fields.deliveryTag
-      }
+      };
       // Filter not unique messages
       if (identifiers.includes(identifier)) {
         return pump(count - 1, results, identifiers);
