@@ -204,7 +204,7 @@ export default async function (AMQP_URL) {
     logger.log('verbose', 'Nack messages!');
     messages.forEach(message => {
       logger.log('silly', `Nack message ${message.properties.correlationId}`);
-      channel.reject(message, true);
+      channel.nack(message);
     });
   }
 
@@ -265,19 +265,22 @@ export default async function (AMQP_URL) {
       logError(error);
     }
 
-    async function pump(count, results = [], correlationIds = []) {
+    async function pump(count, results = [], identifiers = []) {
       if (count === 0) {
         return results;
       }
 
       const message = await channel.get(queue);
-
+      const identifier = {
+        correlationId: message.properties.correlationId,
+        deliveryTag: message.fields.deliveryTag
+      };
       // Filter not unique messages
-      if (correlationIds.includes(message.properties.correlationId)) {
-        return pump(count - 1, results, correlationIds);
+      if (identifiers.includes(identifier)) {
+        return pump(count - 1, results, identifiers);
       }
 
-      return pump(count - 1, results.concat(message), correlationIds.concat(message.properties.correlationId));
+      return pump(count - 1, results.concat(message), identifiers.concat(identifier));
     }
   }
 
