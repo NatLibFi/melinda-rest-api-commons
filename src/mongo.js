@@ -38,6 +38,7 @@ import httpStatus from 'http-status';
 {
   "correlationId":"FOO",
   "cataloger":"xxx0000",
+  "oCatalogerIn":"xxx0000"
   "operation":"UPDATE",
   "contentType":"application/json",
   "recordLoadParams": {
@@ -65,12 +66,13 @@ export default async function (MONGO_URI) {
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushId};
 
-  async function createPrio({correlationId, cataloger, operation}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
       operation,
+      oCatalogerIn,
       queueItemState: PRIO_QUEUE_ITEM_STATE.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
@@ -88,11 +90,12 @@ export default async function (MONGO_URI) {
     }
   }
 
-  function createBulk({correlationId, cataloger, operation, contentType, recordLoadParams, stream}) {
+  function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
+      oCatalogerIn,
       operation,
       contentType,
       recordLoadParams,
