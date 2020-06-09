@@ -71,6 +71,10 @@ export default async function (AMQP_URL) {
         return consumeRawChunk(queue);
       }
 
+      if (style === (/^.{8}-.{4}-.{4}-.{4}-.{12}$/u)) {
+        return consumeByCorrelationId(queue, style);
+      }
+
       if (style === 'basic') {
         return consumeChunk(queue);
       }
@@ -112,6 +116,33 @@ export default async function (AMQP_URL) {
 
       return {headers, records, messages};
     } catch (error) {
+      logError(error);
+    }
+  }
+
+  async function consumeByCorrelationId(queue, correlationId) {
+    logger.log('verbose', `Prepared to consumeByCorrelationId from queue: ${queue}`);
+    try {
+      await channel.assertQueue(queue, {durable: true});
+      const queMessages = await getData(queue);
+
+      logger.log('debug', `Filtering messages by ${correlationId}`);
+
+      // Check that cataloger match! headers
+      const messages = queMessages.filter(message => {
+        if (message.properties.correlationId === correlationId) {
+          return true;
+        }
+
+        // Nack unwanted ones
+        channel.nack(message, false, true);
+        return false;
+      });
+      const headers = getHeaderInfo(messages[0]);
+      const records = await messagesToRecords(messages);
+
+      return {headers, records, messages};
+    }catch (error) {
       logError(error);
     }
   }
@@ -212,8 +243,8 @@ export default async function (AMQP_URL) {
     try {
       logger.log('silly', `Record queue ${queue}`);
       logger.log('silly', `Record correlationId ${correlationId}`);
-      logger.log('silly', `Record data ${data}`);
-      logger.log('silly', `Record headers ${headers}`);
+      logger.log('silly', `Record data ${JSON.stringify(data)}`);
+      logger.log('silly', `Record headers ${JSON.stringify(headers)}`);
 
       await channel.assertQueue(queue, {durable: true});
 
