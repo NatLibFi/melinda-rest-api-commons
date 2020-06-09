@@ -71,7 +71,7 @@ export default async function (AMQP_URL) {
         return consumeRawChunk(queue);
       }
 
-      if (style === (/^.{8}-.{4}-.{4}-.{4}-.{12}$/u)) {
+      if (style === /^.{8}-.{4}-.{4}-.{4}-.{12}$/u) {
         return consumeByCorrelationId(queue, style);
       }
 
@@ -142,7 +142,7 @@ export default async function (AMQP_URL) {
       const records = await messagesToRecords(messages);
 
       return {headers, records, messages};
-    }catch (error) {
+    } catch (error) {
       logError(error);
     }
   }
