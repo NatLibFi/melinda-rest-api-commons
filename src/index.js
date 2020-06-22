@@ -30,7 +30,8 @@ import mongoFactory from './mongo';
 import amqpFactory from './amqp';
 import conversions from './helpers/conversion';
 import validations from './helpers/validation';
+import * as format from './helpers/format';
 import {logError} from './utils';
 
-export {mongoFactory, amqpFactory, conversions, validations, logError};
+export {mongoFactory, amqpFactory, conversions, validations, format, logError};
 export * from './constants';
