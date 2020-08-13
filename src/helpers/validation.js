@@ -30,10 +30,9 @@ import validateFactory from '@natlibfi/marc-record-validate';
 import {
   FieldStructure as fieldStructure
 } from '@natlibfi/marc-record-validators-melinda';
-import {Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 export default async () => {
-  const {createLogger} = Utils;
   const logger = createLogger();
 
   logger.log('verbose', 'Running validations');

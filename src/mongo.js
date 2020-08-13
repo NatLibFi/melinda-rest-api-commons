@@ -27,7 +27,8 @@
 */
 
 import {MongoClient, GridFSBucket} from 'mongodb';
-import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
@@ -56,7 +57,6 @@ import httpStatus from 'http-status';
 */
 
 export default async function (MONGO_URI) {
-  const {createLogger} = Utils;
   const logger = createLogger();
 
   // Connect to mongo (MONGO)

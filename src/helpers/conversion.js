@@ -28,11 +28,11 @@
 
 import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
-import {Error as ConversionError, Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
 
 export default function () {
-  const {createLogger} = Utils;
   const logger = createLogger();
 
   return {serialize, unserialize};

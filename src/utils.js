@@ -26,9 +26,9 @@
 *
 */
 
-import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 
-const {createLogger} = Utils;
 const logger = createLogger();
 
 export function logError(err) {

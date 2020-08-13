@@ -28,13 +28,13 @@
 
 import amqplib from 'amqplib';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
 import httpStatus from 'http-status';
 
 export default async function (AMQP_URL) {
-  const {createLogger} = Utils;
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
   const logger = createLogger();
