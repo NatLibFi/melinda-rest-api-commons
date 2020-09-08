@@ -180,14 +180,15 @@ export default async function (MONGO_URI) {
 
   async function readContent(correlationId) {
     logger.log('info', `Reading content for id: ${correlationId}`);
-    const result = await db.collection('queue-items').findOne({correlationId}); //ignore: node_nosqli_injection
+    const clean = sanitaze(correlationId);
+    const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
     if (result) {
       // Check if the file exists
-      await getFileMetadata({gridFSBucket, filename: correlationId});
+      await getFileMetadata({gridFSBucket, filename: clean});
       return {
         contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(correlationId)
+        readStream: gridFSBucket.openDownloadStreamByName(clean)
       };
     }
 
@@ -198,7 +199,7 @@ export default async function (MONGO_URI) {
     logger.log('info', `Removing content for id: ${params.correlationId}`);
     const clean = sanitaze(params.correlationId);
 
-    const result = await db.collection('queue-items').findOne({correlationId: clean});
+    const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
     if (result) {
       const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: clean});
       await gridFSBucket.delete(fileId);
@@ -211,13 +212,13 @@ export default async function (MONGO_URI) {
     try {
       if (operation === undefined) {
         logger.log('silly', `Checking DB for ${clean2}`);
-        return db.collection('queue-items').findOne({clean2});
+        return db.collection('queue-items').findOne({clean2}); //ignore: node_nosqli_injection
       }
 
       const clean = sanitaze(operation);
 
       logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
-      return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2});
+      return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2}); //ignore: node_nosqli_injection
     } catch (error) {
       logError(error);
     }
