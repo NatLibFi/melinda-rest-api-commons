@@ -83,9 +83,8 @@ describe('services/conversion', () => {
       expect(conversionService.unserialize).to.throw();
     });
 
-    it('Should unserialize from MARCXML', () => {
-      const record = conversionService.unserialize(marcXml, conversionFormats.MARCXML);
-
+    it('Should unserialize from MARCXML', async () => {
+      const record = await conversionService.unserialize(marcXml, conversionFormats.MARCXML);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
