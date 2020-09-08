@@ -226,10 +226,10 @@ export default async function (MONGO_URI) {
 
   async function getStream(correlationId) {
     logger.log('info', `Forming stream from db: ${correlationId}`);
-
+    const clean = sanitaze(correlationId);
     try {
       // Check that content is there
-      await getFileMetadata({gridFSBucket, filename: correlationId});
+      await getFileMetadata({gridFSBucket, filename: clean});
 
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(correlationId);
