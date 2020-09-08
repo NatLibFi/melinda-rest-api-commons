@@ -33,7 +33,7 @@ import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
-
+import {sanitaze} from 'mongo-sanitize';
 
 /* QueueItem:
 {
@@ -180,9 +180,8 @@ export default async function (MONGO_URI) {
 
   async function readContent(correlationId) {
     logger.log('info', `Reading content for id: ${correlationId}`);
-    await testParamsSanitazion({correlationId});
-
-    const result = await db.collection('queue-items').findOne({correlationId});
+    const clean = sanitaze(correlationId);
+    const result = await db.collection('queue-items').findOne({correlationId: clean});
 
     if (result) {
       // Check if the file exists
@@ -198,9 +197,9 @@ export default async function (MONGO_URI) {
 
   async function removeContent(params) {
     logger.log('info', `Removing content for id: ${params.correlationId}`);
-    await testParamsSanitazion(params);
+    const clean = sanitaze(params.correlationId);
 
-    const result = await db.collection('queue-items').findOne(params);
+    const result = await db.collection('queue-items').findOne({correlationId: clean});
     if (result) {
       const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: params.correlationId});
       await gridFSBucket.delete(fileId);
@@ -209,7 +208,8 @@ export default async function (MONGO_URI) {
   }
 
   function getOne({operation, queueItemState}) {
-    testParamsSanitazion({operation, queueItemState});
+    const clean = sanitaze(operation);
+    const clean2 = sanitaze(queueItemState);
 
     try {
       if (operation === undefined) {
@@ -218,7 +218,7 @@ export default async function (MONGO_URI) {
       }
 
       logger.log('silly', `Checking DB for ${operation} + ${queueItemState}`);
-      return db.collection('queue-items').findOne({operation, queueItemState});
+      return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2});
     } catch (error) {
       logError(error);
     }
@@ -240,9 +240,9 @@ export default async function (MONGO_URI) {
 
   async function pushIds({correlationId, ids}) {
     logger.log('debug', `Push queue-item ids to list: ${correlationId}, ${ids}`);
-    await testParamsSanitazion({correlationId, ids});
+    const clean = sanitaze(correlationId);
     await db.collection('queue-items').updateOne({
-      correlationId
+      correlationId: clean
     }, {
       $set: {
         modificationTime: moment().toDate()
@@ -255,9 +255,9 @@ export default async function (MONGO_URI) {
 
   async function pushId({correlationId, id}) {
     logger.log('debug', `Push queue-item id: ${correlationId}, ${id}`);
-    await testParamsSanitazion({correlationId, id});
+    const clean = sanitaze(correlationId);
     await db.collection('queue-items').updateOne({
-      correlationId
+      correlationId: clean
     }, {
       $set: {
         modificationTime: moment().toDate(),
@@ -268,9 +268,9 @@ export default async function (MONGO_URI) {
 
   function setState({correlationId, state}) {
     logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
-    testParamsSanitazion({correlationId, state});
+    const clean = sanitaze(correlationId);
     return db.collection('queue-items').findOneAndUpdate({
-      correlationId
+      correlationId: clean
     }, {
       $set: {
         queueItemState: state,
@@ -286,20 +286,5 @@ export default async function (MONGO_URI) {
         .on('data', resolve)
         .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
     });
-  }
-
-  async function testParamsSanitazion(params) {
-    await Promise.resolve(sanitizer(params));
-
-    function sanitizer(params) {
-      return new Promise((resolve, reject) => {
-        Object.keys(params).forEach(v => {
-          if (typeof params[v] === 'object') {
-            return reject(new ApiError(httpStatus.FORBIDDEN));
-          }
-        });
-        resolve(true);
-      });
-    }
   }
 }

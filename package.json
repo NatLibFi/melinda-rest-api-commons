@@ -44,6 +44,7 @@
 		"amqplib": "^0.6.0",
 		"http-status": "^1.4.2",
 		"moment": "^2.27.0",
+		"mongo-sanitize": "^1.1.0",
 		"mongodb": "^3.6.0"
 	},
 	"devDependencies": {
