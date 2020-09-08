@@ -185,10 +185,10 @@ export default async function (MONGO_URI) {
 
     if (result) {
       // Check if the file exists
-      await getFileMetadata({gridFSBucket, filename: correlationId});
+      await getFileMetadata({gridFSBucket, filename: clean});
       return {
         contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(correlationId)
+        readStream: gridFSBucket.openDownloadStreamByName(clean)
       };
     }
 
@@ -201,7 +201,7 @@ export default async function (MONGO_URI) {
 
     const result = await db.collection('queue-items').findOne({correlationId: clean});
     if (result) {
-      const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: params.correlationId});
+      const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: clean});
       await gridFSBucket.delete(fileId);
       return true;
     }
@@ -214,7 +214,7 @@ export default async function (MONGO_URI) {
     try {
       if (operation === undefined) {
         logger.log('silly', `Checking DB for ${queueItemState}`);
-        return db.collection('queue-items').findOne({queueItemState});
+        return db.collection('queue-items').findOne({clean2});
       }
 
       logger.log('silly', `Checking DB for ${operation} + ${queueItemState}`);
@@ -232,7 +232,7 @@ export default async function (MONGO_URI) {
       await getFileMetadata({gridFSBucket, filename: clean});
 
       // Return content stream
-      return gridFSBucket.openDownloadStreamByName(correlationId);
+      return gridFSBucket.openDownloadStreamByName(clean);
     } catch (error) {
       logError(error);
     }
