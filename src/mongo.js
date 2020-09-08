@@ -181,7 +181,7 @@ export default async function (MONGO_URI) {
   async function readContent(correlationId) {
     logger.log('info', `Reading content for id: ${correlationId}`);
     const clean = sanitaze(correlationId);
-    const result = await db.collection('queue-items').findOne({correlationId: clean});
+    const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
     if (result) {
       // Check if the file exists
