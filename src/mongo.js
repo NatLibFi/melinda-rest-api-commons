@@ -208,16 +208,16 @@ export default async function (MONGO_URI) {
   }
 
   function getOne({operation, queueItemState}) {
-    const clean = sanitaze(operation);
     const clean2 = sanitaze(queueItemState);
-
     try {
       if (operation === undefined) {
-        logger.log('silly', `Checking DB for ${queueItemState}`);
+        logger.log('silly', `Checking DB for ${clean2}`);
         return db.collection('queue-items').findOne({clean2});
       }
 
-      logger.log('silly', `Checking DB for ${operation} + ${queueItemState}`);
+      const clean = sanitaze(operation);
+
+      logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
       return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2});
     } catch (error) {
       logError(error);
