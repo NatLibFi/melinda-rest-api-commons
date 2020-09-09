@@ -31,6 +31,7 @@ import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
+import {logError} from '../utils';
 
 export default function () {
   const logger = createLogger();
@@ -54,6 +55,10 @@ export default function () {
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
+      logError(err);
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+        throw err;
+      }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while serializing record');
     }
   }
@@ -75,6 +80,10 @@ export default function () {
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
+      logError(err);
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+        throw err;
+      }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while unserializing record');
     }
   }
