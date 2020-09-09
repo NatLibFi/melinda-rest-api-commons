@@ -288,15 +288,15 @@ export default async function (MONGO_URI) {
   }
 
   function sanitize(v) {
-    if (v instanceof Object) {
-      for (var key in v) {
-        if (/^\$/.test(key)) {
-          delete v[key];
-        } else {
+    if (v instanceof Object) { // eslint-disable-line functional/no-conditional-statement
+      for (const key in v) { // eslint-disable-line functional/no-loop-statement
+        if (/^\$/u.test(key)) { // eslint-disable-line functional/no-conditional-statement, wrap-regex
+          delete v[key]; // eslint-disable-line functional/immutable-data
+        } else { // eslint-disable-line functional/no-conditional-statement
           sanitize(v[key]);
         }
       }
     }
     return v;
-  };
+  }
 }
