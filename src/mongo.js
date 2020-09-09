@@ -33,7 +33,6 @@ import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
-import {sanitize} from 'mongo-sanitize';
 
 /* QueueItem:
 {
@@ -287,4 +286,17 @@ export default async function (MONGO_URI) {
         .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
     });
   }
+
+  function sanitize(v) {
+    if (v instanceof Object) {
+      for (var key in v) {
+        if (/^\$/.test(key)) {
+          delete v[key];
+        } else {
+          sanitize(v[key]);
+        }
+      }
+    }
+    return v;
+  };
 }
