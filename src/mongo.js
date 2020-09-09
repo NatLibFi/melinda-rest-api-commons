@@ -33,7 +33,7 @@ import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
-import {sanitaze} from 'mongo-sanitize';
+import {sanitize} from 'mongo-sanitize';
 
 /* QueueItem:
 {
@@ -180,7 +180,7 @@ export default async function (MONGO_URI) {
 
   async function readContent(correlationId) {
     logger.log('info', `Reading content for id: ${correlationId}`);
-    const clean = sanitaze(correlationId);
+    const clean = sanitize(correlationId);
     const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
     if (result) {
@@ -197,7 +197,7 @@ export default async function (MONGO_URI) {
 
   async function removeContent(params) {
     logger.log('info', `Removing content for id: ${params.correlationId}`);
-    const clean = sanitaze(params.correlationId);
+    const clean = sanitize(params.correlationId);
 
     const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
     if (result) {
@@ -208,14 +208,14 @@ export default async function (MONGO_URI) {
   }
 
   function getOne({operation, queueItemState}) {
-    const clean2 = sanitaze(queueItemState);
+    const clean2 = sanitize(queueItemState);
     try {
       if (operation === undefined) {
         logger.log('silly', `Checking DB for ${clean2}`);
         return db.collection('queue-items').findOne({clean2}); //ignore: node_nosqli_injection
       }
 
-      const clean = sanitaze(operation);
+      const clean = sanitize(operation);
 
       logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
       return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2}); //ignore: node_nosqli_injection
@@ -226,7 +226,7 @@ export default async function (MONGO_URI) {
 
   async function getStream(correlationId) {
     logger.log('info', `Forming stream from db: ${correlationId}`);
-    const clean = sanitaze(correlationId);
+    const clean = sanitize(correlationId);
     try {
       // Check that content is there
       await getFileMetadata({gridFSBucket, filename: clean});
@@ -240,7 +240,7 @@ export default async function (MONGO_URI) {
 
   async function pushIds({correlationId, ids}) {
     logger.log('debug', `Push queue-item ids to list: ${correlationId}, ${ids}`);
-    const clean = sanitaze(correlationId);
+    const clean = sanitize(correlationId);
     await db.collection('queue-items').updateOne({
       correlationId: clean
     }, {
@@ -255,7 +255,7 @@ export default async function (MONGO_URI) {
 
   async function pushId({correlationId, id}) {
     logger.log('debug', `Push queue-item id: ${correlationId}, ${id}`);
-    const clean = sanitaze(correlationId);
+    const clean = sanitize(correlationId);
     await db.collection('queue-items').updateOne({
       correlationId: clean
     }, {
@@ -268,7 +268,7 @@ export default async function (MONGO_URI) {
 
   function setState({correlationId, state}) {
     logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
-    const clean = sanitaze(correlationId);
+    const clean = sanitize(correlationId);
     return db.collection('queue-items').findOneAndUpdate({
       correlationId: clean
     }, {
