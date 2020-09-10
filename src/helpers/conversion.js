@@ -67,14 +67,17 @@ export default function () {
     logger.log('verbose', 'Unserializing record');
     try {
       if (format === conversionFormats.MARCXML) {
+        logger.log('verbose', 'Unserialize format marcxml');
         return MARCXML.from(data, validationOptions);
       }
 
       if (format === conversionFormats.ISO2709) {
+        logger.log('verbose', 'Unserialize format iso2709');
         return ISO2709.from(data, validationOptions);
       }
 
       if (format === conversionFormats.JSON) {
+        logger.log('verbose', 'Unserialize format json');
         return Json.from(data, validationOptions);
       }
 
