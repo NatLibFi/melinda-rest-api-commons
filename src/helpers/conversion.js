@@ -63,19 +63,19 @@ export default function () {
     }
   }
 
-  function unserialize(data, format) {
+  function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.log('verbose', 'Unserializing record');
     try {
       if (format === conversionFormats.MARCXML) {
-        return MARCXML.from(data);
+        return MARCXML.from(data, validationOptions);
       }
 
       if (format === conversionFormats.ISO2709) {
-        return ISO2709.from(data);
+        return ISO2709.from(data, validationOptions);
       }
 
       if (format === conversionFormats.JSON) {
-        return Json.from(data);
+        return Json.from(data, validationOptions);
       }
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
