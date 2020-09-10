@@ -43,7 +43,7 @@ describe('services/conversion', () => {
   ]});
   const conversionService = createConversionService();
 
-  const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']})));
+  const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']})), {subfieldValues: false});
   const marcXml = getFixture({components: ['marcxml1']});
   const iso2709 = getFixture({components: ['iso2709_1']});
   const json = getFixture({components: ['json1']});
@@ -90,13 +90,11 @@ describe('services/conversion', () => {
 
     it('Should unserialize from ISO2709', () => {
       const record = conversionService.unserialize(iso2709, conversionFormats.ISO2709);
-
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
     it('Should unserialize from JSON', () => {
       const record = conversionService.unserialize(json, conversionFormats.JSON);
-
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
