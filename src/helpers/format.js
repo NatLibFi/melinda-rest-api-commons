@@ -33,7 +33,7 @@ export function formatRecord(record, settings) {
   const logger = createLogger();
 
   logger.log('verbose', 'Applying formating');
-  const newRecord = MarcRecord.clone(record);
+  const newRecord = MarcRecord.clone(record, {subfieldValues: false});
 
   settings.forEach(options => {
     replacePrefixes(options);
