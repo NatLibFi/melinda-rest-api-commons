@@ -66,7 +66,8 @@ export default function () {
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.log('verbose', 'Unserializing record');
     logger.log('debug', `Format: ${format}`);
-    logger.log('debug', `Validation options: ${validationOptions}`);
+    logger.log('debug', `Validation options: ${JSON.stringify(validationOptions)}`);
+    logger.log('debug', `Data: ${JSON.stringify(data)}`);
     try {
       if (format === conversionFormats.MARCXML) {
         logger.log('verbose', 'Unserialize format marcxml');
