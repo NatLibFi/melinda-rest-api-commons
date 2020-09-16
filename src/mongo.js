@@ -33,6 +33,7 @@ import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
+import {sanitize} from 'mongo-sanitize';
 
 /* QueueItem:
 {
@@ -285,18 +286,5 @@ export default async function (MONGO_URI) {
         .on('data', resolve)
         .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
     });
-  }
-
-  function sanitize(v) {
-    if (v instanceof Object) { // eslint-disable-line functional/no-conditional-statement
-      for (const key in v) { // eslint-disable-line functional/no-loop-statement
-        if (/^\$/u.test(key)) { // eslint-disable-line functional/no-conditional-statement, wrap-regex
-          delete v[key]; // eslint-disable-line functional/immutable-data
-        } else { // eslint-disable-line functional/no-conditional-statement
-          sanitize(v[key]);
-        }
-      }
-    }
-    return v;
   }
 }
