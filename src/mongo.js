@@ -33,7 +33,7 @@ import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
-import {sanitize} from 'mongo-sanitize';
+import sanitize from 'mongo-sanitize';
 
 /* QueueItem:
 {
