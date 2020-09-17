@@ -212,7 +212,7 @@ export default async function (MONGO_URI) {
     try {
       if (operation === undefined) {
         logger.log('silly', `Checking DB for ${clean2}`);
-        return db.collection('queue-items').findOne({clean2}); //ignore: node_nosqli_injection
+        return db.collection('queue-items').findOne({queueItemState: clean2}); //ignore: node_nosqli_injection
       }
 
       const clean = sanitize(operation);
