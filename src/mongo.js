@@ -208,17 +208,16 @@ export default async function (MONGO_URI) {
   }
 
   function getOne({operation, queueItemState}) {
-    const clean2 = sanitize(queueItemState);
+    const clean = {queueItemState: sanitize(queueItemState)};
     try {
       if (operation === undefined) {
-        logger.log('silly', `Checking DB for ${clean2}`);
-        return db.collection('queue-items').findOne({queueItemState: clean2}); //ignore: node_nosqli_injection
+        logger.log('silly', `Checking DB for ${JSON.stringify(clean)}`);
+        return db.collection('queue-items').findOne({...clean}); //ignore: node_nosqli_injection
       }
 
-      const clean = sanitize(operation);
-
+      const clean2 = {operation: sanitize(operation)};
       logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
-      return db.collection('queue-items').findOne({operation: clean, queueItemState: clean2}); //ignore: node_nosqli_injection
+      return db.collection('queue-items').findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
     } catch (error) {
       logError(error);
     }
