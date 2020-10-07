@@ -39,7 +39,7 @@ export default async () => {
   const validate = validateFactory([await fieldStructure([{tag: /^003$/u, valuePattern: /^FI-MELINDA$/u}])]);
 
   return async unvalidRecord => {
-    const {record, valid, report} = await validate(unvalidRecord, {fix: false, validateFixes: false});
+    const {record, valid, report} = await validate(unvalidRecord, {fix: false, validateFixes: false}, {subfieldValues: false});
 
     return {
       record,

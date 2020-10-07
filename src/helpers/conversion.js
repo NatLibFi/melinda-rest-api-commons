@@ -31,6 +31,7 @@ import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
+import {logError} from '../utils';
 
 export default function () {
   const logger = createLogger();
@@ -54,27 +55,41 @@ export default function () {
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
+      logError(err);
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+        throw err;
+      }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while serializing record');
     }
   }
 
-  function unserialize(data, format) {
+  function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.log('verbose', 'Unserializing record');
+    logger.log('silly', `Format: ${format}`);
+    logger.log('silly', `Validation options: ${JSON.stringify(validationOptions)}`);
+    logger.log('silly', `Data: ${JSON.stringify(data)}`);
     try {
       if (format === conversionFormats.MARCXML) {
-        return MARCXML.from(data);
+        logger.log('verbose', 'Unserialize format marcxml');
+        return MARCXML.from(data, validationOptions);
       }
 
       if (format === conversionFormats.ISO2709) {
-        return ISO2709.from(data);
+        logger.log('verbose', 'Unserialize format iso2709');
+        return ISO2709.from(data, validationOptions);
       }
 
       if (format === conversionFormats.JSON) {
-        return Json.from(data);
+        logger.log('verbose', 'Unserialize format json');
+        return Json.from(data, validationOptions);
       }
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
+      logError(err);
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+        throw err;
+      }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while unserializing record');
     }
   }

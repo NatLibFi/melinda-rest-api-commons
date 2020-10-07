@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "1.0.0-alpha.6",
+	"version": "1.0.0-alpha.26",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=12"
@@ -31,19 +31,20 @@
 		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
 		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
 		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon",
-		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified"
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
 	},
 	"dependencies": {
 		"@natlibfi/fixura": "^1.0.0",
-		"@natlibfi/marc-record": "^4.0.4",
-		"@natlibfi/marc-record-serializers": "^5.0.3",
-		"@natlibfi/marc-record-validate": "^5.0.1",
+		"@natlibfi/marc-record": "^6.1.0",
+		"@natlibfi/marc-record-serializers": "^7.1.5",
+		"@natlibfi/marc-record-validate": "^6.0.0",
 		"@natlibfi/marc-record-validators-melinda": "^8.2.3",
 		"@natlibfi/melinda-backend-commons": "^1.0.6",
-		"@natlibfi/melinda-commons": "^10.0.3",
+		"@natlibfi/melinda-commons": "^11.0.1",
 		"amqplib": "^0.6.0",
 		"http-status": "^1.4.2",
 		"moment": "^2.27.0",
+		"mongo-sanitize": "^1.1.0",
 		"mongodb": "^3.6.0"
 	},
 	"devDependencies": {
