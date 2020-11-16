@@ -171,7 +171,7 @@ export default async function (MONGO_URI) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Remove content first');
     } catch (err) {
       if (err.status === httpStatus.NOT_FOUND) {
-        await db.collection('queue-items').deleteOne(correlationId);
+        await db.collection('queue-items').deleteOne({correlationId});
         return true;
       }
       throw err;
