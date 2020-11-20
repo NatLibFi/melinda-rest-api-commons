@@ -60,8 +60,8 @@ export default async function (MONGO_URI) {
   const logger = createLogger();
 
   // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
-  const db = client.db('rest-api');
+  const connection = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+  const db = connection.db();
   const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushId};
