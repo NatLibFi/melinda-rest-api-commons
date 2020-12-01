@@ -36,7 +36,7 @@
 	"dependencies": {
 		"@natlibfi/fixura": "^2.1.3",
 		"@natlibfi/marc-record": "^6.1.1",
-		"@natlibfi/marc-record-serializers": "^7.1.6",
+		"@natlibfi/marc-record-serializers": "^7.2.1",
 		"@natlibfi/marc-record-validate": "^6.0.1",
 		"@natlibfi/marc-record-validators-melinda": "^8.2.5",
 		"@natlibfi/melinda-backend-commons": "^2.0.2",
