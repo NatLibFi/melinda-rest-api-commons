@@ -164,14 +164,20 @@ export default async function (MONGO_URI) {
     return true;
   }
 
-  async function remove(correlationId) {
-    logger.log('info', `Removing id: ${correlationId}`);
+  async function remove(params) {
+    logger.log('info', `Removing id: ${params.correlationId}`);
+    const clean = sanitize(params.correlationId);
+
     try {
-      await getFileMetadata({gridFSBucket, filename: correlationId});
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Remove content first');
+      await getFileMetadata({gridFSBucket, filename: clean});
+      const noContent = await removeContent(params);
+      if (noContent) {
+        await db.collection('queue-items').deleteOne({correlationId: clean});
+        return true;
+      }
     } catch (err) {
       if (err.status === httpStatus.NOT_FOUND) {
-        await db.collection('queue-items').deleteOne({correlationId});
+        await db.collection('queue-items').deleteOne({correlationId: clean});
         return true;
       }
       throw err;
