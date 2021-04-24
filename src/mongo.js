@@ -153,7 +153,9 @@ export default async function (MONGO_URI) {
   }
 
   async function checkTimeOut(correlationId) {
+    logger.log('silly', `Checking timeout for correlationId ${correlationId}`);
     const result = await db.collection('queue-items').findOne({correlationId});
+    logger.log('silly', `Result: ${JSON.stringify(result)}`);
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.log('silly', `timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
