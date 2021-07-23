@@ -211,7 +211,7 @@ export default async function (AMQP_URL) {
     await messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
-      if (payloads.ids.length < 0 && payloads.rejectedIds.length > 0) {
+      if (payloads.ids.length < 1 && payloads.rejectedIds.length > 0) {
         logger.debug(`Got 0 valid ids and rejected ${payloads.rejectedIds}`);
 
         sendToQueue({
