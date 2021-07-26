@@ -211,15 +211,19 @@ export default async function (AMQP_URL) {
     await messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
-      if (payloads.ids.length < 1 && payloads.rejectedIds.length > 0) {
-        logger.debug(`Got 0 valid ids and rejected ${payloads.rejectedIds}`);
+      // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
+      const ids = payloads.ids || payloads;
+      const rejectedIds = payloads.rejectedIds || [];
+
+      if (ids.length < 1 && rejectedIds.length > 0) {
+        logger.debug(`Got 0 valid ids and rejected ${rejectedIds}`);
 
         sendToQueue({
           queue: message.properties.correlationId,
           correlationId: message.properties.correlationId,
           headers,
           data: {
-            status: httpStatus.UNPROCESSABLE_ENTITY, payload: payloads.rejectedIds
+            status: httpStatus.UNPROCESSABLE_ENTITY, payload: rejectedIds
           }
         });
 
@@ -232,7 +236,7 @@ export default async function (AMQP_URL) {
         correlationId: message.properties.correlationId,
         headers,
         data: {
-          status, payload: payloads.ids[index]
+          status, payload: ids[index]
         }
       });
 
