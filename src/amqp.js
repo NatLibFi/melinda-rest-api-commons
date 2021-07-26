@@ -216,6 +216,7 @@ export default async function (AMQP_URL) {
 
       const ids = payloads.ids || payloads;
       const rejectedIds = payloads.rejectedIds || [];
+      logger.debug(`ids: ${JSON.stringify(ids)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
 
       if (ids.length < 1 && rejectedIds.length > 0) {
         logger.debug(`Got 0 valid ids and rejected ${rejectedIds}`);
