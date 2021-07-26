@@ -212,6 +212,8 @@ export default async function (AMQP_URL) {
       const headers = getHeaderInfo(message);
 
       // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
+      logger.debug(`Payloads: ${JSON.stringify(payloads)}`);
+
       const ids = payloads.ids || payloads;
       const rejectedIds = payloads.rejectedIds || [];
 
