@@ -208,12 +208,14 @@ export default async function (AMQP_URL) {
   // ACK records
   async function ackNReplyMessages({status, messages, payloads}) {
     logger.verbose('Ack and reply messages!');
+    logger.debug(`Ack and reply messages. status: ${JSON.stringify.status} messages: ${JSON.stringify.messages} payloads: ${JSON.stringify.payloads}`);
     await messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
-      // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
-      logger.debug(`Payloads: ${JSON.stringify(payloads)}`);
+      logger.debug(`Message: ${JSON.stringify(message)}, index: ${JSON.stringify(index)}`);
+      logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
+      // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
       const ids = payloads.ids || payloads;
       const rejectedIds = payloads.rejectedIds || [];
       logger.debug(`ids: ${JSON.stringify(ids)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
