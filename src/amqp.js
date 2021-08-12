@@ -43,7 +43,8 @@ export default async function (AMQP_URL) {
 
   return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
-  async function checkQueue(queue, style = 'basic', purge = false) {
+  async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
+    logger.debug(`checkQueue: ${queue}, Style: ${style}`);
     try {
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (purge) {
@@ -53,6 +54,7 @@ export default async function (AMQP_URL) {
       }
 
       if (channelInfo.messageCount < 1) {
+        logger.debug(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
         return false;
       }
       logger.debug(`Queue ${queue} has ${channelInfo.messageCount} records`);
@@ -73,8 +75,9 @@ export default async function (AMQP_URL) {
         return consumeRawChunk(queue);
       }
 
-      if (style === /^.{8}-.{4}-.{4}-.{4}-.{12}$/u) {
-        return consumeByCorrelationId(queue, style);
+      if ((/^.{8}-.{4}-.{4}-.{4}-.{12}$/u).test(style)) {
+        logger.debug(`checkQueue: regexp match ${style}`);
+        return consumeByCorrelationId(queue, style, toRecord);
       }
 
       if (style === 'basic') {
@@ -122,7 +125,7 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consumeByCorrelationId(queue, correlationId) {
+  async function consumeByCorrelationId(queue, correlationId, toRecord = true) {
     logger.verbose(`Prepared to consumeByCorrelationId from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
@@ -141,9 +144,13 @@ export default async function (AMQP_URL) {
         return false;
       });
       const headers = getHeaderInfo(messages[0]);
-      const records = await messagesToRecords(messages);
 
-      return {headers, records, messages};
+      if (toRecord) {
+        const records = await messagesToRecords(messages);
+
+        return {headers, records, messages};
+      }
+      return {headers, messages};
     } catch (error) {
       logError(error);
     }
@@ -208,11 +215,12 @@ export default async function (AMQP_URL) {
   // ACK records
   async function ackNReplyMessages({status, messages, payloads}) {
     logger.verbose('Ack and reply messages!');
-    logger.debug(`Ack and reply messages. status: ${JSON.stringify.status} messages: ${JSON.stringify.messages} payloads: ${JSON.stringify.payloads}`);
+    logger.debug(`Ack and reply messages. status: ${JSON.stringify(status)} messages: ${messages} payloads: ${JSON.stringify(payloads)}`);
+    logger.debug(`Handling ${messages.length} messages`);
     await messages.forEach((message, index) => {
       const headers = getHeaderInfo(message);
 
-      logger.debug(`Message: ${JSON.stringify(message)}, index: ${JSON.stringify(index)}`);
+      logger.debug(`Message: ${message}, index: ${index}`);
       logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
       // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
@@ -250,7 +258,7 @@ export default async function (AMQP_URL) {
   }
 
   function ackMessages(messages) {
-    logger.verbose('Ack messages!');
+    logger.verbose(`Ack messages! (${messages.length})`);
     messages.forEach(message => {
       logger.silly(`Ack message ${message.properties.correlationId}`);
       channel.ack(message);
@@ -258,7 +266,7 @@ export default async function (AMQP_URL) {
   }
 
   function nackMessages(messages) {
-    logger.verbose('Nack messages!');
+    logger.verbose(`Nack messages! (${messages.length})`);
     messages.forEach(message => {
       logger.silly(`Nack message ${message.properties.correlationId}`);
       channel.nack(message);
