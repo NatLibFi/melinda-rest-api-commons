@@ -106,13 +106,8 @@ export default async function (MONGO_URI, collection) {
       handledIds: []
     };
     try {
-<<<<<<< HEAD
       db.collection(collection).insertOne(newQueueItem);
       logger.log('info', 'New queue item has been made!');
-=======
-      db.collection('queue-items').insertOne(newQueueItem);
-      logger.info('New queue item has been made!');
->>>>>>> origin/next
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -223,23 +218,13 @@ export default async function (MONGO_URI, collection) {
     const clean = {queueItemState: sanitize(queueItemState)};
     try {
       if (operation === undefined) {
-<<<<<<< HEAD
-        logger.log('silly', `Checking DB for ${JSON.stringify(clean)}`);
+        logger.log('silly', `Checking DB for ${JSON.stringify(clean.queueItemState)}`);
         return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
       }
 
       const clean2 = {operation: sanitize(operation)};
-      logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
+      logger.log('silly', `Checking DB for ${clean.queueItemState} + ${clean2.operation}`);
       return db.collection(collection).findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
-=======
-        logger.silly(`Checking DB for ${JSON.stringify(clean)}`);
-        return db.collection('queue-items').findOne({...clean}); //ignore: node_nosqli_injection
-      }
-
-      const clean2 = {operation: sanitize(operation)};
-      logger.silly(`Checking DB for ${clean} + ${clean2}`);
-      return db.collection('queue-items').findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
->>>>>>> origin/next
     } catch (error) {
       logError(error);
     }

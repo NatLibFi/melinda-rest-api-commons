@@ -14,11 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
 	},
 	"license": "AGPL-3.0+",
-<<<<<<< HEAD
-	"version": "1.0.5",
-=======
 	"version": "1.0.7-alpha.2",
->>>>>>> origin/next
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=12"
