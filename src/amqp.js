@@ -307,7 +307,7 @@ export default async function (AMQP_URL) {
   // ----------------
 
   function messagesToRecords(messages) {
-    logger.verbose('Parsing messages to records');
+    logger.verbose(`Parsing messages (${messages.length})to records`);
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
@@ -319,7 +319,9 @@ export default async function (AMQP_URL) {
     logger.verbose(`Getting queue data from ${queue}`);
     try {
       const {messageCount} = await channel.checkQueue(queue);
+      logger.debug(`There is ${messageCount} messages in queue ${queue}`);
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
+      logger.debug(`Getting ${messagesToGet} messages from queue ${queue}`);
 
       const messages = await pump(messagesToGet);
 

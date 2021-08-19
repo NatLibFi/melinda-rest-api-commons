@@ -81,7 +81,7 @@ export default async function (MONGO_URI) {
     };
     try {
       const result = await db.collection('queue-items').insertOne(newQueueItem);
-      if (result.result.n === 1 && result.result.ok === 1) {
+      if (result.acknowledged) {
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -166,7 +166,8 @@ export default async function (MONGO_URI) {
   }
 
   async function remove(params) {
-    logger.info(`Removing id: ${params.correlationId}`);
+    logger.debug(`${JSON.stringify(params)}`);
+    logger.info(`Removing from Mongo id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
 
     try {
