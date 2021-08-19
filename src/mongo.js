@@ -81,7 +81,7 @@ export default async function (MONGO_URI, collection) {
     };
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
-      if (result.result.n === 1 && result.result.ok === 1) {
+      if (result.acknowledged) {
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
