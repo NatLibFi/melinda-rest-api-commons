@@ -282,7 +282,7 @@ export default async function (MONGO_URI, collection) {
       $set: {
         queueItemState: state,
         modificationTime: moment().toDate(),
-        errorMessage: errorMessage
+        errorMessage
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
   }
