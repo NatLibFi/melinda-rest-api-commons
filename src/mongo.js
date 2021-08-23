@@ -271,7 +271,7 @@ export default async function (MONGO_URI) {
     });
   }
 
-  function setState({correlationId, state}) {
+  function setState({correlationId, state, errorMessage = ''}) {
     logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
     const clean = sanitize(correlationId);
     return db.collection('queue-items').findOneAndUpdate({
@@ -279,7 +279,8 @@ export default async function (MONGO_URI) {
     }, {
       $set: {
         queueItemState: state,
-        modificationTime: moment().toDate()
+        modificationTime: moment().toDate(),
+        errorMessage: errorMessage
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
   }
