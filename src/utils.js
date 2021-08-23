@@ -33,14 +33,14 @@ const logger = createLogger();
 
 export function logError(err) {
   if (err instanceof ApiError) {
-    logger.log('error', JSON.stringify(err));
+    logger.error(JSON.stringify(err));
     return;
   }
 
   if (err === 'SIGINT') {
-    logger.log('error', err);
+    logger.error(err);
     return;
   }
 
-  logger.log('error', err.stack === undefined ? err : err.stack);
+  logger.error(err.stack === undefined ? err : err.stack);
 }

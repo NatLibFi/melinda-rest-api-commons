@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -56,13 +57,13 @@ import sanitize from 'mongo-sanitize';
 }
 */
 
-export default async function (MONGO_URI) {
+export default async function (MONGO_URI, collection) {
   const logger = createLogger();
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
-  const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
+  const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushId};
 
@@ -79,8 +80,8 @@ export default async function (MONGO_URI) {
       handledId: ''
     };
     try {
-      const result = await db.collection('queue-items').insertOne(newQueueItem);
-      if (result.result.n === 1 && result.result.ok === 1) {
+      const result = await db.collection(collection).insertOne(newQueueItem);
+      if (result.acknowledged) {
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -105,7 +106,7 @@ export default async function (MONGO_URI) {
       handledIds: []
     };
     try {
-      db.collection('queue-items').insertOne(newQueueItem);
+      db.collection(collection).insertOne(newQueueItem);
       logger.log('info', 'New queue item has been made!');
     } catch (error) {
       logError(error);
@@ -133,14 +134,14 @@ export default async function (MONGO_URI) {
   }
 
   async function query(params) {
-    const result = await db.collection('queue-items').find(params, {projection: {_id: 0}})
+    const result = await db.collection(collection).find(params, {projection: {_id: 0}})
       .toArray();
-    logger.log('info', `Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    logger.info(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     return result;
   }
 
   async function queryById(correlationId, checkModTime) {
-    const result = await db.collection('queue-items').findOne({correlationId});
+    const result = await db.collection(collection).findOne({correlationId});
     if (checkModTime) {
       const timeOut = await checkTimeOut(correlationId);
       if (timeOut) {
@@ -153,9 +154,9 @@ export default async function (MONGO_URI) {
   }
 
   async function checkTimeOut(correlationId) {
-    const result = await db.collection('queue-items').findOne({correlationId});
+    const result = await db.collection(collection).findOne({correlationId});
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
-    logger.log('silly', `timeOut @ ${timeoutTime}`);
+    logger.silly(`timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
       await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
       return false;
@@ -165,19 +166,20 @@ export default async function (MONGO_URI) {
   }
 
   async function remove(params) {
-    logger.log('info', `Removing id: ${params.correlationId}`);
+    logger.debug(`${JSON.stringify(params)}`);
+    logger.info(`Removing from Mongo id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
 
     try {
       await getFileMetadata({gridFSBucket, filename: clean});
       const noContent = await removeContent(params);
       if (noContent) {
-        await db.collection('queue-items').deleteOne({correlationId: clean});
+        await db.collection(collection).deleteOne({correlationId: clean});
         return true;
       }
     } catch (err) {
       if (err.status === httpStatus.NOT_FOUND) {
-        await db.collection('queue-items').deleteOne({correlationId: clean});
+        await db.collection(collection).deleteOne({correlationId: clean});
         return true;
       }
       throw err;
@@ -185,9 +187,9 @@ export default async function (MONGO_URI) {
   }
 
   async function readContent(correlationId) {
-    logger.log('info', `Reading content for id: ${correlationId}`);
+    logger.info(`Reading content for id: ${correlationId}`);
     const clean = sanitize(correlationId);
-    const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
     if (result) {
       // Check if the file exists
@@ -202,10 +204,10 @@ export default async function (MONGO_URI) {
   }
 
   async function removeContent(params) {
-    logger.log('info', `Removing content for id: ${params.correlationId}`);
+    logger.info(`Removing content for id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await db.collection('queue-items').findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
     if (result) {
       const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: clean});
       await gridFSBucket.delete(fileId);
@@ -217,20 +219,20 @@ export default async function (MONGO_URI) {
     const clean = {queueItemState: sanitize(queueItemState)};
     try {
       if (operation === undefined) {
-        logger.log('silly', `Checking DB for ${JSON.stringify(clean)}`);
-        return db.collection('queue-items').findOne({...clean}); //ignore: node_nosqli_injection
+        logger.log('silly', `Checking DB for ${JSON.stringify(clean.queueItemState)}`);
+        return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
       }
 
       const clean2 = {operation: sanitize(operation)};
-      logger.log('silly', `Checking DB for ${clean} + ${clean2}`);
-      return db.collection('queue-items').findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
+      logger.log('silly', `Checking DB for ${clean.queueItemState} + ${clean2.operation}`);
+      return db.collection(collection).findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
     } catch (error) {
       logError(error);
     }
   }
 
   async function getStream(correlationId) {
-    logger.log('info', `Forming stream from db: ${correlationId}`);
+    logger.info(`Forming stream from db: ${correlationId}`);
     const clean = sanitize(correlationId);
     try {
       // Check that content is there
@@ -244,9 +246,9 @@ export default async function (MONGO_URI) {
   }
 
   async function pushIds({correlationId, ids}) {
-    logger.log('debug', `Push queue-item ids to list: ${correlationId}, ${ids}`);
+    logger.debug(`Push queue-item ids to list: ${correlationId}, ${ids}`);
     const clean = sanitize(correlationId);
-    await db.collection('queue-items').updateOne({
+    await db.collection(collection).updateOne({
       correlationId: clean
     }, {
       $set: {
@@ -259,9 +261,9 @@ export default async function (MONGO_URI) {
   }
 
   async function pushId({correlationId, id}) {
-    logger.log('debug', `Push queue-item id: ${correlationId}, ${id}`);
+    logger.debug(`Push queue-item id: ${correlationId}, ${id}`);
     const clean = sanitize(correlationId);
-    await db.collection('queue-items').updateOne({
+    await db.collection(collection).updateOne({
       correlationId: clean
     }, {
       $set: {
@@ -272,9 +274,9 @@ export default async function (MONGO_URI) {
   }
 
   function setState({correlationId, state, errorMessage = ''}) {
-    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}`);
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, ${errorMessage}`);
     const clean = sanitize(correlationId);
-    return db.collection('queue-items').findOneAndUpdate({
+    return db.collection(collection).findOneAndUpdate({
       correlationId: clean
     }, {
       $set: {
