@@ -82,6 +82,7 @@ export default async function (MONGO_URI, collection) {
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
       if (result.acknowledged) {
+        logger.debug(`Created new prio queue item ${correlationId} in ${collection}`);
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -106,8 +107,9 @@ export default async function (MONGO_URI, collection) {
       handledIds: []
     };
     try {
+      // Should this have also await?
       db.collection(collection).insertOne(newQueueItem);
-      logger.log('info', 'New queue item has been made!');
+      logger.log('info', `New bulk queue item for ${correlationId} has been made in ${collection}!`);
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -167,7 +169,7 @@ export default async function (MONGO_URI, collection) {
 
   async function remove(params) {
     logger.debug(`${JSON.stringify(params)}`);
-    logger.info(`Removing from Mongo id: ${params.correlationId}`);
+    logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
 
     try {
@@ -187,7 +189,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function readContent(correlationId) {
-    logger.info(`Reading content for id: ${correlationId}`);
+    logger.info(`Reading content for id: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
     const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
@@ -204,7 +206,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function removeContent(params) {
-    logger.info(`Removing content for id: ${params.correlationId}`);
+    logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
     const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
@@ -219,12 +221,12 @@ export default async function (MONGO_URI, collection) {
     const clean = {queueItemState: sanitize(queueItemState)};
     try {
       if (operation === undefined) {
-        logger.log('silly', `Checking DB for ${JSON.stringify(clean.queueItemState)}`);
+        logger.log('silly', `Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
         return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
       }
 
       const clean2 = {operation: sanitize(operation)};
-      logger.log('silly', `Checking DB for ${clean.queueItemState} + ${clean2.operation}`);
+      logger.log('silly', `Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
       return db.collection(collection).findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
     } catch (error) {
       logError(error);
@@ -232,7 +234,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function getStream(correlationId) {
-    logger.info(`Forming stream from db: ${correlationId}`);
+    logger.info(`Forming stream from db: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
     try {
       // Check that content is there
@@ -246,7 +248,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function pushIds({correlationId, ids}) {
-    logger.debug(`Push queue-item ids to list: ${correlationId}, ${ids}`);
+    logger.debug(`Push queue-item ids to list: ${correlationId}, ${ids} to ${collection}`);
     const clean = sanitize(correlationId);
     await db.collection(collection).updateOne({
       correlationId: clean
@@ -261,7 +263,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function pushId({correlationId, id}) {
-    logger.debug(`Push queue-item id: ${correlationId}, ${id}`);
+    logger.debug(`Push queue-item id: ${correlationId}, ${id} to ${collection}`);
     const clean = sanitize(correlationId);
     await db.collection(collection).updateOne({
       correlationId: clean
@@ -274,7 +276,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   function setState({correlationId, state, errorMessage = ''}) {
-    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, ${errorMessage}`);
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, ${errorMessage} to ${collection}`);
     const clean = sanitize(correlationId);
     return db.collection(collection).findOneAndUpdate({
       correlationId: clean
