@@ -100,7 +100,7 @@ export default async function (MONGO_URI, collection) {
       operation,
       contentType,
       recordLoadParams,
-      queueItemState: QUEUE_ITEM_STATE.UPLOADING,
+      queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
       creationTime: time,
       modificationTime: time,
       handledIds: []
