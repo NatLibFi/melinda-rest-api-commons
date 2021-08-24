@@ -28,7 +28,7 @@
 *
 */
 
-import {MongoClient, GridFSBucket} from 'mongodb';
+import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from './constants';
@@ -108,7 +108,7 @@ export default async function (MONGO_URI, collection) {
       handledIds: []
     };
     try {
-      // Should this have also await?
+      // No await here, promises later
       db.collection(collection).insertOne(newQueueItem);
       logger.log('info', `New bulk queue item for ${correlationId} has been made in ${collection}!`);
     } catch (error) {
@@ -175,8 +175,8 @@ export default async function (MONGO_URI, collection) {
     logger.debug(`mongo/remove: clean: ${JSON.stringify(clean)}`);
 
     try {
-      const metadataResult = await getFileMetadata({filename: clean});
-      logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
+      //const metadataResult = await getFileMetadata({filename: clean});
+      //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
       const noContent = await removeContent(params);
       logger.debug(`mongo/remove: noContent: ${JSON.stringify(noContent)}`);
       if (noContent) {
@@ -184,11 +184,16 @@ export default async function (MONGO_URI, collection) {
         return true;
       }
     } catch (err) {
-      if (err.status === httpStatus.NOT_FOUND) {
-        await db.collection(collection).deleteOne({correlationId: clean});
-        return true;
+      if (err instanceof MongoDriverError) {
+        logger.error(err.message);
+        if (err.message.indexOf('File not found for id') !== -1) {
+          logger.debug(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
+          await db.collection(collection).deleteOne({correlationId: clean});
+          return true;
+        }
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
       }
-      throw err;
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 
@@ -218,9 +223,9 @@ export default async function (MONGO_URI, collection) {
     logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
-      const {_id: fileId} = await getFileMetadata({filename: clean});
-      logger.debug(`mongo/removeContent: fileId: ${fileId}`);
-      await gridFSBucket.delete(fileId);
+      //const {_id: fileId} = await getFileMetadata({filename: clean});
+      //logger.debug(`mongo/removeContent: fileId: ${fileId}`);
+      await gridFSBucket.delete(clean);
       return true;
     }
 
@@ -302,7 +307,7 @@ export default async function (MONGO_URI, collection) {
   function getFileMetadata(params) {
     logger.debug(`mongo/getFileMetadata: Getting metadata: ${JSON.stringify(params)}`);
     return new Promise((resolve, reject) => {
-      gridFSBucket.find(params)
+      gridFSBucket.find(params, {maxTimeMS: 1000})
         .on('error', reject)
         .on('data', resolve)
         .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
