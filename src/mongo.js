@@ -30,7 +30,7 @@
 import {MongoClient, GridFSBucket} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from './constants';
+import {QUEUE_ITEM_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
@@ -74,7 +74,7 @@ export default async function (MONGO_URI, collection) {
       cataloger,
       operation,
       oCatalogerIn,
-      queueItemState: PRIO_QUEUE_ITEM_STATE.PENDING_VALIDATION,
+      queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
       handledId: ''
@@ -158,7 +158,7 @@ export default async function (MONGO_URI, collection) {
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.silly(`timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
-      await setState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ABORT});
+      await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT});
       return false;
     }
 
