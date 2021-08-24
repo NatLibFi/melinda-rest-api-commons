@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /* eslint-disable max-statements */
 /**
 *
@@ -171,10 +172,13 @@ export default async function (MONGO_URI, collection) {
     logger.debug(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
+    logger.debug(`mongo/remove: clean: ${JSON.stringify(clean)}`);
 
     try {
-      await getFileMetadata({gridFSBucket, filename: clean});
+      const metadataResult = await getFileMetadata({filename: clean});
+      logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
       const noContent = await removeContent(params);
+      logger.debug(`mongo/remove: noContent: ${JSON.stringify(noContent)}`);
       if (noContent) {
         await db.collection(collection).deleteOne({correlationId: clean});
         return true;
@@ -195,7 +199,7 @@ export default async function (MONGO_URI, collection) {
 
     if (result) {
       // Check if the file exists
-      await getFileMetadata({gridFSBucket, filename: clean});
+      await getFileMetadata({filename: clean});
       return {
         contentType: result.contentType,
         readStream: gridFSBucket.openDownloadStreamByName(clean)
@@ -208,13 +212,19 @@ export default async function (MONGO_URI, collection) {
   async function removeContent(params) {
     logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
+    logger.debug(`mongo/removeContent: clean ${clean}`);
 
     const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
+
     if (result) {
-      const {_id: fileId} = await getFileMetadata({gridFSBucket, filename: clean});
+      const {_id: fileId} = await getFileMetadata({filename: clean});
+      logger.debug(`mongo/removeContent: fileId: ${fileId}`);
       await gridFSBucket.delete(fileId);
       return true;
     }
+
+    return true;
   }
 
   function getOne({operation, queueItemState}) {
@@ -238,7 +248,7 @@ export default async function (MONGO_URI, collection) {
     const clean = sanitize(correlationId);
     try {
       // Check that content is there
-      await getFileMetadata({gridFSBucket, filename: clean});
+      await getFileMetadata({filename: clean});
 
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(clean);
@@ -289,9 +299,10 @@ export default async function (MONGO_URI, collection) {
     }, {projection: {_id: 0}, returnNewDocument: true});
   }
 
-  function getFileMetadata({gridFSBucket, filename}) {
+  function getFileMetadata(params) {
+    logger.debug(`mongo/getFileMetadata: Getting metadata: ${JSON.stringify(params)}`);
     return new Promise((resolve, reject) => {
-      gridFSBucket.find({filename})
+      gridFSBucket.find(params)
         .on('error', reject)
         .on('data', resolve)
         .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
