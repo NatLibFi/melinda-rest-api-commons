@@ -253,8 +253,9 @@ export default async function (MONGO_URI, collection) {
     }
   }
 
-  async function pushIds({correlationId, ids}) {
-    logger.debug(`Push queue-item ids to list: ${correlationId}, ${ids} to ${collection}`);
+  async function pushIds({correlationId, handledIds, rejectedIds}) {
+    logger.debug(`Push queue-item ids to list: ${correlationId} to ${collection}`);
+    logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
     const clean = sanitize(correlationId);
     await db.collection(collection).updateOne({
       correlationId: clean
@@ -263,7 +264,8 @@ export default async function (MONGO_URI, collection) {
         modificationTime: moment().toDate()
       },
       $push: {
-        handledIds: {$each: ids}
+        handledIds: {$each: handledIds},
+        rejectedIds: {$each: rejectedIds}
       }
     });
   }

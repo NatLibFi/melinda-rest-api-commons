@@ -223,12 +223,10 @@ export default async function (AMQP_URL) {
       logger.debug(`Message: ${message}, index: ${index}`);
       logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
-      // payloads ids are parsed both form old payloads including just array of ids and new payloads including both array of ids and array of rejected ids
-      const ids = payloads.ids || payloads;
-      const rejectedIds = payloads.rejectedIds || [];
-      logger.debug(`ids: ${JSON.stringify(ids)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
+      const {handledIds, rejectedIds} = payloads;
+      logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
 
-      if (ids.length < 1 && rejectedIds.length > 0) {
+      if (handledIds.length < 1 && rejectedIds.length > 0) {
         logger.debug(`Got 0 valid ids and rejected ${rejectedIds}`);
 
         sendToQueue({
@@ -236,20 +234,20 @@ export default async function (AMQP_URL) {
           correlationId: message.properties.correlationId,
           headers,
           data: {
-            status: httpStatus.UNPROCESSABLE_ENTITY, payload: rejectedIds
+            status: httpStatus.UNPROCESSABLE_ENTITY, payload: rejectedIds[0]
           }
         });
 
         return channel.ack(message);
       }
 
-      // Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
+      // Reply consumer gets: {"data":{"status":"UPDATED","payload":"000123456"}}
       sendToQueue({
         queue: message.properties.correlationId,
         correlationId: message.properties.correlationId,
         headers,
         data: {
-          status, payload: ids[index]
+          status, payload: handledIds[0]
         }
       });
 
