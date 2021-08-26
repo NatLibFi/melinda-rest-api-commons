@@ -242,7 +242,7 @@ export default async function (MONGO_URI, collection) {
     }
   }
 
-  async function getStream(correlationId) {
+  function getStream(correlationId) {
     logger.info(`Forming stream from db: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
     try {
