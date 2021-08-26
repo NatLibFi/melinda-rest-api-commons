@@ -66,7 +66,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushId};
+  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation}) {
     const time = moment().toDate();
@@ -78,7 +78,7 @@ export default async function (MONGO_URI, collection) {
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
-      handledId: ''
+      handledIds: []
     };
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
@@ -178,7 +178,6 @@ export default async function (MONGO_URI, collection) {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
       const noContent = await removeContent(params);
-      logger.debug(`mongo/remove: noContent: ${JSON.stringify(noContent)}`);
       if (noContent) {
         await db.collection(collection).deleteOne({correlationId: clean});
         return true;
@@ -203,8 +202,6 @@ export default async function (MONGO_URI, collection) {
     const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
 
     if (result) {
-      // Check if the file exists
-      await getFileMetadata({filename: clean});
       return {
         contentType: result.contentType,
         readStream: gridFSBucket.openDownloadStreamByName(clean)
@@ -217,14 +214,11 @@ export default async function (MONGO_URI, collection) {
   async function removeContent(params) {
     logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
-    logger.debug(`mongo/removeContent: clean ${clean}`);
 
     const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
     logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
-      //const {_id: fileId} = await getFileMetadata({filename: clean});
-      //logger.debug(`mongo/removeContent: fileId: ${fileId}`);
       await gridFSBucket.delete(clean);
       return true;
     }
@@ -236,7 +230,7 @@ export default async function (MONGO_URI, collection) {
     const clean = {queueItemState: sanitize(queueItemState)};
     try {
       if (operation === undefined) {
-        logger.log('silly', `Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
+        logger.silly(`Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
         return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
       }
 
@@ -252,9 +246,6 @@ export default async function (MONGO_URI, collection) {
     logger.info(`Forming stream from db: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
     try {
-      // Check that content is there
-      await getFileMetadata({filename: clean});
-
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(clean);
     } catch (error) {
@@ -277,21 +268,8 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  async function pushId({correlationId, id}) {
-    logger.debug(`Push queue-item id: ${correlationId}, ${id} to ${collection}`);
-    const clean = sanitize(correlationId);
-    await db.collection(collection).updateOne({
-      correlationId: clean
-    }, {
-      $set: {
-        modificationTime: moment().toDate(),
-        handledId: id
-      }
-    });
-  }
-
   function setState({correlationId, state, errorMessage = ''}) {
-    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, ${errorMessage} to ${collection}`);
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, Error message: '${errorMessage}' to ${collection}`);
     const clean = sanitize(correlationId);
     return db.collection(collection).findOneAndUpdate({
       correlationId: clean
@@ -302,15 +280,5 @@ export default async function (MONGO_URI, collection) {
         errorMessage
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
-  }
-
-  function getFileMetadata(params) {
-    logger.debug(`mongo/getFileMetadata: Getting metadata: ${JSON.stringify(params)}`);
-    return new Promise((resolve, reject) => {
-      gridFSBucket.find(params, {maxTimeMS: 1000})
-        .on('error', reject)
-        .on('data', resolve)
-        .on('end', () => reject(new ApiError(httpStatus.NOT_FOUND, 'No content')));
-    });
   }
 }
