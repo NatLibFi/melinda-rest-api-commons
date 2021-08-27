@@ -222,8 +222,13 @@ export default async function (AMQP_URL) {
 
       logger.debug(`Message: ${message}, index: ${index}`);
       logger.debug(`Headers: ${JSON.stringify(headers)}`);
+      logger.debug(`Payloads: ${JSON.stringify(payloads)}`);
 
-      const {handledIds, rejectedIds} = payloads;
+      // Validator uses this for responses that do not include handledIds/rejectedIds, just error message in payloads
+      // const {handledIds, rejectedIds} = payloads;
+      const handledIds = payloads.handledIds || [];
+      const rejectedIds = payloads.rejectedIds || [];
+
       logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
 
       if (handledIds.length < 1 && rejectedIds.length > 0) {
@@ -241,13 +246,16 @@ export default async function (AMQP_URL) {
         return channel.ack(message);
       }
 
+      const responsePayload = handledIds[0] || payloads;
+      logger.debug(`responsePayload ${JSON.stringify(responsePayload)}`);
+
       // Reply consumer gets: {"data":{"status":"UPDATED","payload":"000123456"}}
       sendToQueue({
         queue: message.properties.correlationId,
         correlationId: message.properties.correlationId,
         headers,
         data: {
-          status, payload: handledIds[0]
+          status, payload: responsePayload
         }
       });
 
