@@ -66,7 +66,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds};
+  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation}) {
     const time = moment().toDate();
@@ -266,6 +266,22 @@ export default async function (MONGO_URI, collection) {
       $push: {
         handledIds: {$each: handledIds},
         rejectedIds: {$each: rejectedIds}
+      }
+    });
+  }
+
+  async function pushMessages({correlationId, messages, messageField = 'messages'}) {
+    logger.debug(`Push messages to ${messageField}. ${correlationId} to ${collection}`);
+    logger.debug(`Messages: ${JSON.stringify(messages)}}`);
+    const clean = sanitize(correlationId);
+    await db.collection(collection).updateOne({
+      correlationId: clean
+    }, {
+      $set: {
+        modificationTime: moment().toDate()
+      },
+      $push: {
+        messageField: {$each: messages}
       }
     });
   }
