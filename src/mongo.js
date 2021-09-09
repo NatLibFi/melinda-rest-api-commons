@@ -271,9 +271,10 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function pushMessages({correlationId, messages, messageField = 'messages'}) {
-    logger.debug(`Push messages to ${messageField}. ${correlationId} to ${collection}`);
+    logger.debug(`Push messages to ${messageField} ${correlationId} to ${collection}`);
     logger.debug(`Messages: ${JSON.stringify(messages)}}`);
     const clean = sanitize(correlationId);
+    const cleanMessageField = sanitize(messageField);
     await db.collection(collection).updateOne({
       correlationId: clean
     }, {
@@ -281,7 +282,7 @@ export default async function (MONGO_URI, collection) {
         modificationTime: moment().toDate()
       },
       $push: {
-        messageField: {$each: messages}
+        [cleanMessageField]: {$each: messages}
       }
     });
   }
