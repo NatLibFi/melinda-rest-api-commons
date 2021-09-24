@@ -128,10 +128,10 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  async function checkAndSetState({correlationId, state}) {
+  async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
     const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
-      return setState({correlationId, state});
+      return setState({correlationId, state, errorMessage, errorStatus});
     }
     return false;
   }
