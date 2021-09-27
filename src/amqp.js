@@ -214,6 +214,11 @@ export default async function (AMQP_URL) {
 
   // ACK records
   async function ackNReplyMessages({status, messages, payloads}) {
+
+    // Note: original ackNReplyMessages got array of messages and array of payloads from importer
+    // Note: original ackNReplyMessages got array of one message and array of one payload from prio validator
+    // Note: original ackNReplyMessages was not used by bulk validator
+
     logger.verbose('Ack and reply messages!');
     logger.debug(`Ack and reply messages. status: ${JSON.stringify(status)} messages: ${messages} payloads: ${JSON.stringify(payloads)}`);
     logger.debug(`Handling ${messages.length} messages`);
@@ -226,9 +231,10 @@ export default async function (AMQP_URL) {
 
       // Validator uses this for responses that do not include handledIds/rejectedIds, just error message in payloads
       // const {handledIds, rejectedIds} = payloads;
-      const handledIds = payloads.handledIds || [];
-      const rejectedIds = payloads.rejectedIds || [];
+      //const handledIds = payloads.handledIds || [];
+      //const rejectedIds = payloads.rejectedIds || [];
 
+      /*
       logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
 
       if (handledIds.length < 1 && rejectedIds.length > 0) {
@@ -245,11 +251,13 @@ export default async function (AMQP_URL) {
 
         return channel.ack(message);
       }
+      */
 
-      const responsePayload = handledIds[0] || payloads;
+      const responsePayload = payloads[index] || '';
       logger.debug(`responsePayload ${JSON.stringify(responsePayload)}`);
 
       // Reply consumer gets: {"data":{"status":"UPDATED","payload":"000123456"}}
+      // or {"data": {"status: 409","payload":"000123456"}}
       sendToQueue({
         queue: message.properties.correlationId,
         correlationId: message.properties.correlationId,
