@@ -199,7 +199,7 @@ export default async function (MONGO_URI, collection) {
   async function readContent(correlationId) {
     logger.info(`Reading content for id: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
-    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean});
 
     if (result) {
       return {
@@ -215,7 +215,7 @@ export default async function (MONGO_URI, collection) {
     logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean});
     logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
@@ -231,12 +231,12 @@ export default async function (MONGO_URI, collection) {
     try {
       if (operation === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
-        return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
+        return db.collection(collection).findOne({...clean});
       }
 
       const clean2 = {operation: sanitize(operation)};
       logger.log('silly', `Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
-      return db.collection(collection).findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
+      return db.collection(collection).findOne({...clean, ...clean2});
     } catch (error) {
       logError(error);
     }
