@@ -204,7 +204,7 @@ export default async function (MONGO_URI, collection) {
     if (result) {
       return {
         contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(clean))
+        readStream: gridFSBucket.openDownloadStreamByName(clean)
       };
     }
 
