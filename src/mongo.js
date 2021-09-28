@@ -200,12 +200,12 @@ export default async function (MONGO_URI, collection) {
   async function readContent(correlationId) {
     logger.info(`Reading content for id: ${correlationId} in ${collection}`);
     //const clean = sanitize(correlationId);
-    const result = await db.collection(collection).findOne({correlationId: sanitize(correlationId)});
+    const result = await db.collection(collection).findOne({correlationId: sanitize(correlationId)}); //ignore: node_nosqli_injection
 
     if (result) {
       return {
         contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(sanitize(correlationId))
+        readStream: gridFSBucket.openDownloadStreamByName(sanitize(correlationId));
       };
     }
 
