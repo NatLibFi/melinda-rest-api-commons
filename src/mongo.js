@@ -177,7 +177,6 @@ export default async function (MONGO_URI, collection) {
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
-      // foo
       const noContent = await removeContent(params);
       if (noContent) {
         await db.collection(collection).deleteOne({correlationId: clean});
@@ -199,13 +198,13 @@ export default async function (MONGO_URI, collection) {
 
   async function readContent(correlationId) {
     logger.info(`Reading content for id: ${correlationId} in ${collection}`);
-    //const clean = sanitize(correlationId);
-    const result = await db.collection(collection).findOne({correlationId: sanitize(correlationId)}); // njsscan-ignore: node_nosqli_injection
+    const clean = sanitize(correlationId);
+    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
 
     if (result) {
       return {
         contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(sanitize(correlationId))
+        readStream: gridFSBucket.openDownloadStreamByName(clean))
       };
     }
 
@@ -216,7 +215,7 @@ export default async function (MONGO_URI, collection) {
     logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await db.collection(collection).findOne({correlationId: clean});
+    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
     logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
