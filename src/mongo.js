@@ -177,6 +177,7 @@ export default async function (MONGO_URI, collection) {
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
+      // foo
       const noContent = await removeContent(params);
       if (noContent) {
         await db.collection(collection).deleteOne({correlationId: clean});
