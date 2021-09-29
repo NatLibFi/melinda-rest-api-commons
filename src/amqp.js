@@ -41,7 +41,7 @@ export default async function (AMQP_URL) {
   const channel = await connection.createChannel();
   const logger = createLogger();
 
-  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
+  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
   async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
     logger.debug(`checkQueue: ${queue}, Style: ${style}`);
@@ -210,65 +210,6 @@ export default async function (AMQP_URL) {
     } catch (error) {
       logError(error);
     }
-  }
-
-  // ACK records
-  async function ackNReplyMessages({status, messages, payloads}) {
-
-    // Note: original ackNReplyMessages got array of messages and array of payloads from importer
-    // Note: original ackNReplyMessages got array of one message and array of one payload from prio validator
-    // Note: original ackNReplyMessages was not used by bulk validator
-
-    logger.verbose('Ack and reply messages!');
-    logger.debug(`Ack and reply messages. status: ${JSON.stringify(status)} messages: ${messages} payloads: ${JSON.stringify(payloads)}`);
-    logger.debug(`Handling ${messages.length} messages`);
-    await messages.forEach((message, index) => {
-      const headers = getHeaderInfo(message);
-
-      logger.debug(`Message: ${message}, index: ${index}`);
-      logger.debug(`Headers: ${JSON.stringify(headers)}`);
-      logger.debug(`Payloads: ${JSON.stringify(payloads)}`);
-
-      // Validator uses this for responses that do not include handledIds/rejectedIds, just error message in payloads
-      // const {handledIds, rejectedIds} = payloads;
-      //const handledIds = payloads.handledIds || [];
-      //const rejectedIds = payloads.rejectedIds || [];
-
-      /*
-      logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
-
-      if (handledIds.length < 1 && rejectedIds.length > 0) {
-        logger.debug(`Got 0 valid ids and rejected ${rejectedIds}`);
-
-        sendToQueue({
-          queue: message.properties.correlationId,
-          correlationId: message.properties.correlationId,
-          headers,
-          data: {
-            status: httpStatus.UNPROCESSABLE_ENTITY, payload: rejectedIds[0]
-          }
-        });
-
-        return channel.ack(message);
-      }
-      */
-
-      const responsePayload = payloads[index] || '';
-      logger.debug(`responsePayload ${JSON.stringify(responsePayload)}`);
-
-      // Reply consumer gets: {"data":{"status":"UPDATED","payload":"000123456"}}
-      // or {"data": {"status: 409","payload":"000123456"}}
-      sendToQueue({
-        queue: message.properties.correlationId,
-        correlationId: message.properties.correlationId,
-        headers,
-        data: {
-          status, payload: responsePayload
-        }
-      });
-
-      channel.ack(message);
-    });
   }
 
   function ackMessages(messages) {
