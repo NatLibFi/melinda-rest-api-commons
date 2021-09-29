@@ -162,6 +162,7 @@ export default async function (MONGO_URI, collection) {
   // Check that if the item has waited too long
   // If the last modification time for the queueItem is older than 1 minute
   // set state to ABORT and return false, otherwise return true
+  // This could also add information about where the timeout occured
   async function checkTimeOut(correlationId) {
     const result = await db.collection(collection).findOne({correlationId});
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
