@@ -128,6 +128,7 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
+  // Check state if queueItem has not waited too long
   async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
     const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
@@ -156,12 +157,15 @@ export default async function (MONGO_URI, collection) {
     return result;
   }
 
+  // Check that if the item has waited too long
+  // If the last modification time for the queueItem is older than 1 minute
+  // set state to ABORT and return false, otherwise return true
   async function checkTimeOut(correlationId) {
     const result = await db.collection(collection).findOne({correlationId});
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.silly(`timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
-      await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT});
+      await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: '408', errorMessage: 'Timeout'});
       return false;
     }
 
