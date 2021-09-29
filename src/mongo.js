@@ -128,8 +128,10 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  // Check state if queueItem has not waited too long
+  // Check state that the queueItem has not waited too long and set state
   async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute
+    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
     const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
       return setState({correlationId, state, errorMessage, errorStatus});
