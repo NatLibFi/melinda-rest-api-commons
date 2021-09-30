@@ -67,6 +67,7 @@ export default async function (AMQP_URL) {
         return consumeOne(queue);
       }
 
+      // Note: returns just the message
       if (style === 'raw') {
         return consumeRaw(queue);
       }
@@ -101,22 +102,30 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+
+      // getData: next chunk (100) messages
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by ${JSON.stringify(headers)}`);
+      logger.debug(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
+
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
 
       // Check that cataloger match! headers
       const messages = queMessages.filter(message => {
         if (message.properties.headers.cataloger === headers.cataloger) {
+          filterIn++; // eslint-disable-line no-plusplus
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
         return false;
       });
 
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
       const records = await messagesToRecords(messages);
 
       return {headers, records, messages};
@@ -129,20 +138,28 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeByCorrelationId from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+      // get next chunk (100) messages
       const queMessages = await getData(queue);
 
       logger.debug(`Filtering messages by ${correlationId}`);
 
-      // Check that cataloger match! headers
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
+
+      // Check that correlationId matches query
       const messages = queMessages.filter(message => {
         if (message.properties.correlationId === correlationId) {
+          filterIn++; // eslint-disable-line no-plusplus
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
         return false;
       });
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
+
       const headers = getHeaderInfo(messages[0]);
 
       if (toRecord) {
@@ -160,22 +177,32 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeRawChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+      // Get next chunk (100) messages
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by ${JSON.stringify(headers)} and timeout`);
+      logger.debug(`Filtering messages by ${JSON.stringify(headers)}`);
+
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
 
       // Check that cataloger match! headers
       const messages = queMessages.filter(message => {
         if (message.properties.headers.cataloger === headers.cataloger) {
+          filterIn++; // eslint-disable-line no-plusplus
+
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
+
         return false;
       });
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
 
+      // return raw (do not convert messages to records)
       return {headers, messages};
     } catch (error) {
       logError(error);
