@@ -128,10 +128,13 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  async function checkAndSetState({correlationId, state}) {
+  // Check state that the queueItem has not waited too long and set state
+  async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute
+    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
     const timeOut = await checkTimeOut(correlationId);
     if (timeOut) {
-      return setState({correlationId, state});
+      return setState({correlationId, state, errorMessage, errorStatus});
     }
     return false;
   }
@@ -156,12 +159,16 @@ export default async function (MONGO_URI, collection) {
     return result;
   }
 
+  // Check that if the item has waited too long
+  // If the last modification time for the queueItem is older than 1 minute
+  // set state to ABORT and return false, otherwise return true
+  // This could also add information about where the timeout occured
   async function checkTimeOut(correlationId) {
     const result = await db.collection(collection).findOne({correlationId});
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.silly(`timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
-      await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT});
+      await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: 'Timeout'});
       return false;
     }
 
@@ -199,7 +206,7 @@ export default async function (MONGO_URI, collection) {
   async function readContent(correlationId) {
     logger.info(`Reading content for id: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
-    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
 
     if (result) {
       return {
@@ -215,7 +222,7 @@ export default async function (MONGO_URI, collection) {
     logger.info(`Removing content for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await db.collection(collection).findOne({correlationId: clean}); //ignore: node_nosqli_injection
+    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
     logger.debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
@@ -231,12 +238,12 @@ export default async function (MONGO_URI, collection) {
     try {
       if (operation === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
-        return db.collection(collection).findOne({...clean}); //ignore: node_nosqli_injection
+        return db.collection(collection).findOne({...clean});
       }
 
       const clean2 = {operation: sanitize(operation)};
       logger.log('silly', `Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
-      return db.collection(collection).findOne({...clean, ...clean2}); //ignore: node_nosqli_injection
+      return db.collection(collection).findOne({...clean, ...clean2});
     } catch (error) {
       logError(error);
     }
@@ -287,8 +294,8 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  function setState({correlationId, state, errorMessage = ''}) {
-    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, Error message: '${errorMessage}' to ${collection}`);
+  function setState({correlationId, state, errorMessage = '', errorStatus = ''}) {
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, Error message: '${errorMessage}', Error status: '${errorStatus}' to ${collection}`);
     const clean = sanitize(correlationId);
     return db.collection(collection).findOneAndUpdate({
       correlationId: clean
@@ -296,7 +303,8 @@ export default async function (MONGO_URI, collection) {
       $set: {
         queueItemState: state,
         modificationTime: moment().toDate(),
-        errorMessage
+        errorMessage,
+        errorStatus
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
   }

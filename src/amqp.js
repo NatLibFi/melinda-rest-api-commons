@@ -41,7 +41,7 @@ export default async function (AMQP_URL) {
   const channel = await connection.createChannel();
   const logger = createLogger();
 
-  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
+  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
   async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
     logger.debug(`checkQueue: ${queue}, Style: ${style}`);
@@ -67,6 +67,7 @@ export default async function (AMQP_URL) {
         return consumeOne(queue);
       }
 
+      // Note: returns just the message
       if (style === 'raw') {
         return consumeRaw(queue);
       }
@@ -101,22 +102,30 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+
+      // getData: next chunk (100) messages
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by ${JSON.stringify(headers)}`);
+      logger.debug(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
+
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
 
       // Check that cataloger match! headers
       const messages = queMessages.filter(message => {
         if (message.properties.headers.cataloger === headers.cataloger) {
+          filterIn++; // eslint-disable-line no-plusplus
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
         return false;
       });
 
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
       const records = await messagesToRecords(messages);
 
       return {headers, records, messages};
@@ -129,20 +138,28 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeByCorrelationId from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+      // get next chunk (100) messages
       const queMessages = await getData(queue);
 
       logger.debug(`Filtering messages by ${correlationId}`);
 
-      // Check that cataloger match! headers
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
+
+      // Check that correlationId matches query
       const messages = queMessages.filter(message => {
         if (message.properties.correlationId === correlationId) {
+          filterIn++; // eslint-disable-line no-plusplus
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
         return false;
       });
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
+
       const headers = getHeaderInfo(messages[0]);
 
       if (toRecord) {
@@ -160,22 +177,32 @@ export default async function (AMQP_URL) {
     logger.verbose(`Prepared to consumeRawChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+      // Get next chunk (100) messages
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by ${JSON.stringify(headers)} and timeout`);
+      logger.debug(`Filtering messages by ${JSON.stringify(headers)}`);
+
+      let filterIn = 0; // eslint-disable-line functional/no-let
+      let filterOut = 0; // eslint-disable-line functional/no-let
 
       // Check that cataloger match! headers
       const messages = queMessages.filter(message => {
         if (message.properties.headers.cataloger === headers.cataloger) {
+          filterIn++; // eslint-disable-line no-plusplus
+
           return true;
         }
 
         // Nack unwanted ones
         channel.nack(message, false, true);
+        filterOut++; // eslint-disable-line no-plusplus
+
         return false;
       });
+      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
 
+      // return raw (do not convert messages to records)
       return {headers, messages};
     } catch (error) {
       logError(error);
@@ -210,57 +237,6 @@ export default async function (AMQP_URL) {
     } catch (error) {
       logError(error);
     }
-  }
-
-  // ACK records
-  async function ackNReplyMessages({status, messages, payloads}) {
-    logger.verbose('Ack and reply messages!');
-    logger.debug(`Ack and reply messages. status: ${JSON.stringify(status)} messages: ${messages} payloads: ${JSON.stringify(payloads)}`);
-    logger.debug(`Handling ${messages.length} messages`);
-    await messages.forEach((message, index) => {
-      const headers = getHeaderInfo(message);
-
-      logger.debug(`Message: ${message}, index: ${index}`);
-      logger.debug(`Headers: ${JSON.stringify(headers)}`);
-      logger.debug(`Payloads: ${JSON.stringify(payloads)}`);
-
-      // Validator uses this for responses that do not include handledIds/rejectedIds, just error message in payloads
-      // const {handledIds, rejectedIds} = payloads;
-      const handledIds = payloads.handledIds || [];
-      const rejectedIds = payloads.rejectedIds || [];
-
-      logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
-
-      if (handledIds.length < 1 && rejectedIds.length > 0) {
-        logger.debug(`Got 0 valid ids and rejected ${rejectedIds}`);
-
-        sendToQueue({
-          queue: message.properties.correlationId,
-          correlationId: message.properties.correlationId,
-          headers,
-          data: {
-            status: httpStatus.UNPROCESSABLE_ENTITY, payload: rejectedIds[0]
-          }
-        });
-
-        return channel.ack(message);
-      }
-
-      const responsePayload = handledIds[0] || payloads;
-      logger.debug(`responsePayload ${JSON.stringify(responsePayload)}`);
-
-      // Reply consumer gets: {"data":{"status":"UPDATED","payload":"000123456"}}
-      sendToQueue({
-        queue: message.properties.correlationId,
-        correlationId: message.properties.correlationId,
-        headers,
-        data: {
-          status, payload: responsePayload
-        }
-      });
-
-      channel.ack(message);
-    });
   }
 
   function ackMessages(messages) {
