@@ -83,7 +83,7 @@ export default async function (MONGO_URI, collection) {
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
       if (result.acknowledged) {
-        logger.debug(`Created new prio queue item ${correlationId} in ${collection}`);
+        logger.info(`New prio queue item for ${correlationId} has been made in ${collection}`);
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -110,7 +110,7 @@ export default async function (MONGO_URI, collection) {
     try {
       // No await here, promises later
       db.collection(collection).insertOne(newQueueItem);
-      logger.log('info', `New bulk queue item for ${correlationId} has been made in ${collection}!`);
+      logger.info(`New bulk queue item for ${correlationId} has been made in ${collection}!`);
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -142,7 +142,7 @@ export default async function (MONGO_URI, collection) {
   async function query(params) {
     const result = await db.collection(collection).find(params, {projection: {_id: 0}})
       .toArray();
-    logger.info(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     return result;
   }
 
@@ -179,7 +179,7 @@ export default async function (MONGO_URI, collection) {
     logger.debug(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
-    logger.debug(`mongo/remove: clean: ${JSON.stringify(clean)}`);
+    logger.silly(`mongo/remove: clean: ${JSON.stringify(clean)}`);
 
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
@@ -242,7 +242,7 @@ export default async function (MONGO_URI, collection) {
       }
 
       const clean2 = {operation: sanitize(operation)};
-      logger.log('silly', `Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
+      logger.silly(`Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
       return db.collection(collection).findOne({...clean, ...clean2});
     } catch (error) {
       logError(error);
@@ -261,7 +261,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function pushIds({correlationId, handledIds, rejectedIds}) {
-    logger.debug(`Push queue-item ids to list: ${correlationId} to ${collection}`);
+    logger.info(`Push queue-item ids to list: ${correlationId} to ${collection}`);
     logger.debug(`ids: ${JSON.stringify(handledIds)}, rejectedIds: ${JSON.stringify(rejectedIds)}`);
     const clean = sanitize(correlationId);
     await db.collection(collection).updateOne({
@@ -278,7 +278,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function pushMessages({correlationId, messages, messageField = 'messages'}) {
-    logger.debug(`Push messages to ${messageField} ${correlationId} to ${collection}`);
+    logger.info(`Push messages to ${messageField} ${correlationId} to ${collection}`);
     logger.debug(`Messages: ${JSON.stringify(messages)}}`);
     const clean = sanitize(correlationId);
     const cleanMessageField = sanitize(messageField);
@@ -295,7 +295,8 @@ export default async function (MONGO_URI, collection) {
   }
 
   function setState({correlationId, state, errorMessage = '', errorStatus = ''}) {
-    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}, Error message: '${errorMessage}', Error status: '${errorStatus}' to ${collection}`);
+    const errorString = errorMessage || errorStatus ? `, Error message: '${errorMessage}', Error status: '${errorStatus}'` : '';
+    logger.log('info', `Setting queue-item state: ${correlationId}${state}${errorString} to ${collection}`);
     const clean = sanitize(correlationId);
     return db.collection(collection).findOneAndUpdate({
       correlationId: clean
