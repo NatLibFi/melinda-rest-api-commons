@@ -68,17 +68,19 @@ export default async function (MONGO_URI, collection) {
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages};
 
-  async function createPrio({correlationId, cataloger, oCatalogerIn, operation}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, prio = undefined}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
       operation,
       oCatalogerIn,
+      operationSettings: {unique, noop, prio},
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
-      handledIds: []
+      handledIds: [],
+      rejectedIds: []
     };
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
@@ -105,7 +107,8 @@ export default async function (MONGO_URI, collection) {
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
       creationTime: time,
       modificationTime: time,
-      handledIds: []
+      handledIds: [],
+      rejectedIds: []
     };
     try {
       // No await here, promises later
