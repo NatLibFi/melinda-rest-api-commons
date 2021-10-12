@@ -167,7 +167,7 @@ export default async function (MONGO_URI, collection) {
     const timeoutTime = moment(result.modificationTime).add(1, 'm');
     logger.silly(`timeOut @ ${timeoutTime}`);
     if (timeoutTime.isBefore()) {
-      const oldState = result.state;
+      const oldState = result.queueItemState;
       await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: `Timeout in ${oldState}`});
       return false;
     }
