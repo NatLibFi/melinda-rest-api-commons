@@ -44,12 +44,12 @@ export default async function (AMQP_URL) {
   return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
   async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
-    logger.verbose(`checkQueue: ${queue}, Style: ${style}: Purge: ${purge}, toRecord: ${toRecord}`);
+    logger.debug(`checkQueue: ${queue}, Style: ${style}: Purge: ${purge}, toRecord: ${toRecord}`);
     try {
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (purge) {
         await purgeQueue(purge);
-        logger.debug(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
+        logger.verbose(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
         return checkQueue(queue, style);
       }
 
@@ -111,7 +111,7 @@ export default async function (AMQP_URL) {
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
+      logger.silly(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
 
       let filterIn = 0; // eslint-disable-line functional/no-let
       let filterOut = 0; // eslint-disable-line functional/no-let
@@ -129,7 +129,7 @@ export default async function (AMQP_URL) {
         return false;
       });
 
-      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
+      logger.debug(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
       const records = await messagesToRecords(messages);
 
       return {headers, records, messages};
@@ -145,7 +145,7 @@ export default async function (AMQP_URL) {
       // get next chunk (100) messages
       const queMessages = await getData(queue);
 
-      logger.debug(`Filtering messages by ${correlationId}`);
+      logger.silly(`Filtering messages by ${correlationId}`);
 
       let filterIn = 0; // eslint-disable-line functional/no-let
       let filterOut = 0; // eslint-disable-line functional/no-let
@@ -162,7 +162,7 @@ export default async function (AMQP_URL) {
         filterOut++; // eslint-disable-line no-plusplus
         return false;
       });
-      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
+      logger.debug(`Filtering by correlationId result: valid: ${filterIn} non-valid: ${filterOut}`);
 
       const headers = getHeaderInfo(messages[0]);
 
@@ -185,7 +185,7 @@ export default async function (AMQP_URL) {
       const queMessages = await getData(queue);
 
       const headers = getHeaderInfo(queMessages[0]);
-      logger.debug(`Filtering messages by ${JSON.stringify(headers)}`);
+      logger.silly(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
 
       let filterIn = 0; // eslint-disable-line functional/no-let
       let filterOut = 0; // eslint-disable-line functional/no-let
@@ -204,7 +204,7 @@ export default async function (AMQP_URL) {
 
         return false;
       });
-      logger.debug(`Filtering result: valid: ${filterIn} non-valid: ${filterOut}`);
+      logger.debug(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
 
       // return raw (do not convert messages to records)
       return {headers, messages};

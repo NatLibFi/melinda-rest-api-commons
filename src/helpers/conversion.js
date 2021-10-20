@@ -40,7 +40,7 @@ export default function () {
   return {serialize, unserialize};
 
   function serialize(record, format) {
-    logger.verbose('Serializing record');
+    logger.verbose(`Serializing record to ${format}`);
     try {
       if (format === conversionFormats.MARCXML) {
         return MARCXML.to(record);
@@ -65,23 +65,23 @@ export default function () {
   }
 
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
-    logger.verbose('Unserializing record');
+    logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
-    logger.silly(`Validation options: ${JSON.stringify(validationOptions)}`);
+    logger.debug(`Validation options: ${JSON.stringify(validationOptions)}`);
     logger.silly(`Data: ${JSON.stringify(data)}`);
     try {
       if (format === conversionFormats.MARCXML) {
-        logger.verbose('Unserialize format marcxml');
+        logger.silly('Unserialize format marcxml');
         return MARCXML.from(data, validationOptions);
       }
 
       if (format === conversionFormats.ISO2709) {
-        logger.verbose('Unserialize format iso2709');
+        logger.silly('Unserialize format iso2709');
         return ISO2709.from(data, validationOptions);
       }
 
       if (format === conversionFormats.JSON) {
-        logger.verbose('Unserialize format json');
+        logger.silly('Unserialize format json');
         return Json.from(data, validationOptions);
       }
 
