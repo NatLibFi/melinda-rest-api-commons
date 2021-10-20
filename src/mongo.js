@@ -299,7 +299,7 @@ export default async function (MONGO_URI, collection) {
 
   function setState({correlationId, state, errorMessage = '', errorStatus = ''}) {
     const errorString = errorMessage || errorStatus ? `, Error message: '${errorMessage}', Error status: '${errorStatus}'` : '';
-    logger.log('info', `Setting queue-item state: ${correlationId}${state}${errorString} to ${collection}`);
+    logger.log('info', `Setting queue-item state: ${correlationId}, ${state}${errorString} to ${collection}`);
     const clean = sanitize(correlationId);
     return db.collection(collection).findOneAndUpdate({
       correlationId: clean
