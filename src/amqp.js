@@ -252,7 +252,6 @@ export default async function (AMQP_URL) {
     logger.silly(`Prepared to consumeRaw from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
-      logger.verbose(`consumeRaw from queue: ${queue}`);
       // Returns false if 0 items in queue
       return await channel.get(queue);
     } catch (error) {
@@ -293,7 +292,7 @@ export default async function (AMQP_URL) {
           headers
         }
       );
-      logger.verbose(`Send message for ${correlationId} to queue: ${queue}`);
+      logger.debug(`Send message for ${correlationId} to queue: ${queue}`);
     } catch (error) {
       logError(error);
     }
