@@ -44,7 +44,7 @@ export default async function (AMQP_URL) {
   return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
   async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
-    logger.debug(`checkQueue: ${queue}, Style: ${style}: Purge: ${purge}, toRecord: ${toRecord}`);
+    logger.silly(`checkQueue: ${queue}, Style: ${style}: Purge: ${purge}, toRecord: ${toRecord}`);
     try {
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (purge) {
@@ -54,7 +54,7 @@ export default async function (AMQP_URL) {
       }
 
       if (channelInfo.messageCount < 1) {
-        logger.debug(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
+        logger.silly(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
         return false;
       }
       logger.silly(`Queue ${queue} has ${channelInfo.messageCount} messages`);
@@ -103,7 +103,7 @@ export default async function (AMQP_URL) {
   }
 
   async function consumeChunk(queue) {
-    logger.verbose(`Prepared to consumeChunk from queue: ${queue}`);
+    logger.silly(`Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
 
@@ -129,8 +129,13 @@ export default async function (AMQP_URL) {
         return false;
       });
 
-      logger.debug(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
+      logger.silly(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
       const records = await messagesToRecords(messages);
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (messages) {
+        logger.debug(`consumeChunk (${messages.length} from queue ${queue})`);
+      }
 
       return {headers, records, messages};
     } catch (error) {
@@ -139,7 +144,7 @@ export default async function (AMQP_URL) {
   }
 
   async function consumeByCorrelationId(queue, correlationId, toRecord = true) {
-    logger.verbose(`Prepared to consumeByCorrelationId from queue: ${queue}`);
+    logger.silly(`Prepared to consumeByCorrelationId from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
       // get next chunk (100) messages
@@ -166,6 +171,11 @@ export default async function (AMQP_URL) {
 
       const headers = getHeaderInfo(messages[0]);
 
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (messages) {
+        logger.verbose(`consumeByCorrelationId (${messages.length}) from queue: ${queue}`);
+      }
+
       if (toRecord) {
         const records = await messagesToRecords(messages);
 
@@ -178,7 +188,7 @@ export default async function (AMQP_URL) {
   }
 
   async function consumeRawChunk(queue) {
-    logger.verbose(`Prepared to consumeRawChunk from queue: ${queue}`);
+    logger.silly(`Prepared to consumeRawChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
       // Get next chunk (100) messages
@@ -206,6 +216,11 @@ export default async function (AMQP_URL) {
       });
       logger.debug(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
 
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (messages) {
+        logger.verbose(`consumeRawChunk (${messages.length}) from queue: ${queue}`);
+      }
+
       // return raw (do not convert messages to records)
       return {headers, messages};
     } catch (error) {
@@ -214,7 +229,7 @@ export default async function (AMQP_URL) {
   }
 
   async function consumeOne(queue) {
-    logger.verbose(`Prepared to consumeOne from queue: ${queue}`);
+    logger.silly(`Prepared to consumeOne from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
 
@@ -223,6 +238,7 @@ export default async function (AMQP_URL) {
       if (message) {
         const headers = getHeaderInfo(message);
         const records = messagesToRecords([message]);
+        logger.verbose(`consumeOne from queue: ${queue}`);
         return {headers, records, messages: [message]};
       }
 
@@ -233,9 +249,10 @@ export default async function (AMQP_URL) {
   }
 
   async function consumeRaw(queue) {
-    logger.verbose(`Prepared to consumeRaw from queue: ${queue}`);
+    logger.silly(`Prepared to consumeRaw from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
+      logger.verbose(`consumeRaw from queue: ${queue}`);
       // Returns false if 0 items in queue
       return await channel.get(queue);
     } catch (error) {
@@ -258,7 +275,7 @@ export default async function (AMQP_URL) {
   }
 
   async function sendToQueue({queue, correlationId, headers, data}) {
-    logger.verbose(`Send message for ${correlationId} to queue: ${queue}`);
+    logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
     try {
       logger.silly(`Queue ${queue}`);
       logger.silly(`CorrelationId ${correlationId}`);
@@ -276,8 +293,7 @@ export default async function (AMQP_URL) {
           headers
         }
       );
-
-      logger.silly(`Message send to queue ${queue}`);
+      logger.verbose(`Send message for ${correlationId} to queue: ${queue}`);
     } catch (error) {
       logError(error);
     }
@@ -293,7 +309,7 @@ export default async function (AMQP_URL) {
   // ----------------
 
   function messagesToRecords(messages) {
-    logger.verbose(`Parsing messages (${messages.length}) to records`);
+    logger.debug(`Parsing messages (${messages.length}) to records`);
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
@@ -302,7 +318,7 @@ export default async function (AMQP_URL) {
   }
 
   async function getData(queue) {
-    logger.verbose(`Getting queue data from ${queue}`);
+    logger.debug(`Getting queue data from ${queue}`);
     try {
       const {messageCount} = await channel.checkQueue(queue);
       logger.silly(`There is ${messageCount} messages in queue ${queue}`);
