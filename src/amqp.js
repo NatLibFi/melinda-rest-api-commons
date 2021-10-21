@@ -274,7 +274,6 @@ export default async function (AMQP_URL) {
   }
 
   async function sendToQueue({queue, correlationId, headers, data}) {
-    logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
     try {
       logger.silly(`Queue ${queue}`);
       logger.silly(`CorrelationId ${correlationId}`);
@@ -292,7 +291,7 @@ export default async function (AMQP_URL) {
           headers
         }
       );
-      logger.debug(`Send message for ${correlationId} to queue: ${queue}`);
+      logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
     } catch (error) {
       logError(error);
     }
