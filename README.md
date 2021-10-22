@@ -14,7 +14,7 @@ Shared modules for microservices of Melinda rest api import system
 |`validator`  | VALIDATOR.QUEUEING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->                   |
 |`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> IMPORTER.IMPORTING -> DONE  |
 |             |                                                                          |
-|any ms       | -> ERROR if errored
+|any          | any -> ERROR if errored
 
 
 #### QueueItemState flow for prio jobs (single record):
@@ -25,10 +25,10 @@ Shared modules for microservices of Melinda rest api import system
 |`validator`  | VALIDATOR.VALIDATING -> IMPORTER.IN_QUEUE ->                             |
 |`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> DONE                        |
 |             |                                                                          |
-|`http`       | X -> ABORT if job has stayed in any active state too long                |
+|`http`       | any -> ABORT if job has stayed in an active state too long               |
 |`validator`  | VALIDATOR.VALIDATING -> DONE for noop (no-operation) jobs                |
 |             |                                                                          |
-|any module   | X -> ERROR if errored                                                    |
+| any         | any -> ERROR if errored                                                  |
 
 ### CHUNK_SIZE
 Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
