@@ -6,7 +6,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -68,7 +68,7 @@ export default async function (MONGO_URI, collection) {
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages};
 
-  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, prio = undefined}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, prio = true}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
@@ -95,13 +95,14 @@ export default async function (MONGO_URI, collection) {
     }
   }
 
-  function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream}) {
+  function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, prio = false}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
       oCatalogerIn,
       operation,
+      operationSettings: {prio},
       contentType,
       recordLoadParams,
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
