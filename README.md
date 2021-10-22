@@ -5,9 +5,30 @@ Shared modules for microservices of Melinda rest api import system
 ## Constants
 
 ### QUEUE_ITEM_STATE
-`Rest-api-http`: UPLOADING -> PENDING_QUEUING ->
-`Rest-api-Validator`: QUEUING_IN_PROGRESS -> IN_QUEUE ->
-`Rest-api-importer`: IN_PROCESS -> DONE, ERROR or VALIDATE_PROCESS -> IN_PROCESS...
+
+#### QueueItemState flow for bulk jobs (multiple records, no validations):
+
+|microservice | states                                                                   |
+|-------------| -------------------------------------------------------------------------|
+|`http`       | -> VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUEING ->                  |
+|`validator`  | VALIDATOR.QUEUEING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->                   |
+|`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> IMPORTER.IMPORTING -> DONE  |
+|             |                                                                          |
+|any ms       | -> ERROR if errored
+
+
+#### QueueItemState flow for prio jobs (single record):
+
+|microservice | states                                                                   |
+|-------------| -------------------------------------------------------------------------|
+|`http`       | -> VALIDATOR.PENDING_VALIDATION ->                                       |
+|`validator`  | VALIDATOR.VALIDATING -> IMPORTER.IN_QUEUE ->                             |
+|`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> DONE                        |
+|             |                                                                          |
+|`http`       | X -> ABORT if job has stayed in any active state too long                |
+|`validator`  | VALIDATOR.VALIDATING -> DONE for noop (no-operation) jobs                |
+|             |                                                                          |
+|any module   | X -> ERROR if errored                                                    |
 
 ### CHUNK_SIZE
 Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
@@ -17,7 +38,7 @@ Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
 | 9248          | 100        | 93     | ~597 sec       | ~6.4 sec     | Update    |
 Executed on test server using bridge to docker server and back to server
 
-## Common confs
+## Common confs for aleph-record-load-api
 | P_manage_18 name    | Node name         | Prio update | Prio create | Bulk update | Bulk create | Description                                             |
 |---------------------|-------------------|-------------|-------------|-------------|-------------|---------------------------------------------------------|
 | p_active_library    | pActiveLibrary    | `params`    | `params`    | `params`    | `params`    | Library to use                                          |
@@ -39,6 +60,6 @@ Executed on test server using bridge to docker server and back to server
 
 ## License and copyright
 
-Copyright (c) 2020-2020 **University Of Helsinki (The National Library Of Finland)**
+Copyright (c) 2020-2021 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **GNU Affero General Public License Version 3** or any later version.

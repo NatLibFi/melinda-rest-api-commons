@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -26,30 +26,7 @@
 *
 */
 
-/*
-// QueueItemState flow for prio:
-http:
--> VALIDATOR.PENDING_VALIDATION ->
-validator:
--> VALIDATOR.VALIDATING -> VALIDATOR.IN_QUEUE -> 
-importer:
--> IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> DONE
-
-http:
--> ABORT
-
-// Flow bulk:
-http:
-VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUEING ->
-validator:
-VALIDATOR.IN_QUEUE ->
-importer:
-IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> IMPORTER.IMPORTING -> DONE
-
-
-// UPLOADING -> PENDING_QUEUING -> QUEUING_IN_PROGRESS -> IN_QUEUE -> IMPORTING -> IN_PROCESS -> DONE, ERROR
-// Request timeout sets ABORTED to prio
-*/
+// QueueItemState flows: see README.md
 
 export const QUEUE_ITEM_STATE = {
   VALIDATOR: {
