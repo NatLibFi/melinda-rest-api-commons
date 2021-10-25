@@ -41,10 +41,10 @@ export default async function (AMQP_URL) {
   const channel = await connection.createChannel();
   const logger = createLogger();
 
-  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
+  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
-  async function checkQueue(queue, style = 'basic', purge = false, toRecord = true) {
-    logger.silly(`checkQueue: ${queue}, Style: ${style}: Purge: ${purge}, toRecord: ${toRecord}`);
+  async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
+    logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}, `);
     try {
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (purge) {
@@ -63,30 +63,14 @@ export default async function (AMQP_URL) {
         return channelInfo.messageCount;
       }
 
-      // Note: returns a message + a record
+      // Note: returns one message (+ record, of toRecord: true)
       if (style === 'one') {
-        return consumeOne(queue);
+        return consumeOne(queue, toRecord);
       }
 
-      // Note: returns just a message
-      if (style === 'raw') {
-        return consumeRaw(queue);
-      }
-
-      // Note: returns a chunk of messages + records
-      if (style === 'rawChunk') {
-        return consumeRawChunk(queue);
-      }
-
-      // Note: returns a chunk of messages or a chunk of messages + records (depending on toRecord)
-      if ((/^.{8}-.{4}-.{4}-.{4}-.{12}$/u).test(style)) {
-        logger.silly(`checkQueue: regexp match ${style}`);
-        return consumeByCorrelationId(queue, style, toRecord);
-      }
-
-      // Note: returns a chunk of messages + records
+      // Note: returns a chunk of (100) messages (+ records, if toRecord: true)
       if (style === 'basic') {
-        return consumeChunk(queue);
+        return consumeChunk(queue, toRecord);
       }
 
       // Defaults:
@@ -102,7 +86,7 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consumeChunk(queue) {
+  async function consumeChunk(queue, toRecord) {
     logger.silly(`Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
@@ -110,103 +94,40 @@ export default async function (AMQP_URL) {
       // getData: next chunk (100) messages
       const messages = await getData(queue);
       const headers = getHeaderInfo(messages[0]);
-      const records = await messagesToRecords(messages);
-
-      logger.debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue})`);
-
-      return {headers, records, messages};
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  async function consumeByCorrelationId(queue, correlationId, toRecord = true) {
-    logger.silly(`Prepared to consumeByCorrelationId from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      // get next chunk (100) messages
-      const queMessages = await getData(queue);
-
-      logger.silly(`Filtering messages by ${correlationId}`);
-
-      let filterIn = 0; // eslint-disable-line functional/no-let
-      let filterOut = 0; // eslint-disable-line functional/no-let
-
-      // Check that correlationId matches query
-      const messages = queMessages.filter(message => {
-        if (message.properties.correlationId === correlationId) {
-          filterIn++; // eslint-disable-line no-plusplus
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        filterOut++; // eslint-disable-line no-plusplus
-        return false;
-      });
-      logger.debug(`Filtering by correlationId result: valid: ${filterIn} non-valid: ${filterOut}`);
-
-      const headers = getHeaderInfo(messages[0]);
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (messages) {
-        logger.verbose(`consumeByCorrelationId (${messages.length}) from queue: ${queue}`);
-      }
+      logger.debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 
       if (toRecord) {
         const records = await messagesToRecords(messages);
-
         return {headers, records, messages};
       }
+
       return {headers, messages};
     } catch (error) {
       logError(error);
     }
   }
 
-  async function consumeRawChunk(queue) {
-    logger.silly(`Prepared to consumeRawChunk from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      // Get next chunk (100) messages
-      const messages = await getData(queue);
-      const headers = getHeaderInfo(messages[0]);
-
-      logger.verbose(`consumeRawChunk (${messages ? messages.length : '0'}) from queue: ${queue}`);
-
-      // return raw (do not convert messages to records)
-      return {headers, messages};
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  async function consumeOne(queue) {
+  async function consumeOne(queue, toRecord) {
     logger.silly(`Prepared to consumeOne from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
 
       // Returns false if 0 items in queue
       const message = await channel.get(queue);
+
       if (message) {
         const headers = getHeaderInfo(message);
-        const records = messagesToRecords([message]);
-        logger.verbose(`consumeOne from queue: ${queue}`);
-        return {headers, records, messages: [message]};
+
+        logger.verbose(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just messages'}`);
+        if (toRecord) {
+          const records = messagesToRecords([message]);
+          return {headers, records, messages: [message]};
+        }
+
+        return {headers, messages: [message]};
       }
 
       return false;
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  async function consumeRaw(queue) {
-    logger.silly(`Prepared to consumeRaw from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      // Returns false if 0 items in queue
-      return await channel.get(queue);
     } catch (error) {
       logError(error);
     }
