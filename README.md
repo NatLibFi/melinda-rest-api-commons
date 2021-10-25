@@ -1,4 +1,6 @@
 # Shared modules for microservices of Melinda rest api import system
+[![NPM Version](https://img.shields.io/npm/v/@natlibfi/melinda-rest-api-commons.svg)](https://npmjs.org/package/@natlibfi/melinda-rest-api-commons)
+[![Node Version](https://img.shields.io/node/v/@natlibfi/melinda-rest-api-commons.svg)]
 
 Shared modules for microservices of Melinda rest api import system
 
