@@ -48,7 +48,7 @@ Executed on test server using bridge to docker server and back to server
 | p_reject_file       | pRejectFile       | `generated` | `generated` | `generated` | `generated` | Log file for rejected records                           |
 | p_log_file          | pLogFile          | `generated` | `generated` | `generated` | `generated` | Log file for updated/created record ids                 |
 | p_old_new           | pOldNew           | OLD         | NEW         | OLD         | NEW         | Method of operation. Either *NEW* or *OLD*              |
-| p_fix_type          | pFixType          | API         | API         | INSB        | INSB        | Alpeh fix routine code                                  |
+| p_fix_type          | pFixType          | API         | API         | INSB        | INSB        | Aleph fix routine code                                  |
 | p_check_references  | pCheckReferences  |             |             |             |             |                                                         |
 | p_update_f          | pUpdateF          | FULL        | FULL        | FULL        | FULL        | Indexing action                                         |
 | p_update_type       | pUpdateType       | REP         | REP         | REP         | REP         | REP or APP (REPlace or APPend)                          |
