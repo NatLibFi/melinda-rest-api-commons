@@ -108,34 +108,11 @@ export default async function (AMQP_URL) {
       await channel.assertQueue(queue, {durable: true});
 
       // getData: next chunk (100) messages
-      const queMessages = await getData(queue);
-
-      const headers = getHeaderInfo(queMessages[0]);
-      logger.silly(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
-
-      let filterIn = 0; // eslint-disable-line functional/no-let
-      let filterOut = 0; // eslint-disable-line functional/no-let
-
-      // Check that cataloger match! headers
-      const messages = queMessages.filter(message => {
-        if (message.properties.headers.cataloger === headers.cataloger) {
-          filterIn++; // eslint-disable-line no-plusplus
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        filterOut++; // eslint-disable-line no-plusplus
-        return false;
-      });
-
-      logger.silly(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
+      const messages = await getData(queue);
+      const headers = getHeaderInfo(messages[0]);
       const records = await messagesToRecords(messages);
 
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (messages) {
-        logger.debug(`consumeChunk (${messages.length} from queue ${queue})`);
-      }
+      logger.debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue})`);
 
       return {headers, records, messages};
     } catch (error) {
@@ -192,34 +169,10 @@ export default async function (AMQP_URL) {
     try {
       await channel.assertQueue(queue, {durable: true});
       // Get next chunk (100) messages
-      const queMessages = await getData(queue);
+      const messages = await getData(queue);
+      const headers = getHeaderInfo(messages[0]);
 
-      const headers = getHeaderInfo(queMessages[0]);
-      logger.silly(`Filtering messages by cataloger in ${JSON.stringify(headers)}`);
-
-      let filterIn = 0; // eslint-disable-line functional/no-let
-      let filterOut = 0; // eslint-disable-line functional/no-let
-
-      // Check that cataloger match! headers
-      const messages = queMessages.filter(message => {
-        if (message.properties.headers.cataloger === headers.cataloger) {
-          filterIn++; // eslint-disable-line no-plusplus
-
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        filterOut++; // eslint-disable-line no-plusplus
-
-        return false;
-      });
-      logger.debug(`Filtering by cataloger result: valid: ${filterIn} non-valid: ${filterOut}`);
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (messages) {
-        logger.verbose(`consumeRawChunk (${messages.length}) from queue: ${queue}`);
-      }
+      logger.verbose(`consumeRawChunk (${messages ? messages.length : '0'}) from queue: ${queue}`);
 
       // return raw (do not convert messages to records)
       return {headers, messages};
