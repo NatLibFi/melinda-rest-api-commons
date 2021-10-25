@@ -1,3 +1,4 @@
+
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -32,6 +33,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
+import {inspect} from 'util';
 import httpStatus from 'http-status';
 
 export default async function (AMQP_URL) {
@@ -41,6 +43,7 @@ export default async function (AMQP_URL) {
 
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
+  // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
     logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}, `);
     try {
@@ -62,10 +65,18 @@ export default async function (AMQP_URL) {
       }
 
       // Note: returns one message (+ record, of toRecord: true)
+      // note: if toRecord is false returns just message / false
+      // note: if toRecord is true returns {headers, records, messges} -object / false
       if (style === 'one') {
         return consumeOne(queue, toRecord);
       }
 
+      /*
+      // Note: returns one message (+ record, of toRecord: true)
+      if (style === 'raw') {
+        return consumeRaw(queue);
+      }
+*/
       // Note: returns a chunk of (100) messages (+ records, if toRecord: true)
       if (style === 'basic') {
         return consumeChunk(queue, toRecord);
@@ -113,16 +124,17 @@ export default async function (AMQP_URL) {
       // Returns false if 0 items in queue
       const message = await channel.get(queue);
 
-      if (message) {
-        const headers = getHeaderInfo(message);
+      logger.silly(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
+      logger.verbose(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just the message'}`);
 
-        logger.verbose(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just messages'}`);
+      if (message) {
         if (toRecord) {
+          const headers = getHeaderInfo(message);
           const records = messagesToRecords([message]);
           return {headers, records, messages: [message]};
         }
 
-        return {headers, messages: [message]};
+        return message;
       }
 
       return false;
@@ -130,6 +142,19 @@ export default async function (AMQP_URL) {
       logError(error);
     }
   }
+
+  /*
+  async function consumeRaw(queue) {
+    logger.log('verbose', `Prepared to consume raw from queue: ${queue}`);
+    try {
+      await channel.assertQueue(queue, {durable: true});
+      // Returns false if 0 items in queue
+      return await channel.get(queue);
+    } catch (error) {
+      logError(error);
+    }
+  }
+*/
 
   function ackMessages(messages) {
     messages.forEach(message => {
