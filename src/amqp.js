@@ -120,7 +120,8 @@ export default async function (AMQP_URL) {
       const message = await channel.get(queue);
 
       logger.silly(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
-      logger.verbose(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just the message'}`);
+      // Do not spam the logs
+      logger.debug(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just the message'}`);
 
       if (message) {
         if (toRecord) {
