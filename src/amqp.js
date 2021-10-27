@@ -43,7 +43,6 @@ export default async function (AMQP_URL) {
 
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
-  // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
     logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}, `);
     try {
@@ -65,19 +64,15 @@ export default async function (AMQP_URL) {
       }
 
       // Note: returns one message (+ record, of toRecord: true)
-      // note: if toRecord is false returns just message / false
-      // note: if toRecord is true returns {headers, records, messges} -object / false
+      // note: if toRecord is false returns just plain message / false
+      // note: if toRecord is true returns {headers, records, messages} -object / false
+      // should this be more consistent?
       if (style === 'one') {
         return consumeOne(queue, toRecord);
       }
 
-      /*
-      // Note: returns one message (+ record, of toRecord: true)
-      if (style === 'raw') {
-        return consumeRaw(queue);
-      }
-*/
       // Note: returns a chunk of (100) messages (+ records, if toRecord: true)
+      // returns {headers, records, messages} object or {headers, messages} object depending on toRecord
       if (style === 'basic') {
         return consumeChunk(queue, toRecord);
       }
@@ -142,19 +137,6 @@ export default async function (AMQP_URL) {
       logError(error);
     }
   }
-
-  /*
-  async function consumeRaw(queue) {
-    logger.log('verbose', `Prepared to consume raw from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      // Returns false if 0 items in queue
-      return await channel.get(queue);
-    } catch (error) {
-      logError(error);
-    }
-  }
-*/
 
   function ackMessages(messages) {
     messages.forEach(message => {
