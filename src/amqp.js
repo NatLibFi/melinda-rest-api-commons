@@ -178,8 +178,15 @@ export default async function (AMQP_URL) {
   }
 
   async function removeQueue(queue) {
+    // deleteQueue borks the channel if the queue does not exist
+    // -> use throwaway tempChannel to avoid killing actual channel in use
+    // this might be doable also with assertQueue before deleteQueue
+    const tempChannel = await connection.createChannel();
     logger.verbose(`Removing queue ${queue}.`);
-    await channel.deleteQueue(queue);
+    await tempChannel.deleteQueue(queue);
+    if (tempChannel) { // eslint-disable-line functional/no-conditional-statement
+      await tempChannel.close();
+    }
   }
 
   // ----------------
