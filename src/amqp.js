@@ -50,7 +50,7 @@ export default async function (AMQP_URL) {
       if (purge) {
         await purgeQueue(purge);
         logger.verbose(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
-        return checkQueue(queue, style);
+        return checkQueue({queue, style});
       }
 
       if (channelInfo.messageCount < 1) {
