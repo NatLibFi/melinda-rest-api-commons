@@ -42,10 +42,15 @@ export default async function (AMQP_URL) {
 
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
+  // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
-    logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}, `);
+    logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}`);
+
     try {
+
+      errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
+
       if (purge) {
         await purgeQueue(purge);
         logger.verbose(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
@@ -159,6 +164,7 @@ export default async function (AMQP_URL) {
       logger.silly(`Data ${JSON.stringify(data)}`);
       logger.silly(`Headers ${JSON.stringify(headers)}`);
 
+      errorUndefinedQueue(queue);
       await channel.assertQueue(queue, {durable: true});
 
       channel.sendToQueue(
@@ -240,4 +246,12 @@ export default async function (AMQP_URL) {
   function getHeaderInfo(data) {
     return data.properties.headers;
   }
+
+  function errorUndefinedQueue(queue) {
+    if (queue === undefined || queue === '' || queue === null) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Undefined queue!`);
+    }
+  }
 }
+
+
