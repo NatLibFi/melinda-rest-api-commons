@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -26,27 +26,24 @@
 *
 */
 
-// Flow: PENDING_VALIDATION -> VALIDATING -> VALIDATED -> IMPORTING -> DONE, ERROR
-// Request timeout sets ABORTED
-export const PRIO_QUEUE_ITEM_STATE = {
-  PENDING_VALIDATION: 'PENDING_VALIDATION',
-  VALIDATING: 'VALIDATING',
-  VALIDATED: 'VALIDATED',
-  IMPORTING: 'IMPORTING',
+// QueueItemState flows: see README.md
+
+export const QUEUE_ITEM_STATE = {
+  VALIDATOR: {
+    PENDING_QUEUING: 'PENDING_QUEUING',
+    PENDING_VALIDATION: 'PENDING_VALIDATION',
+    QUEUING_IN_PROGRESS: 'QUEUING_IN_PROGRESS',
+    VALIDATING: 'VALIDATING',
+    UPLOADING: 'UPLOADING'
+  },
+  IMPORTER: {
+    IMPORTING: 'IMPORTING',
+    IN_PROCESS: 'IN_PROCESS',
+    IN_QUEUE: 'IN_QUEUE'
+  },
   DONE: 'DONE',
   ERROR: 'ERROR',
   ABORT: 'ABORT'
-};
-
-// Flow: UPLOADING -> PENDING_QUEUING -> QUEUING_IN_PROGRESS -> IN_QUEUE -> IN_PROCESS -> DONE, ERROR
-export const QUEUE_ITEM_STATE = {
-  DONE: 'DONE',
-  ERROR: 'ERROR',
-  IN_PROCESS: 'IN_PROCESS',
-  IN_QUEUE: 'IN_QUEUE',
-  PENDING_QUEUING: 'PENDING_QUEUING',
-  QUEUING_IN_PROGRESS: 'QUEUING_IN_PROGRESS',
-  UPLOADING: 'UPLOADING'
 };
 
 export const OPERATIONS = {

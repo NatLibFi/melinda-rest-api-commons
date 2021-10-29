@@ -35,7 +35,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 export default async () => {
   const logger = createLogger();
 
-  logger.log('verbose', 'Running validations');
+  logger.verbose('Running inbuilt record validations');
   const validate = validateFactory([await fieldStructure([{tag: /^003$/u, valuePattern: /^FI-MELINDA$/u}])]);
 
   return async unvalidRecord => {

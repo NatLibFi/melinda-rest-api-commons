@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -39,7 +39,7 @@ export default function () {
   return {serialize, unserialize};
 
   function serialize(record, format) {
-    logger.log('verbose', 'Serializing record');
+    logger.verbose(`Serializing record to ${format}`);
     try {
       if (format === conversionFormats.MARCXML) {
         return MARCXML.to(record);
@@ -64,23 +64,23 @@ export default function () {
   }
 
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
-    logger.log('verbose', 'Unserializing record');
-    logger.log('silly', `Format: ${format}`);
-    logger.log('silly', `Validation options: ${JSON.stringify(validationOptions)}`);
-    logger.log('silly', `Data: ${JSON.stringify(data)}`);
+    logger.verbose(`Unserializing record from ${format}`);
+    logger.silly(`Format: ${format}`);
+    logger.debug(`Validation options: ${JSON.stringify(validationOptions)}`);
+    logger.silly(`Data: ${JSON.stringify(data)}`);
     try {
       if (format === conversionFormats.MARCXML) {
-        logger.log('verbose', 'Unserialize format marcxml');
+        logger.silly('Unserialize format marcxml');
         return MARCXML.from(data, validationOptions);
       }
 
       if (format === conversionFormats.ISO2709) {
-        logger.log('verbose', 'Unserialize format iso2709');
+        logger.silly('Unserialize format iso2709');
         return ISO2709.from(data, validationOptions);
       }
 
       if (format === conversionFormats.JSON) {
-        logger.log('verbose', 'Unserialize format json');
+        logger.silly('Unserialize format json');
         return Json.from(data, validationOptions);
       }
 

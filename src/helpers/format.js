@@ -32,7 +32,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 export function formatRecord(record, settings) {
   const logger = createLogger();
 
-  logger.log('verbose', 'Applying formating');
+  logger.verbose('Applying formating');
   const newRecord = MarcRecord.clone(record, {subfieldValues: false});
 
   settings.forEach(options => {

@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -32,6 +32,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {CHUNK_SIZE} from './constants';
 import {logError} from './utils';
+import {inspect} from 'util';
 import httpStatus from 'http-status';
 
 export default async function (AMQP_URL) {
@@ -39,44 +40,45 @@ export default async function (AMQP_URL) {
   const channel = await connection.createChannel();
   const logger = createLogger();
 
-  return {checkQueue, consumeChunk, consumeRawChunk, consumeOne, consumeRaw, ackNReplyMessages, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
+  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
 
-  async function checkQueue(queue, style = 'basic', purge = false) {
+  // eslint-disable-next-line max-statements
+  async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
+    logger.silly(`checkQueue: ${queue}, Style: ${style}: toRecord: ${toRecord}, Purge: ${purge}`);
+
     try {
+
+      errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
+
       if (purge) {
         await purgeQueue(purge);
-        logger.log('debug', `Queue ${queue} has purged ${channelInfo.messageCount} records`);
-        return checkQueue(queue, style);
+        logger.verbose(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
+        return checkQueue({queue, style});
       }
 
       if (channelInfo.messageCount < 1) {
+        logger.silly(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
         return false;
       }
-      logger.log('debug', `Queue ${queue} has ${channelInfo.messageCount} records`);
+      logger.silly(`Queue ${queue} has ${channelInfo.messageCount} messages`);
 
       if (style === 'messages') {
         return channelInfo.messageCount;
       }
 
+      // Note: returns one message (+ record, of toRecord: true)
+      // note: if toRecord is false returns just plain message / false
+      // note: if toRecord is true returns {headers, records, messages} -object / false
+      // should this be more consistent?
       if (style === 'one') {
-        return consumeOne(queue);
+        return consumeOne(queue, toRecord);
       }
 
-      if (style === 'raw') {
-        return consumeRaw(queue);
-      }
-
-      if (style === 'rawChunk') {
-        return consumeRawChunk(queue);
-      }
-
-      if (style === /^.{8}-.{4}-.{4}-.{4}-.{12}$/u) {
-        return consumeByCorrelationId(queue, style);
-      }
-
+      // Note: returns a chunk of (100) messages (+ records, if toRecord: true)
+      // returns {headers, records, messages} object or {headers, messages} object depending on toRecord
       if (style === 'basic') {
-        return consumeChunk(queue);
+        return consumeChunk(queue, toRecord);
       }
 
       // Defaults:
@@ -92,80 +94,20 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consumeChunk(queue) {
-    logger.log('verbose', `Prepared to consumeChunk from queue: ${queue}`);
+  async function consumeChunk(queue, toRecord) {
+    logger.silly(`Prepared to consumeChunk from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
-      const queMessages = await getData(queue);
 
-      const headers = getHeaderInfo(queMessages[0]);
-      logger.log('debug', `Filtering messages by ${JSON.stringify(headers)}`);
-
-      // Check that cataloger match! headers
-      const messages = queMessages.filter(message => {
-        if (message.properties.headers.cataloger === headers.cataloger) {
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        return false;
-      });
-
-      const records = await messagesToRecords(messages);
-
-      return {headers, records, messages};
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  async function consumeByCorrelationId(queue, correlationId) {
-    logger.log('verbose', `Prepared to consumeByCorrelationId from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      const queMessages = await getData(queue);
-
-      logger.log('debug', `Filtering messages by ${correlationId}`);
-
-      // Check that cataloger match! headers
-      const messages = queMessages.filter(message => {
-        if (message.properties.correlationId === correlationId) {
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        return false;
-      });
+      // getData: next chunk (100) messages
+      const messages = await getData(queue);
       const headers = getHeaderInfo(messages[0]);
-      const records = await messagesToRecords(messages);
+      logger.debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 
-      return {headers, records, messages};
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  async function consumeRawChunk(queue) {
-    logger.log('verbose', `Prepared to consumeRawChunk from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      const queMessages = await getData(queue);
-
-      const headers = getHeaderInfo(queMessages[0]);
-      logger.log('debug', `Filtering messages by ${JSON.stringify(headers)} and timeout`);
-
-      // Check that cataloger match! headers
-      const messages = queMessages.filter(message => {
-        if (message.properties.headers.cataloger === headers.cataloger) {
-          return true;
-        }
-
-        // Nack unwanted ones
-        channel.nack(message, false, true);
-        return false;
-      });
+      if (toRecord) {
+        const records = await messagesToRecords(messages);
+        return {headers, records, messages};
+      }
 
       return {headers, messages};
     } catch (error) {
@@ -173,17 +115,26 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consumeOne(queue) {
-    logger.log('verbose', `Prepared to consume one from queue: ${queue}`);
+  async function consumeOne(queue, toRecord) {
+    logger.silly(`Prepared to consumeOne from queue: ${queue}`);
     try {
       await channel.assertQueue(queue, {durable: true});
 
       // Returns false if 0 items in queue
       const message = await channel.get(queue);
+
+      logger.silly(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
+      // Do not spam the logs
+      logger.debug(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just the message'}`);
+
       if (message) {
-        const headers = getHeaderInfo(message);
-        const records = messagesToRecords([message]);
-        return {headers, records, messages: [message]};
+        if (toRecord) {
+          const headers = getHeaderInfo(message);
+          const records = messagesToRecords([message]);
+          return {headers, records, messages: [message]};
+        }
+
+        return message;
       }
 
       return false;
@@ -192,60 +143,28 @@ export default async function (AMQP_URL) {
     }
   }
 
-  async function consumeRaw(queue) {
-    logger.log('verbose', `Prepared to consume raw from queue: ${queue}`);
-    try {
-      await channel.assertQueue(queue, {durable: true});
-      // Returns false if 0 items in queue
-      return await channel.get(queue);
-    } catch (error) {
-      logError(error);
-    }
-  }
-
-  // ACK records
-  async function ackNReplyMessages({status, messages, payloads}) {
-    logger.log('verbose', 'Ack and reply messages!');
-    await messages.forEach((message, index) => {
-      const headers = getHeaderInfo(message);
-
-      // Reply consumer gets: {"data":{"status":"UPDATED","payload":"0"}}
-      sendToQueue({
-        queue: message.properties.correlationId,
-        correlationId: message.properties.correlationId,
-        headers,
-        data: {
-          status, payload: payloads[index]
-        }
-      });
-
-      channel.ack(message);
-    });
-  }
-
   function ackMessages(messages) {
-    logger.log('verbose', 'Ack messages!');
     messages.forEach(message => {
-      logger.log('silly', `Ack message ${message.properties.correlationId}`);
+      logger.silly(`Ack message ${message.properties.correlationId}`);
       channel.ack(message);
     });
   }
 
   function nackMessages(messages) {
-    logger.log('verbose', 'Nack messages!');
     messages.forEach(message => {
-      logger.log('silly', `Nack message ${message.properties.correlationId}`);
+      logger.silly(`Nack message ${message.properties.correlationId}`);
       channel.nack(message);
     });
   }
 
   async function sendToQueue({queue, correlationId, headers, data}) {
     try {
-      logger.log('silly', `Record queue ${queue}`);
-      logger.log('silly', `Record correlationId ${correlationId}`);
-      logger.log('silly', `Record data ${JSON.stringify(data)}`);
-      logger.log('silly', `Record headers ${JSON.stringify(headers)}`);
+      logger.silly(`Queue ${queue}`);
+      logger.silly(`CorrelationId ${correlationId}`);
+      logger.silly(`Data ${JSON.stringify(data)}`);
+      logger.silly(`Headers ${JSON.stringify(headers)}`);
 
+      errorUndefinedQueue(queue);
       await channel.assertQueue(queue, {durable: true});
 
       channel.sendToQueue(
@@ -257,15 +176,22 @@ export default async function (AMQP_URL) {
           headers
         }
       );
-
-      logger.log('silly', `Message send to queue ${queue}`);
+      logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
     } catch (error) {
       logError(error);
     }
   }
 
   async function removeQueue(queue) {
-    await channel.deleteQueue(queue);
+    // deleteQueue borks the channel if the queue does not exist
+    // -> use throwaway tempChannel to avoid killing actual channel in use
+    // this might be doable also with assertQueue before deleteQueue
+    const tempChannel = await connection.createChannel();
+    logger.verbose(`Removing queue ${queue}.`);
+    await tempChannel.deleteQueue(queue);
+    if (tempChannel) { // eslint-disable-line functional/no-conditional-statement
+      await tempChannel.close();
+    }
   }
 
   // ----------------
@@ -273,7 +199,7 @@ export default async function (AMQP_URL) {
   // ----------------
 
   function messagesToRecords(messages) {
-    logger.log('verbose', 'Parsing messages to records');
+    logger.debug(`Parsing messages (${messages.length}) to records`);
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
@@ -282,14 +208,16 @@ export default async function (AMQP_URL) {
   }
 
   async function getData(queue) {
-    logger.log('verbose', `Getting queue data from ${queue}`);
+    logger.debug(`Getting queue data from ${queue}`);
     try {
       const {messageCount} = await channel.checkQueue(queue);
+      logger.silly(`There is ${messageCount} messages in queue ${queue}`);
       const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
+      logger.silly(`Getting ${messagesToGet} messages from queue ${queue}`);
 
       const messages = await pump(messagesToGet);
 
-      logger.log('debug', `Returning ${messages.length} unique messages`);
+      logger.debug(`Returning ${messages.length} unique messages`);
 
       return messages;
     } catch (error) {
@@ -318,4 +246,12 @@ export default async function (AMQP_URL) {
   function getHeaderInfo(data) {
     return data.properties.headers;
   }
+
+  function errorUndefinedQueue(queue) {
+    if (queue === undefined || queue === '' || queue === null) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Undefined queue!`);
+    }
+  }
 }
+
+

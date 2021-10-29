@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -33,14 +33,14 @@ const logger = createLogger();
 
 export function logError(err) {
   if (err instanceof ApiError) {
-    logger.log('error', JSON.stringify(err));
+    logger.error(JSON.stringify(err));
     return;
   }
 
   if (err === 'SIGINT') {
-    logger.log('error', err);
+    logger.error(err);
     return;
   }
 
-  logger.log('error', err.stack === undefined ? err : err.stack);
+  logger.error(err.stack === undefined ? err : err.stack);
 }
