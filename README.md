@@ -12,8 +12,8 @@ Shared modules for microservices of Melinda rest api import system
 
 |microservice | states                                                                   |
 |-------------| -------------------------------------------------------------------------|
-|`http`       | -> VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUEING ->                  |
-|`validator`  | VALIDATOR.QUEUEING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->                   |
+|`http`       | -> VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUING ->                  |
+|`validator`  | VALIDATOR.QUEUING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->                   |
 |`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> IMPORTER.IMPORTING -> DONE  |
 |             |                                                                          |
 |any          | any -> ERROR if errored
