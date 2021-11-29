@@ -74,7 +74,7 @@ export function formatRecord(record, settings = []) {
     return sidsToBeAdded.forEach(sidField => newRecord.insertField(sidField));
 
     function genNewSids(sidsToBeAdded) {
-      return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'b', value: sidInfo.SID}, {code: 'c', value: sidInfo.value}]}));
+      return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: sidInfo.value}, {code: 'b', value: sidInfo.SID}]}));
     }
 
     function sidsToSidInfo(SIDs) {

@@ -599,12 +599,12 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "b",
-          "value": "FI-BTJ"
-        },
-        {
           "code": "c",
           "value": "fuu"
+        },
+        {
+          "code": "b",
+          "value": "FI-BTJ"
         }
       ]
     }

@@ -625,12 +625,12 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "b",
-          "value": "tati"
-        },
-        {
           "code": "c",
           "value": "faa"
+        },
+        {
+          "code": "b",
+          "value": "tati"
         }
       ]
     }
