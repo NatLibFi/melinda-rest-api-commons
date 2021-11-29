@@ -37,6 +37,28 @@
         ]
       },
       {
+        "tag": "035",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "(FI-BTJ)fuu"
+          }
+        ]
+      },
+      {
+        "tag": "035",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "(FI-TATI)faa"
+          }
+        ]
+      },
+      {
         "tag": "040",
         "ind1": " ",
         "ind2": " ",
@@ -566,6 +588,21 @@
             "value": "Linkki e-kirjaan"
           }
         ]
+      },
+      {
+        "tag": "SID",
+        "subfields": [
+          {
+            "code": "c",
+            "value": "fuu"
+          },
+          {
+            "code": "b",
+            "value": "FI-BTJ"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
       },
       {
         "tag": "SID",

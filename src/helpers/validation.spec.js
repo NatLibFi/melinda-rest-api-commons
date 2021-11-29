@@ -27,7 +27,7 @@
 */
 
 import {expect} from 'chai';
-import fixtureFactory from '@natlibfi/fixura';
+import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import createValidator from './validation';
 
@@ -39,17 +39,17 @@ describe('services/validate', () => {
     'test-fixtures',
     'validation'
   ];
-  const {getFixture} = fixtureFactory({root: FIXTURES_PATH});
+  const {getFixture} = fixtureFactory({root: FIXTURES_PATH, reader: READERS.JSON});
 
   describe('f003-fi-melinda', () => {
     it('Should have failed: false', async () => {
       const validator = await createValidator();
-      const record = new MarcRecord(JSON.parse(getFixture({
+      const record = new MarcRecord(getFixture({
         components: [
           'in',
           'f003-fi-melinda.json'
         ]
-      })));
+      }));
       const result = await validator(record.toObject());
       const expected = getFixture({
         components: [
@@ -57,8 +57,7 @@ describe('services/validate', () => {
           'f003-fi-melinda.json'
         ]
       });
-      const stringResult = JSON.stringify({...result}, undefined, 2);
-      expect(stringResult).to.eql(expected);
+      expect(result).to.eql(expected);
       expect(result.failed).to.equal(false);
     });
   });
@@ -66,12 +65,12 @@ describe('services/validate', () => {
   describe('f003-not-fi-melinda', () => {
     it('Should have failed: true', async () => {
       const validator = await createValidator();
-      const record = new MarcRecord(JSON.parse(getFixture({
+      const record = new MarcRecord(getFixture({
         components: [
           'in',
           'f003-not-fi-melinda.json'
         ]
-      })));
+      }));
       const result = await validator(record.toObject());
       const expected = getFixture({
         components: [
@@ -79,8 +78,7 @@ describe('services/validate', () => {
           'f003-not-fi-melinda.json'
         ]
       });
-      const stringResult = JSON.stringify({...result}, undefined, 2);
-      expect(stringResult).to.eql(expected);
+      expect(result).to.eql(expected);
       expect(result.failed).to.equal(true);
     });
   });
