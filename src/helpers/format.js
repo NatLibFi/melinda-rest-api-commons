@@ -29,17 +29,19 @@
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 
-export function formatRecord(record, settings) {
+export function formatRecord(record, settings = []) {
   const logger = createLogger();
 
   logger.verbose('Applying formating');
   const newRecord = MarcRecord.clone(record, {subfieldValues: false});
 
+  generateMissingSIDs();
+
   settings.forEach(options => {
     replacePrefixes(options);
   });
 
-  return newRecord;
+  return newRecord.toObject();
 
   // Replace prefix in all specified subfields
   function replacePrefixes(options) {
@@ -54,6 +56,57 @@ export function formatRecord(record, settings) {
             subfield.value = subfield.value.replace(pattern, replacement); // eslint-disable-line functional/immutable-data
           });
       });
+  }
+
+
+  function generateMissingSIDs() {
+    const f035Filters = [/^\(FI-BTJ\)/u, /^\(FI-TATI\)/u];
+    const fSIDFilters = ['FI-BTJ', 'tati'];
+    const f035s = f035ToSidInfo(newRecord.get(/^035$/u));
+    const fSIDs = sidsToSidInfo(newRecord.get(/^SID$/u));
+
+    const sidsToBeAdded = genNewSids(fSIDs.length === 0
+      ? f035s
+      // test that SIDs are not there yet
+      : f035s.filter(f035SidInfo => fSIDs.some(fSIDInfo => f035SidInfo.SID !== fSIDInfo.SID && f035SidInfo.value !== fSIDInfo.value)));
+
+    // Add new SIDs
+    return sidsToBeAdded.forEach(sidField => newRecord.insertField(sidField));
+
+    function genNewSids(sidsToBeAdded) {
+      return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: sidInfo.value}, {code: 'b', value: sidInfo.SID}]}));
+    }
+
+    function sidsToSidInfo(SIDs) {
+      return SIDs.flatMap(({subfields}) => {
+        const [SID] = subfields.filter(sub => sub.code === 'b' && fSIDFilters.includes(sub.value)).map(sub => sub.value);
+        const [value] = subfields.filter(sub => sub.code === 'c' && sub.value !== undefined).map(sub => sub.value);
+
+        if (SID && value) {
+          return {
+            SID,
+            value
+          };
+        }
+
+        return undefined;
+      }).filter(value => value !== undefined);
+    }
+
+    function f035ToSidInfo(f035s) {
+      return f035s.flatMap(({subfields}) => {
+        const [wantedSub] = subfields.filter(sub => sub.code === 'a' && f035Filters.some(regexp => regexp.test(sub.value)));
+
+        if (wantedSub) {
+          return {
+            SID: fSIDFilters[f035Filters.findIndex(regexp => regexp.test(wantedSub.value))],
+            value: wantedSub.value.slice(wantedSub.value.indexOf(')') + 1)
+          };
+        }
+
+        return undefined;
+      }).filter(value => value !== undefined);
+    }
   }
 }
 

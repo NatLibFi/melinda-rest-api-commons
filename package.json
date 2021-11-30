@@ -37,7 +37,7 @@
 		"@natlibfi/marc-record": "^6.1.2",
 		"@natlibfi/marc-record-serializers": "^8.0.0",
 		"@natlibfi/marc-record-validate": "^6.0.1",
-		"@natlibfi/marc-record-validators-melinda": "^8.4.4",
+		"@natlibfi/marc-record-validators-melinda": "^8.4.6",
 		"@natlibfi/melinda-backend-commons": "^2.0.5",
 		"@natlibfi/melinda-commons": "^12.0.0",
 		"amqplib": ">=0.8.0 <1.0.0",

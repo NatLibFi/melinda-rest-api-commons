@@ -27,7 +27,7 @@
 */
 
 import {expect} from 'chai';
-import fixtureFactory from '@natlibfi/fixura';
+import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {formatRecord, BIB_FORMAT_SETTINGS} from './format';
 
@@ -39,16 +39,16 @@ describe('services/format', () => {
     'test-fixtures',
     'format'
   ];
-  const {getFixture} = fixtureFactory({root: FIXTURES_PATH});
+  const {getFixture} = fixtureFactory({root: FIXTURES_PATH, reader: READERS.JSON});
 
   describe('fiAsteriN0Fin11', () => {
     it('Should succeed', () => {
-      const record = new MarcRecord(JSON.parse(getFixture({
+      const record = new MarcRecord(getFixture({
         components: [
           'in',
           'fiAsteriN0Fin11.json'
         ]
-      })));
+      }));
       const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
@@ -56,19 +56,19 @@ describe('services/format', () => {
           'fiAsteriN0Fin11.json'
         ]
       });
-      const stringResult = JSON.stringify({...result}, undefined, 2);
-      expect(stringResult).to.eql(expected);
+
+      expect(result).to.eql(expected);
     });
   });
 
   describe('fiAsteriS0Fin10', () => {
     it('Should succeed', () => {
-      const record = new MarcRecord(JSON.parse(getFixture({
+      const record = new MarcRecord(getFixture({
         components: [
           'in',
           'fiAsteriS0Fin10.json'
         ]
-      })));
+      }));
       const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
@@ -76,19 +76,19 @@ describe('services/format', () => {
           'fiAsteriS0Fin10.json'
         ]
       });
-      const stringResult = JSON.stringify({...result}, undefined, 2);
-      expect(stringResult).to.eql(expected);
+
+      expect(result).to.eql(expected);
     });
   });
 
   describe('fiMelindaWFin01', () => {
     it('Should succeed', () => {
-      const record = new MarcRecord(JSON.parse(getFixture({
+      const record = new MarcRecord(getFixture({
         components: [
           'in',
           'fiMelindaWFin01.json'
         ]
-      })));
+      }));
       const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
@@ -96,8 +96,68 @@ describe('services/format', () => {
           'fiMelindaWFin01.json'
         ]
       });
-      const stringResult = JSON.stringify({...result}, undefined, 2);
-      expect(stringResult).to.eql(expected);
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('f035fibtj', () => {
+    it('Should add FI-BTJ SID', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035fibtj.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'f035fibtj.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('f035tati', () => {
+    it('Should add tati SID', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035tati.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'f035tati.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('f035fibtjAndTati', () => {
+    it('Should add tati SID and skip FI-BTJ SID', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035fibtjAndTati.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject());
+      const expected = getFixture({
+        components: [
+          'out',
+          'f035fibtjAndTati.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
     });
   });
 });

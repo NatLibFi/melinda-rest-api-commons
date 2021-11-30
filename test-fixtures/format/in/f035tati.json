@@ -7,7 +7,7 @@
     },
     {
       "tag": "003",
-      "value": "FI-MELINDA"
+      "value": "FI-BTJ"
     },
     {
       "tag": "005",
@@ -33,6 +33,17 @@
         {
           "code": "z",
           "value": "978-952-234-385-7"
+        }
+      ]
+    },
+    {
+      "tag": "035",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "(FI-TATI)faa"
         }
       ]
     },
@@ -65,8 +76,8 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "w",
-          "value": "(FIN01)"
+          "code": "a",
+          "value": "fin"
         }
       ]
     },
@@ -95,8 +106,8 @@
           "value": "86.2"
         },
         {
-          "code": "2",
-          "value": "ykl"
+          "code": "0",
+          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -195,8 +206,8 @@
       "ind2": "0",
       "subfields": [
         {
-          "code": "w",
-          "value": "(FIN01)"
+          "code": "0",
+          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -360,8 +371,8 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "w",
-          "value": "(FIN01)"
+          "code": "0",
+          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -457,8 +468,8 @@
           "value": "kertomakirjallisuus"
         },
         {
-          "code": "w",
-          "value": "(FIN01)"
+          "code": "2",
+          "value": "ysa"
         }
       ]
     },
