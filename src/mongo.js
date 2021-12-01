@@ -170,13 +170,8 @@ export default async function (MONGO_URI, collection) {
     const result = await db.collection(collection).findOne({correlationId});
     const oldState = result.queueItemState;
 
-    if (oldState === QUEUE_ITEM_STATE.ABORT) {
-      logger.silly(`${correlationId} has timeouted already`);
-      return false;
-    }
-
-    if (oldState === QUEUE_ITEM_STATE.ERROR) {
-      logger.silly(`${correlationId} has errored already`);
+    if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR].includes(oldState)) {
+      logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
 
@@ -184,7 +179,6 @@ export default async function (MONGO_URI, collection) {
     logger.silly(`timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
-      const oldState = result.queueItemState;
       await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: `Timeout in ${oldState}`});
       return false;
     }
