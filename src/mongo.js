@@ -167,15 +167,14 @@ export default async function (MONGO_URI, collection) {
   // If the state is already ABORT or ERROR return false
 
   async function checkTimeOut(correlationId) {
-    const result = await db.collection(collection).findOne({correlationId});
-    const oldState = result.queueItemState;
+    const {modificationTime, queueitemState: oldState} = await db.collection(collection).findOne({correlationId});
 
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR].includes(oldState)) {
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
 
-    const timeoutTime = moment(result.modificationTime).add(1, 'm');
+    const timeoutTime = moment(modificationTime).add(1, 'm');
     logger.silly(`timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
