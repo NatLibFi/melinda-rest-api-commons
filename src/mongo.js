@@ -103,7 +103,7 @@ export default async function (MONGO_URI, collection) {
       operationSettings: {prio},
       contentType,
       recordLoadParams,
-      queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
+      queueItemState: stream ? QUEUE_ITEM_STATE.VALIDATOR.UPLOADING : QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS,
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -116,6 +116,10 @@ export default async function (MONGO_URI, collection) {
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    if (!stream) {
+      return correlationId;
     }
 
     return new Promise((resolve, reject) => {
@@ -131,7 +135,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   // Check state that the queueItem has not waited too long and set state
-  async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
+  async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
     // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
     // otherwise it sets queueItem to state ABORT (408, 'Timeout')
     const timeOut = await checkTimeOut(correlationId);
@@ -304,19 +308,34 @@ export default async function (MONGO_URI, collection) {
     });
   }
 
-  function setState({correlationId, state, errorMessage = '', errorStatus = ''}) {
-    const errorString = errorMessage || errorStatus ? `, Error message: '${errorMessage}', Error status: '${errorStatus}'` : '';
+  function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
+    const errorString = errorMessage || errorStatus ? `, Error message: '${errorMessage || ''}', Error status: '${errorStatus || ''}'` : '';
     logger.info(`Setting queue-item state ${state} for ${correlationId}${errorString} to ${collection}`);
+
+    const stateInQueueItemStates = Object.values(QUEUE_ITEM_STATE).indexOf(state) > -1;
+    const stateInQueueItemStatesValidator = Object.values(QUEUE_ITEM_STATE.VALIDATOR).indexOf(state) > -1;
+    const stateInQueueItemStatesImporter = Object.values(QUEUE_ITEM_STATE.IMPORTER).indexOf(state) > -1;
+    if (!stateInQueueItemStates && !stateInQueueItemStatesValidator && !stateInQueueItemStatesImporter) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Trying to set invalid state');
+    }
+
     const clean = sanitize(correlationId);
-    return db.collection(collection).findOneAndUpdate({
-      correlationId: clean
-    }, {
-      $set: {
-        queueItemState: state,
-        modificationTime: moment().toDate(),
-        errorMessage,
-        errorStatus
-      }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    const updateValues = {
+      queueItemState: state,
+      modificationTime: moment().toDate(),
+      errorMessage,
+      errorStatus
+    };
+
+    // Do not update value that are undefined
+    // eslint-disable-next-line functional/immutable-data
+    Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
+
+    return db.collection(collection)
+      .findOneAndUpdate(
+        {correlationId: clean},
+        {$set: updateValues},
+        {projection: {_id: 0}, returnNewDocument: true}
+      );
   }
 }
