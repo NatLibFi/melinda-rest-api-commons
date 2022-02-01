@@ -66,14 +66,14 @@ export default async function (MONGO_URI, collection) {
 
   return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages};
 
-  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, prio = true}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, merge = undefined, prio = true}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
       operation,
       oCatalogerIn,
-      operationSettings: {unique, noop, prio},
+      operationSettings: {unique, noop, prio, merge},
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
