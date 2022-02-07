@@ -109,25 +109,39 @@ export default async function (MONGO_URI, collection) {
       handledIds: [],
       rejectedIds: []
     };
-    try {
+
+    if (stream) {
+      try {
       // No await here, promises later
-      db.collection(collection).insertOne(newQueueItem);
-      logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
+        db.collection(collection).insertOne(newQueueItem);
+        logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
+      } catch (error) {
+        logError(error);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      }
+      return new Promise((resolve, reject) => {
+        const outputStream = gridFSBucket.openUploadStream(correlationId);
+
+        stream
+          .on('error', reject)
+          .on('data', chunk => outputStream.write(chunk))
+          .on('end', () => outputStream.end(undefined, undefined, () => {
+            resolve(correlationId);
+          }));
+      });
+    }
+    logger.debug(`No stream`);
+    try {
+      const result = db.collection(collection).insertOne(newQueueItem);
+      if (result.acknowledged) {
+        logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
+        return;
+      }
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     } catch (error) {
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    return new Promise((resolve, reject) => {
-      const outputStream = gridFSBucket.openUploadStream(correlationId);
-
-      stream
-        .on('error', reject)
-        .on('data', chunk => outputStream.write(chunk))
-        .on('end', () => outputStream.end(undefined, undefined, () => {
-          resolve(correlationId);
-        }));
-    });
   }
 
   // Check state that the queueItem has not waited too long and set state
