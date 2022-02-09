@@ -64,7 +64,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages};
+  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages, setOperation};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, merge = undefined, prio = true}) {
     const time = moment().toDate();
@@ -73,7 +73,7 @@ export default async function (MONGO_URI, collection) {
       cataloger,
       operation,
       oCatalogerIn,
-      operationSettings: {unique, noop, prio, merge},
+      operationSettings: {unique, noop, prio, merge, originalOperation: operation},
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       creationTime: time,
       modificationTime: time,
@@ -93,14 +93,14 @@ export default async function (MONGO_URI, collection) {
     }
   }
 
-  function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, prio = false}) {
+  async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, prio = false}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
       cataloger,
       oCatalogerIn,
       operation,
-      operationSettings: {prio},
+      operationSettings: {prio, originalOperation: operation},
       contentType,
       recordLoadParams,
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
@@ -132,7 +132,7 @@ export default async function (MONGO_URI, collection) {
     }
     logger.debug(`No stream`);
     try {
-      const result = db.collection(collection).insertOne(newQueueItem);
+      const result = await db.collection(collection).insertOne(newQueueItem);
       if (result.acknowledged) {
         logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
         return;
@@ -332,5 +332,25 @@ export default async function (MONGO_URI, collection) {
         errorStatus
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
+  }
+
+  async function setOperation({correlationId, operation}) {
+    const newOperation = operation;
+    const {operation: oldOperation} = await db.collection(collection).findOne({correlationId});
+    logger.info(`Setting queue-item operation from ${oldOperation} to ${newOperation} for ${correlationId} to ${collection}`);
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanNewOperation = sanitize(newOperation);
+
+    const result = await db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId
+    }, {
+      $set: {
+        operation: cleanNewOperation,
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+
+    return result.ok;
+    // logger.debug(JSON.stringify(result));
   }
 }
