@@ -119,7 +119,7 @@ export default async function (MONGO_URI, collection) {
     }
 
     if (!stream) {
-      return correlationId;
+      return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
     }
 
     return new Promise((resolve, reject) => {
