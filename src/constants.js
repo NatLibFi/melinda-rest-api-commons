@@ -47,6 +47,16 @@ export const QUEUE_ITEM_STATE = {
   ABORT: 'ABORT'
 };
 
+export const IMPORT_JOB_STATE = {
+  EMPTY: 'EMPTY',
+  QUEUING: 'QUEUING',
+  IN_QUEUE: 'IN_QUEUE',
+  PROCESSING: 'PROCESSING',
+  DONE: 'DONE',
+  ERROR: 'ERROR',
+  ABORT: 'ABORT'
+}
+
 export const OPERATIONS = {
   CREATE: 'CREATE',
   UPDATE: 'UPDATE'

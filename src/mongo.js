@@ -80,9 +80,10 @@ export default async function (MONGO_URI, collection) {
       oCatalogerIn,
       operationSettings: {unique, noop, prio, merge, originalOperation: operation},
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
-      importJobStates: {[operation]: IMPORT_JOB_STATE.PENDING},
-      createImportJobState: IMPORT_JOB_STATE.NULL,
-      updateImportJobState: IMPORT_JOB_STATE.NULL,
+      importJobState: {
+        CREATE: IMPORT_JOB_STATE.EMPTY,
+        UPDATE: IMPORT_JOB_STATE.EMPTY
+      },
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -113,9 +114,10 @@ export default async function (MONGO_URI, collection) {
       contentType,
       recordLoadParams,
       queueItemState: stream ? QUEUE_ITEM_STATE.VALIDATOR.UPLOADING : QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS,
-      importJobStates: {[operation]: IMPORT_JOB_STATE.PENDING},
-      createImportJobState: IMPORT_JOB_STATE.NULL,
-      updateImportJobState: IMPORT_JOB_STATE.NULL,
+      importJobState: {
+        CREATE: IMPORT_JOB_STATE.EMPTY,
+        UPDATE: IMPORT_JOB_STATE.EMPTY
+      },
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -124,51 +126,39 @@ export default async function (MONGO_URI, collection) {
 
     if (stream) {
       try {
-      // No await here, promises later
+        // No await here, promises later
         db.collection(collection).insertOne(newQueueItem);
         logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
+        return new Promise((resolve, reject) => {
+          const outputStream = gridFSBucket.openUploadStream(correlationId);
+
+          stream
+            .on('error', reject)
+            .on('data', chunk => outputStream.write(chunk))
+            .on('end', () => outputStream.end(undefined, undefined, () => {
+              resolve(correlationId);
+            }));
+        });
       } catch (error) {
         logError(error);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
       }
-      return new Promise((resolve, reject) => {
-        const outputStream = gridFSBucket.openUploadStream(correlationId);
-
-        stream
-          .on('error', reject)
-          .on('data', chunk => outputStream.write(chunk))
-          .on('end', () => outputStream.end(undefined, undefined, () => {
-            resolve(correlationId);
-          }));
-      });
     }
+
     logger.debug(`No stream`);
-    try {
-      const result = await db.collection(collection).insertOne(newQueueItem);
-      if (result.acknowledged) {
-        logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
-        return;
-      }
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
-    } catch (error) {
-      logError(error);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
-    }
-
     if (!stream) {
-      return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
+      try {
+        const result = await db.collection(collection).insertOne(newQueueItem);
+        if (result.acknowledged) {
+          logger.info(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
+          return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
+        }
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      } catch (error) {
+        logError(error);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      }
     }
-
-    return new Promise((resolve, reject) => {
-      const outputStream = gridFSBucket.openUploadStream(correlationId);
-
-      stream
-        .on('error', reject)
-        .on('data', chunk => outputStream.write(chunk))
-        .on('end', () => outputStream.end(undefined, undefined, () => {
-          resolve(correlationId);
-        }));
-    });
   }
 
   // Check state that the queueItem has not waited too long and set state
@@ -184,8 +174,8 @@ export default async function (MONGO_URI, collection) {
 
   // Check state that the queueItem has not waited too long and set state
   async function checkAndSetImportJobState({correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}) {
-  // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
-  // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
+    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
     const timeOut = await checkTimeOut({correlationId, operation, importJobState});
     if (timeOut) {
       return setImportJobState({correlationId, operation, importJobState, errorMessage, errorStatus});
@@ -195,8 +185,8 @@ export default async function (MONGO_URI, collection) {
 
   // Check state that the queueItem has not waited too long and set state
   async function checkAndSetImportJobStates({correlationId, importJobState2}) {
-  // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
-  // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
+    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
     const timeOut = await checkTimeOut({correlationId, importJobState2});
     if (timeOut) {
       return setImportJobStates({correlationId, importJobState2});
