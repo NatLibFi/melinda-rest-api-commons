@@ -29,7 +29,7 @@
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE} from './constants';
+import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
@@ -50,6 +50,10 @@ import sanitize from 'mongo-sanitize';
     "pOldNew": "NEW"
   },
   "queueItemState":"PENDING_QUEUING",
+  "importJobState": {
+    "CREATE": "PENDING",
+    "UPDATE": "PENDING"
+  },
   "creationTime":"2020-01-01T00:00:00.000Z",
   "modificationTime":"2020-01-01T00:00:01.000Z",
   "handledIds": []
@@ -64,7 +68,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, pushIds, pushMessages, setOperation};
+  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, checkAndSetImportJobStates, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, merge = undefined, prio = true}) {
     const time = moment().toDate();
@@ -72,9 +76,13 @@ export default async function (MONGO_URI, collection) {
       correlationId,
       cataloger,
       operation,
+      operations: [operation],
       oCatalogerIn,
       operationSettings: {unique, noop, prio, merge, originalOperation: operation},
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
+      importJobStates: {[operation]: IMPORT_JOB_STATE.PENDING},
+      createImportJobState: IMPORT_JOB_STATE.NULL,
+      updateImportJobState: IMPORT_JOB_STATE.NULL,
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -100,10 +108,14 @@ export default async function (MONGO_URI, collection) {
       cataloger,
       oCatalogerIn,
       operation,
+      operations: [operation],
       operationSettings: {prio, originalOperation: operation},
       contentType,
       recordLoadParams,
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.UPLOADING,
+      importJobStates: {[operation]: IMPORT_JOB_STATE.PENDING},
+      createImportJobState: IMPORT_JOB_STATE.NULL,
+      updateImportJobState: IMPORT_JOB_STATE.NULL,
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -148,12 +160,35 @@ export default async function (MONGO_URI, collection) {
   async function checkAndSetState({correlationId, state, errorMessage = '', errorStatus = ''}) {
     // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
     // otherwise it sets queueItem to state ABORT (408, 'Timeout')
-    const timeOut = await checkTimeOut(correlationId);
+    const timeOut = await checkTimeOut({correlationId});
     if (timeOut) {
       return setState({correlationId, state, errorMessage, errorStatus});
     }
     return false;
   }
+
+  // Check state that the queueItem has not waited too long and set state
+  async function checkAndSetImportJobState({correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}) {
+  // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
+  // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    const timeOut = await checkTimeOut({correlationId, operation, importJobState});
+    if (timeOut) {
+      return setImportJobState({correlationId, operation, importJobState, errorMessage, errorStatus});
+    }
+    return false;
+  }
+
+  // Check state that the queueItem has not waited too long and set state
+  async function checkAndSetImportJobStates({correlationId, importJobState2}) {
+  // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
+  // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    const timeOut = await checkTimeOut({correlationId, importJobState2});
+    if (timeOut) {
+      return setImportJobStates({correlationId, importJobState2});
+    }
+    return false;
+  }
+
 
   async function query(params) {
     const result = await db.collection(collection).find(params, {projection: {_id: 0}})
@@ -162,12 +197,12 @@ export default async function (MONGO_URI, collection) {
     return result;
   }
 
-  async function queryById(correlationId, checkModTime) {
+  async function queryById({correlationId, checkModTime = false}) {
     const result = await db.collection(collection).findOne({correlationId});
     if (checkModTime) {
-      const timeOut = await checkTimeOut(correlationId);
+      const timeOut = await checkTimeOut({correlationId});
       if (timeOut) {
-        return queryById(correlationId);
+        return queryById({correlationId});
       }
       return result;
     }
@@ -180,9 +215,10 @@ export default async function (MONGO_URI, collection) {
   // set state to ABORT and return false, otherwise return true
   // If the state is already ABORT or ERROR return false
 
-  async function checkTimeOut(correlationId) {
+  async function checkTimeOut({correlationId, operation, importJobState, importJobState2}) {
     const {modificationTime, queueitemState: oldState} = await db.collection(collection).findOne({correlationId});
 
+    // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR].includes(oldState)) {
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
@@ -192,6 +228,20 @@ export default async function (MONGO_URI, collection) {
     logger.silly(`timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
+      if (importJobState) {
+        await setImportJobState({correlationId, operation, importJobState: IMPORT_JOB_STATE.ABORT});
+        return false;
+      }
+      // importJobState2 = {"CREATE": "PENDING"};
+      // -> newImportJobState = {"CREATE": "ABORT"}
+
+      if (importJobState2) {
+        const [importJobStateKey] = Object.keys(importJobState2);
+        const newImportJobState2 = {[importJobStateKey]: IMPORT_JOB_STATE.ABORT};
+        await setImportJobStates({correlationId, importJobState2: newImportJobState2});
+        return false;
+      }
+
       await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: `Timeout in ${oldState}`});
       return false;
     }
@@ -257,17 +307,48 @@ export default async function (MONGO_URI, collection) {
     return true;
   }
 
-  function getOne({operation, queueItemState}) {
-    const clean = {queueItemState: sanitize(queueItemState)};
+  // eslint-disable-next-line max-statements
+  function getOne({queueItemState, operation = undefined, importOperation = undefined, importJobState = undefined}) {
+
+    // logger.debug(`Getting queueItem for ${operation ? `${operation},` : ''} queueItemState: ${queueItemState} ${importOperation ? `, importOperation: ${importOperation}` : ''} ${importJobState ? `, importJobState: ${importJobState}` : ''}`);
+
+    const cleanOperation = operation ? {operation: sanitize(operation)} : undefined;
+    const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
+    const cleanImportJobState = importJobState ? sanitize(importJobState) : undefined;
+
+    const importJobStateForFind = importOperation === 'CREATE' ? {createImportJobState: cleanImportJobState} : {updateImportJobState: cleanImportJobState};
+
+    logger.silly(`importJobStateForFind: ${JSON.stringify(importJobStateForFind)}`);
+
     try {
-      if (operation === undefined) {
-        logger.silly(`Checking DB ${collection} for ${JSON.stringify(clean.queueItemState)}`);
-        return db.collection(collection).findOne({...clean});
+
+      // Just queueItemState
+      if (queueItemState && operation === undefined && importJobState === undefined) {
+        logger.silly(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
+        return db.collection(collection).findOne({...cleanQueueItemState});
       }
 
-      const clean2 = {operation: sanitize(operation)};
-      logger.silly(`Checking DB ${collection} for ${clean.queueItemState} + ${clean2.operation}`);
-      return db.collection(collection).findOne({...clean, ...clean2});
+      // queueItemState and operation
+      if (queueItemState && operation && importJobState === undefined) {
+        logger.silly(`Checking DB ${collection} for ${cleanQueueItemState.queueItemState} + ${cleanOperation.operation}`);
+        return db.collection(collection).findOne({...cleanQueueItemState, ...cleanOperation});
+      }
+
+      // importJobState (and importOperation to choose the between updateImportJobState and createImportJobState)
+      if (importJobState && importOperation && queueItemState === undefined) {
+        logger.silly(`Checking DB ${collection} for ${importOperation}: ${JSON.stringify(importJobStateForFind)}`);
+        return db.collection(collection).findOne({...importJobStateForFind});
+      }
+
+      // All three parameters
+      if (importJobState && importOperation && queueItemState) {
+        logger.silly(`Checking DB ${collection} for ${queueItemState} and ${operation} ${JSON.stringify(importJobStateForFind)}`);
+        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobStateForFind});
+      }
+
+      logger.debug(`getOne not working!`);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Missing parameters, cannot get queueItem');
+
     } catch (error) {
       logError(error);
     }
@@ -334,6 +415,42 @@ export default async function (MONGO_URI, collection) {
     }, {projection: {_id: 0}, returnNewDocument: true});
   }
 
+  function setImportJobState({correlationId, operation, importJobState}) {
+    logger.info(`Setting queue-item importJobState ${operation}.${importJobState} for ${correlationId}`);
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanImportJobState = sanitize(importJobState);
+
+    const importJobStateForSet = operation === 'CREATE' ? 'createImportJobState' : 'updateImportJobState';
+
+    return db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId
+    }, {
+      $set: {
+        [importJobStateForSet]: cleanImportJobState,
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+  }
+
+
+  function setImportJobStates({correlationId, importJobState2}) {
+    // importJobState2 = {"CREATE": "DONE"}
+
+    logger.info(`Setting queue-item importJobState ${importJobState2} for ${correlationId}`);
+    const cleanCorrelationId = sanitize(correlationId);
+
+    //const [importJobStateKey] = Object.keys(importJobState2);
+
+    return db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId
+    }, {
+      $set: {
+        importJobStates: [importJobState2, ...importJobStates],
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+  }
+
   async function setOperation({correlationId, operation}) {
     const newOperation = operation;
     const {operation: oldOperation} = await db.collection(collection).findOne({correlationId});
@@ -353,4 +470,34 @@ export default async function (MONGO_URI, collection) {
     return result.ok;
     // logger.debug(JSON.stringify(result));
   }
+
+  async function setOperations({correlationId, addOperation, removeOperation = undefined}) {
+    const cleanCorrelationId = sanitize(correlationId);
+
+    //logger.info(`Setting queue-item operation from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
+
+    const queueItem = await db.collection(collection).findOne({correlationId: cleanCorrelationId});
+    logger.debug(`We fould a queueItem: ${JSON.stringify(queueItem)}`);
+
+    const oldOperations = queueItem.operations;
+
+    logger.info(`Setting queue-item operation from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
+
+    const operationsAfterRemove = oldOperations.filter(operation => operation !== removeOperation);
+    const operationsAfterRemoveAndAdd = [addOperation, ...operationsAfterRemove];
+
+    const result = await db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId
+    }, {
+      $set: {
+        operations: operationsAfterRemoveAndAdd,
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+
+    return result.ok;
+    // logger.debug(JSON.stringify(result));
+  }
+
+
 }
