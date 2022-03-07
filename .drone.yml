@@ -17,7 +17,7 @@ steps:
   - name: Install
     image: node:14
     environment:
-      NPM_CONFIG_IGNORE_SCRIPTS: true
+      NPM_CONFIG_IGNORE_SCRIPTS: 'true'
     commands:
       - npm install
 
@@ -50,7 +50,8 @@ steps:
       token:
         from_secret: npm_token
     when:
-      event: tag
+      event:
+        - tag
 ---
   kind: pipeline
   type: docker
