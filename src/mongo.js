@@ -124,6 +124,7 @@ export default async function (MONGO_URI, collection) {
       rejectedIds: []
     };
 
+    // eslint-disable-next-line functional/no-conditional-statement
     if (stream) {
       try {
         // No await here, promises later
@@ -146,6 +147,7 @@ export default async function (MONGO_URI, collection) {
     }
 
     logger.debug(`No stream`);
+    // eslint-disable-next-line functional/no-conditional-statement
     if (!stream) {
       try {
         const result = await db.collection(collection).insertOne(newQueueItem);
@@ -453,19 +455,20 @@ export default async function (MONGO_URI, collection) {
   }
 
 
-  function setImportJobStates({correlationId, importJobState2}) {
+  async function setImportJobStates({correlationId, importJobState2}) {
     // importJobState2 = {"CREATE": "DONE"}
 
     logger.info(`Setting queue-item importJobState ${importJobState2} for ${correlationId}`);
     const cleanCorrelationId = sanitize(correlationId);
-
-    //const [importJobStateKey] = Object.keys(importJobState2);
+    const {importJobState: oldImportJobState} = await db.collection(collection).findOne({correlationId});
+    const newImportJobState = {importJobState2, ...oldImportJobState};
+    logger.debug(`oldImportJobState: ${oldImportJobState}, newImportJobState: ${newImportJobState}`);
 
     return db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
-        importJobStates: [importJobState2, ...importJobStates],
+        importJobStates: newImportJobState,
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
