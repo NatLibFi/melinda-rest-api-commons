@@ -440,13 +440,12 @@ export default async function (MONGO_URI, collection) {
     const cleanCorrelationId = sanitize(correlationId);
     const cleanImportJobState = sanitize(importJobState);
 
-    const importJobStateForSet = operation === 'CREATE' ? 'createImportJobState' : 'updateImportJobState';
 
     return db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
-        [importJobStateForSet]: cleanImportJobState,
+        'importJobState.CREATE': cleanImportJobState,
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
