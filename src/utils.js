@@ -44,3 +44,15 @@ export function logError(err) {
 
   logger.error(err.stack === undefined ? err : err.stack);
 }
+
+export function createImportJobState(operation, state){
+  if (!IMPORT_JOB_STATE.includes(state)) {
+    throw new Error('Invalid IMPORT_JOB_STATE');
+  }
+
+  if (operation === OPERATIONS.CREATE) {
+    return {CREATE: state};
+  }
+
+  return {UPDATE: state};
+}
