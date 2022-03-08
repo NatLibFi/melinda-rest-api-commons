@@ -45,7 +45,7 @@ export function logError(err) {
   logger.error(err.stack === undefined ? err : err.stack);
 }
 
-export function createImportJob(operation, state){
+export function createImportJobState(operation, state){
   if (!IMPORT_JOB_STATE.includes(state)) {
     throw new Error('Invalid IMPORT_JOB_STATE');
   }
