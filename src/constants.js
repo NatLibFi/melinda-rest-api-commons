@@ -55,7 +55,7 @@ export const IMPORT_JOB_STATE = {
   DONE: 'DONE',
   ERROR: 'ERROR',
   ABORT: 'ABORT'
-}
+};
 
 export const OPERATIONS = {
   CREATE: 'CREATE',
