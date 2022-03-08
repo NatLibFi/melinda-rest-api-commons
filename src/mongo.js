@@ -29,7 +29,7 @@
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from './constants';
+import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
@@ -442,36 +442,24 @@ export default async function (MONGO_URI, collection) {
   }
 
   function setImportJobState({correlationId, operation, importJobState}) {
-    logger.info(`Setting queue-item importJobState ${operation}.${importJobState} for ${correlationId}`);
+    logger.info(`Setting queue-item importJobState: {${operation}: ${importJobState}} for ${correlationId}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanImportJobState = sanitize(importJobState);
 
+    if (!OPERATIONS.includes(operation)) {
+      throw new ApiError('400', 'Invalid operation for import job state');
+    }
 
+    if (!IMPORT_JOB_STATE.includes(cleanImportJobState)) {
+      throw new ApiError('400', 'Invalid import job state');
+    }
+
+    const newJobState = operation === OPERATIONS.CREATE ? {'importJobState.CREATE': cleanImportJobState} : {'importJobState.UPDATE': cleanImportJobState};
     return db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
-        'importJobState.CREATE': cleanImportJobState,
-        modificationTime: moment().toDate()
-      }
-    }, {projection: {_id: 0}, returnNewDocument: true});
-  }
-
-
-  async function setImportJobStates({correlationId, importJobState2}) {
-    // importJobState2 = {"CREATE": "DONE"}
-
-    logger.info(`Setting queue-item importJobState ${importJobState2} for ${correlationId}`);
-    const cleanCorrelationId = sanitize(correlationId);
-    const {importJobState: oldImportJobState} = await db.collection(collection).findOne({correlationId});
-    const newImportJobState = {importJobState2, ...oldImportJobState};
-    logger.debug(`oldImportJobState: ${oldImportJobState}, newImportJobState: ${newImportJobState}`);
-
-    return db.collection(collection).findOneAndUpdate({
-      correlationId: cleanCorrelationId
-    }, {
-      $set: {
-        importJobState: newImportJobState,
+        ...newJobState,
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
