@@ -41,6 +41,7 @@ import sanitize from 'mongo-sanitize';
   "cataloger":"xxx0000",
   "oCatalogerIn":"xxx0000"
   "operation":"UPDATE",
+  "operations":["UPDATE", "CREATE"]
   "contentType":"application/json",
   "recordLoadParams": {
     "pActiveLibrary": "XXX00",
@@ -51,8 +52,8 @@ import sanitize from 'mongo-sanitize';
   },
   "queueItemState":"PENDING_QUEUING",
   "importJobState": {
-    "CREATE": "PENDING",
-    "UPDATE": "PENDING"
+    "CREATE": "EMPTY",
+    "UPDATE": "EMPTY"
   },
   "creationTime":"2020-01-01T00:00:00.000Z",
   "modificationTime":"2020-01-01T00:00:01.000Z",
@@ -324,8 +325,11 @@ export default async function (MONGO_URI, collection) {
     const cleanImportJobState = importJobState ? sanitize(importJobState) : undefined;
 
     const importJobStateForFind = importOperation === 'CREATE' ? {createImportJobState: cleanImportJobState} : {updateImportJobState: cleanImportJobState};
+    const importJobStateForFind2 = {[importOperation]: importJobState};
 
     logger.silly(`importJobStateForFind: ${JSON.stringify(importJobStateForFind)}`);
+    logger.silly(`importJobStateForFind2: ${JSON.stringify(importJobStateForFind2)}`);
+
 
     try {
 
@@ -344,13 +348,13 @@ export default async function (MONGO_URI, collection) {
       // importJobState (and importOperation to choose the between updateImportJobState and createImportJobState)
       if (importJobState && importOperation && queueItemState === undefined) {
         logger.silly(`Checking DB ${collection} for ${importOperation}: ${JSON.stringify(importJobStateForFind)}`);
-        return db.collection(collection).findOne({...importJobStateForFind});
+        return db.collection(collection).findOne({...importJobStateForFind2});
       }
 
       // All three parameters
       if (importJobState && importOperation && queueItemState) {
         logger.silly(`Checking DB ${collection} for ${queueItemState} and ${operation} ${JSON.stringify(importJobStateForFind)}`);
-        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobStateForFind});
+        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobStateForFind2});
       }
 
       logger.debug(`getOne not working!`);
@@ -468,7 +472,7 @@ export default async function (MONGO_URI, collection) {
       correlationId: cleanCorrelationId
     }, {
       $set: {
-        importJobStates: newImportJobState,
+        importJobState: newImportJobState,
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
