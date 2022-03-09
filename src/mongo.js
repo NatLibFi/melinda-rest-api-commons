@@ -303,7 +303,7 @@ export default async function (MONGO_URI, collection) {
   // eslint-disable-next-line max-statements
   function getOne({queueItemState, importJobState = undefined}) {
 
-    logger.debug(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
+    logger.silly(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
 
     const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
     const cleanImportJobState = importJobState ? sanitize(importJobState) : undefined;
