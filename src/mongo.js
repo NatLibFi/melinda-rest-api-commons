@@ -304,9 +304,7 @@ export default async function (MONGO_URI, collection) {
   function getOne({queueItemState, importJobState = undefined}) {
 
     logger.silly(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
-
     const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
-    const cleanImportJobState = importJobState ? sanitize(importJobState) : undefined;
 
     try {
 
@@ -318,14 +316,14 @@ export default async function (MONGO_URI, collection) {
 
       // importJobState
       if (importJobState && queueItemState === undefined) {
-        logger.silly(`Checking DB ${collection} for ${JSON.stringify(cleanImportJobState)}`);
-        return db.collection(collection).findOne({...cleanImportJobState});
+        logger.silly(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
+        return db.collection(collection).findOne({...importJobState});
       }
 
       // importJobState and queueItemState
       if (importJobState && queueItemState) {
-        logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(cleanImportJobState)}`);
-        return db.collection(collection).findOne({...cleanQueueItemState, ...cleanImportJobState});
+        logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
+        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobState});
       }
 
       logger.debug(`getOne not working!`);

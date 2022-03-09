@@ -51,9 +51,31 @@ export function createImportJobState(operation, state) {
     throw new Error('Invalid IMPORT_JOB_STATE');
   }
 
+  if (!(operation in OPERATIONS)) {
+    throw new Error('Invalid operation');
+  }
+
+  return {[operation]: state};
+
+/*
   if (operation === OPERATIONS.CREATE) {
     return {CREATE: state};
   }
 
   return {UPDATE: state};
+*/
+}
+
+export function createImportJobStateForQuery(operation, state) {
+  if (!(state in IMPORT_JOB_STATE)) {
+    throw new Error('Invalid IMPORT_JOB_STATE');
+  }
+  if (!(operation in OPERATIONS)) {
+    throw new Error('Invalid operation');
+  }
+
+  const importJobStateWithOperation = `importJobState.${operation}`;
+  const importJobStateForQuery = {[importJobStateWithOperation]: state};
+
+  return importJobStateForQuery;
 }

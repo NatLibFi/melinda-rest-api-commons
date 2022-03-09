@@ -31,7 +31,7 @@ import amqpFactory from './amqp';
 import conversions from './helpers/conversion';
 import validations from './helpers/validation';
 import * as format from './helpers/format';
-import {logError, createImportJobState} from './utils';
+import {logError, createImportJobState, createImportJobStateForQuery} from './utils';
 
-export {mongoFactory, amqpFactory, conversions, validations, format, logError, createImportJobState};
+export {mongoFactory, amqpFactory, conversions, validations, format, logError, createImportJobState, createImportJobStateForQuery};
 export * from './constants';
