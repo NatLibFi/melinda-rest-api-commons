@@ -69,7 +69,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, checkAndSetImportJobStates, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations};
+  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, merge = undefined, prio = true}) {
     const time = moment().toDate();
@@ -186,18 +186,6 @@ export default async function (MONGO_URI, collection) {
     return false;
   }
 
-  // Check state that the queueItem has not waited too long and set state
-  async function checkAndSetImportJobStates({correlationId, importJobState2}) {
-    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
-    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
-    const timeOut = await checkTimeOut({correlationId, importJobState2});
-    if (timeOut) {
-      return setImportJobStates({correlationId, importJobState2});
-    }
-    return false;
-  }
-
-
   async function query(params) {
     const result = await db.collection(collection).find(params, {projection: {_id: 0}})
       .toArray();
@@ -223,11 +211,11 @@ export default async function (MONGO_URI, collection) {
   // set state to ABORT and return false, otherwise return true
   // If the state is already ABORT or ERROR return false
 
-  async function checkTimeOut({correlationId, operation, importJobState, importJobState2}) {
-    const {modificationTime, queueitemState: oldState} = await db.collection(collection).findOne({correlationId});
+  async function checkTimeOut({correlationId}) {
+    const {modificationTime, queueitemState: oldState, importJobState} = await db.collection(collection).findOne({correlationId});
 
     // should we check for DONE too?
-    if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR].includes(oldState)) {
+    if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
@@ -236,21 +224,17 @@ export default async function (MONGO_URI, collection) {
     logger.silly(`timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
-      if (importJobState) {
-        await setImportJobState({correlationId, operation, importJobState: IMPORT_JOB_STATE.ABORT});
-        return false;
+      const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
+      if (!finalImportJobStates.includes(importJobState.CREATE)) { // eslint-disable-line
+        await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
-      // importJobState2 = {"CREATE": "PENDING"};
-      // -> newImportJobState = {"CREATE": "ABORT"}
 
-      if (importJobState2) {
-        const [importJobStateKey] = Object.keys(importJobState2);
-        const newImportJobState2 = {[importJobStateKey]: IMPORT_JOB_STATE.ABORT};
-        await setImportJobStates({correlationId, importJobState2: newImportJobState2});
-        return false;
+      if (!finalImportJobStates.includes(importJobState.UPDATE)) { // eslint-disable-line
+        await setImportJobState({correlationId, operation: 'UPDATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
       await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: `Timeout in ${oldState}`});
+
       return false;
     }
 
