@@ -301,45 +301,31 @@ export default async function (MONGO_URI, collection) {
   }
 
   // eslint-disable-next-line max-statements
-  function getOne({queueItemState, operation = undefined, importOperation = undefined, importJobState = undefined}) {
+  function getOne({queueItemState, importJobState = undefined}) {
 
-    // logger.debug(`Getting queueItem for ${operation ? `${operation},` : ''} queueItemState: ${queueItemState} ${importOperation ? `, importOperation: ${importOperation}` : ''} ${importJobState ? `, importJobState: ${importJobState}` : ''}`);
+    logger.debug(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
 
-    const cleanOperation = operation ? {operation: sanitize(operation)} : undefined;
     const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
     const cleanImportJobState = importJobState ? sanitize(importJobState) : undefined;
-
-    const importJobStateForFind = importOperation === 'CREATE' ? {createImportJobState: cleanImportJobState} : {updateImportJobState: cleanImportJobState};
-    const importJobStateForFind2 = {[importOperation]: importJobState};
-
-    logger.silly(`importJobStateForFind: ${JSON.stringify(importJobStateForFind)}`);
-    logger.silly(`importJobStateForFind2: ${JSON.stringify(importJobStateForFind2)}`);
-
 
     try {
 
       // Just queueItemState
-      if (queueItemState && operation === undefined && importJobState === undefined) {
+      if (queueItemState && importJobState === undefined) {
         logger.silly(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
         return db.collection(collection).findOne({...cleanQueueItemState});
       }
 
-      // queueItemState and operation
-      if (queueItemState && operation && importJobState === undefined) {
-        logger.silly(`Checking DB ${collection} for ${cleanQueueItemState.queueItemState} + ${cleanOperation.operation}`);
-        return db.collection(collection).findOne({...cleanQueueItemState, ...cleanOperation});
+      // importJobState
+      if (importJobState && queueItemState === undefined) {
+        logger.silly(`Checking DB ${collection} for ${JSON.stringify(cleanImportJobState)}`);
+        return db.collection(collection).findOne({...cleanImportJobState});
       }
 
-      // importJobState (and importOperation to choose the between updateImportJobState and createImportJobState)
-      if (importJobState && importOperation && queueItemState === undefined) {
-        logger.silly(`Checking DB ${collection} for ${importOperation}: ${JSON.stringify(importJobStateForFind)}`);
-        return db.collection(collection).findOne({...importJobStateForFind2});
-      }
-
-      // All three parameters
-      if (importJobState && importOperation && queueItemState) {
-        logger.silly(`Checking DB ${collection} for ${queueItemState} and ${operation} ${JSON.stringify(importJobStateForFind)}`);
-        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobStateForFind2});
+      // importJobState and queueItemState
+      if (importJobState && queueItemState) {
+        logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(cleanImportJobState)}`);
+        return db.collection(collection).findOne({...cleanQueueItemState, ...cleanImportJobState});
       }
 
       logger.debug(`getOne not working!`);
