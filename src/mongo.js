@@ -413,6 +413,8 @@ export default async function (MONGO_URI, collection) {
   }
 
   function setImportJobState({correlationId, operation, importJobState}) {
+
+    // should this also get importJobState as previously created object? {}
     logger.info(`Setting queue-item importJobState: {${operation}: ${importJobState}} for ${correlationId}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanImportJobState = sanitize(importJobState);
