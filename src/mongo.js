@@ -179,6 +179,7 @@ export default async function (MONGO_URI, collection) {
   async function checkAndSetImportJobState({correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}) {
     // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
     // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    logger.debug(`${correlationId}, ${importJobState}, ${operation}`);
     const timeOut = await checkTimeOut({correlationId, operation, importJobState});
     if (timeOut) {
       return setImportJobState({correlationId, operation, importJobState, errorMessage, errorStatus});
@@ -430,11 +431,11 @@ export default async function (MONGO_URI, collection) {
     const cleanCorrelationId = sanitize(correlationId);
     const cleanImportJobState = sanitize(importJobState);
 
-    if (!OPERATIONS.includes(operation)) {
+    if (!(operation in OPERATIONS)) {
       throw new ApiError('400', 'Invalid operation for import job state');
     }
 
-    if (!IMPORT_JOB_STATE.includes(cleanImportJobState)) {
+    if (!(cleanImportJobState in IMPORT_JOB_STATE)) {
       throw new ApiError('400', 'Invalid import job state');
     }
 
