@@ -47,7 +47,7 @@ export function logError(err) {
 }
 
 export function createImportJobState(operation, state) {
-  if (!IMPORT_JOB_STATE.includes(state)) {
+  if (!(state in IMPORT_JOB_STATE)) {
     throw new Error('Invalid IMPORT_JOB_STATE');
   }
 
