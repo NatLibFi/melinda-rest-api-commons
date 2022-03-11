@@ -71,7 +71,7 @@ export default async function (MONGO_URI, collection) {
 
   return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations};
 
-  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, noop = undefined, unique = undefined, merge = undefined, prio = true}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
@@ -79,7 +79,10 @@ export default async function (MONGO_URI, collection) {
       operation,
       operations: [operation],
       oCatalogerIn,
-      operationSettings: {unique, noop, prio, merge, originalOperation: operation},
+      operationSettings: {
+        prio: true,
+        ...operationSettings
+      },
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       importJobState: {
         CREATE: IMPORT_JOB_STATE.EMPTY,
@@ -103,7 +106,7 @@ export default async function (MONGO_URI, collection) {
     }
   }
 
-  async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, prio = false}) {
+  async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
@@ -111,7 +114,10 @@ export default async function (MONGO_URI, collection) {
       oCatalogerIn,
       operation,
       operations: [operation],
-      operationSettings: {prio, originalOperation: operation},
+      operationSettings: {
+        prio: false,
+        ...operationSettings
+      },
       contentType,
       recordLoadParams,
       queueItemState: stream ? QUEUE_ITEM_STATE.VALIDATOR.UPLOADING : QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS,
