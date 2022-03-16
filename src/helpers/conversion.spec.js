@@ -47,6 +47,8 @@ describe('services/conversion', () => {
   const marcXml = getFixture({components: ['marcxml1']});
   const iso2709 = getFixture({components: ['iso2709_1']});
   const json = getFixture({components: ['json1']});
+  const alephSeq = getFixture({components: ['aleph_sequential']});
+
 
   describe('factory', () => {
     it('Should create the expected object', () => {
@@ -76,6 +78,12 @@ describe('services/conversion', () => {
       const data = conversionService.serialize(marcRecord, conversionFormats.JSON);
       expect(data).to.equal(json);
     });
+
+    it('Should serialize to aleph sequential', () => {
+      const data = conversionService.serialize(marcRecord, conversionFormats.ALEPHSEQ);
+      expect(data).to.equal(alephSeq);
+    });
+
   });
 
   describe('#unserialize', () => {
@@ -97,6 +105,12 @@ describe('services/conversion', () => {
       const record = conversionService.unserialize(json, conversionFormats.JSON);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
+
+    it('Should unserialize from Aleph sequential', () => {
+      const record = conversionService.unserialize(alephSeq, conversionFormats.ALEPHSEQ);
+      expect(record.equalsTo(marcRecord)).to.equal(true);
+    });
+
 
     it('Should throw because the record could not be unserialized', () => {
       expect(() => {

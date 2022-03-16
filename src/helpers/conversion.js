@@ -27,7 +27,7 @@
 */
 
 import httpStatus from 'http-status';
-import {MARCXML, ISO2709, Json} from '@natlibfi/marc-record-serializers';
+import {MARCXML, ISO2709, Json, AlephSequential} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import {conversionFormats} from '../constants';
@@ -53,6 +53,10 @@ export default function () {
         return Json.to(record);
       }
 
+      if (format === conversionFormats.ALEPHSEQ) {
+        return AlephSequential.to(record);
+      }
+
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
       logError(err);
@@ -63,6 +67,7 @@ export default function () {
     }
   }
 
+  // eslint-disable-next-line max-statements
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
@@ -82,6 +87,11 @@ export default function () {
       if (format === conversionFormats.JSON) {
         logger.silly('Unserialize format json');
         return Json.from(data, validationOptions);
+      }
+
+      if (format === conversionFormats.ALEPHSEQ) {
+        logger.silly('Unserialize format aleph sequential');
+        return AlephSequential.from(data, validationOptions);
       }
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
