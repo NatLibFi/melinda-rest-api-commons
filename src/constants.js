@@ -65,9 +65,9 @@ export const OPERATIONS = {
 
 export const CHUNK_SIZE = 100;
 
-export const conversionFormats = {
-  MARCXML: 1,
-  ISO2709: 2,
-  JSON: 3,
-  ALEPHSEQ: 4
+export const CONVERSION_FORMATS = {
+  MARCXML: 'MARCXML',
+  ISO2709: 'ISO2709',
+  JSON: 'JSON',
+  ALEPHSEQ: 'ALEPHSEQ'
 };

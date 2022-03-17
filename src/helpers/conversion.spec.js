@@ -31,7 +31,7 @@ import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import createConversionService from './conversion';
-import {conversionFormats} from '../constants';
+import {CONVERSION_FORMATS} from '../constants';
 
 describe('services/conversion', () => {
   const {getFixture} = fixtureFactory({root: [
@@ -65,22 +65,22 @@ describe('services/conversion', () => {
     });
 
     it('Should serialize to MARCXML', () => {
-      const data = conversionService.serialize(marcRecord, conversionFormats.MARCXML);
+      const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.MARCXML);
       expect(data).to.equal(marcXml);
     });
 
     it('Should serialize to ISO2709', () => {
-      const data = conversionService.serialize(marcRecord, conversionFormats.ISO2709);
+      const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.ISO2709);
       expect(data).to.equal(iso2709);
     });
 
     it('Should serialize to JSON', () => {
-      const data = conversionService.serialize(marcRecord, conversionFormats.JSON);
+      const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.JSON);
       expect(data).to.equal(json);
     });
 
     it('Should serialize to aleph sequential', () => {
-      const data = conversionService.serialize(marcRecord, conversionFormats.ALEPHSEQ);
+      const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.ALEPHSEQ);
       expect(data).to.equal(alephSeq);
     });
 
@@ -92,29 +92,29 @@ describe('services/conversion', () => {
     });
 
     it('Should unserialize from MARCXML', async () => {
-      const record = await conversionService.unserialize(marcXml, conversionFormats.MARCXML);
+      const record = await conversionService.unserialize(marcXml, CONVERSION_FORMATS.MARCXML);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
     it('Should unserialize from ISO2709', () => {
-      const record = conversionService.unserialize(iso2709, conversionFormats.ISO2709);
+      const record = conversionService.unserialize(iso2709, CONVERSION_FORMATS.ISO2709);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
     it('Should unserialize from JSON', () => {
-      const record = conversionService.unserialize(json, conversionFormats.JSON);
+      const record = conversionService.unserialize(json, CONVERSION_FORMATS.JSON);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
     it('Should unserialize from Aleph sequential', () => {
-      const record = conversionService.unserialize(alephSeq, conversionFormats.ALEPHSEQ);
+      const record = conversionService.unserialize(alephSeq, CONVERSION_FORMATS.ALEPHSEQ);
       expect(record.equalsTo(marcRecord)).to.equal(true);
     });
 
 
     it('Should throw because the record could not be unserialized', () => {
       expect(() => {
-        conversionService.unserialize('', conversionFormats.JSON);
+        conversionService.unserialize('', CONVERSION_FORMATS.JSON);
       }).to.throw(ConversionError);
     });
   });
