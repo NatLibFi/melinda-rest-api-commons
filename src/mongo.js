@@ -69,7 +69,7 @@ export default async function (MONGO_URI, collection) {
   const db = client.db('rest-api');
   const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
 
-  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations};
+  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
     const time = moment().toDate();
@@ -88,6 +88,7 @@ export default async function (MONGO_URI, collection) {
         CREATE: IMPORT_JOB_STATE.EMPTY,
         UPDATE: IMPORT_JOB_STATE.EMPTY
       },
+      blobSize: 1,
       creationTime: time,
       modificationTime: time,
       handledIds: [],
@@ -121,6 +122,7 @@ export default async function (MONGO_URI, collection) {
       contentType,
       recordLoadParams,
       queueItemState: stream ? QUEUE_ITEM_STATE.VALIDATOR.UPLOADING : QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS,
+      blobSize: 0,
       importJobState: {
         CREATE: IMPORT_JOB_STATE.EMPTY,
         UPDATE: IMPORT_JOB_STATE.EMPTY
@@ -489,4 +491,41 @@ export default async function (MONGO_URI, collection) {
     return result.ok;
     // logger.debug(JSON.stringify(result));
   }
+
+  async function addBlobSize({correlationId}) {
+    const cleanCorrelationId = sanitize(correlationId);
+
+    const result = await db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId,
+      queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS
+    }, {
+      $inc: {
+        blobSize: 1
+      },
+      $set: {
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+
+    logger.verbose(`AddBlobSizeResult in mongo: ${JSON.stringify(result)}`);
+    return result;
+  }
+
+  async function setBlobSize({correlationId, blobSize}) {
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanBlobSize = sanitize(blobSize);
+
+    const result = await db.collection(collection).findOneAndUpdate({
+      correlationId: cleanCorrelationId
+    }, {
+      $set: {
+        blobSize: cleanBlobSize,
+        modificationTime: moment().toDate()
+      }
+    }, {projection: {_id: 0}, returnNewDocument: true});
+
+    logger.verbose(`SetBlobSizeResult in mongo: ${JSON.stringify(result)}`);
+    return result;
+  }
+
 }
