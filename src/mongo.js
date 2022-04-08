@@ -473,7 +473,7 @@ export default async function (MONGO_URI, collection) {
 
     const oldOperations = queueItem.operations;
 
-    logger.info(`Setting queue-item operation from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
+    logger.info(`Setting queue-item operations from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
 
     const operationsAfterRemove = oldOperations.filter(operation => operation !== removeOperation);
     const operationsAfterRemoveAndAdd = operationsAfterRemove.includes(addOperation) ? operationsAfterRemove : [...operationsAfterRemove, addOperation];
