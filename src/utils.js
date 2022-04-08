@@ -69,7 +69,7 @@ export function createImportJobState(operation, state, queryImportJobState = fal
 export function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
   const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload);
   const recordResponseItem = {
-    melindaId: id || '000000000',
+    databaseId: id || '000000000',
     recordMetadata: responsePayload.recordMetadata || recordMetadata || undefined,
     ...recordResponseStatusAndMessage
   };
