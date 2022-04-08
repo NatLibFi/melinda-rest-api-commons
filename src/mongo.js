@@ -469,7 +469,7 @@ export default async function (MONGO_URI, collection) {
     const cleanCorrelationId = sanitize(correlationId);
 
     const queueItem = await db.collection(collection).findOne({correlationId: cleanCorrelationId});
-    logger.debug(`We found a queueItem: ${JSON.stringify(queueItem)}`);
+    logger.silly(`We found a queueItem: ${JSON.stringify(queueItem)}`);
 
     const oldOperations = queueItem.operations;
 
@@ -478,8 +478,8 @@ export default async function (MONGO_URI, collection) {
     const operationsAfterRemove = oldOperations.filter(operation => operation !== removeOperation);
     const operationsAfterRemoveAndAdd = operationsAfterRemove.includes(addOperation) ? operationsAfterRemove : [...operationsAfterRemove, addOperation];
 
-    logger.debug(`operationsAfterRemove: ${operationsAfterRemove}`);
-    logger.debug(`operationAfterRemoveAndAdd: ${operationsAfterRemoveAndAdd}`);
+    logger.silly(`operationsAfterRemove: ${operationsAfterRemove}`);
+    logger.silly(`operationAfterRemoveAndAdd: ${operationsAfterRemoveAndAdd}`);
 
     const result = await db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
