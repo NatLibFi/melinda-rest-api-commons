@@ -34,6 +34,7 @@ import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
+//import isDeepStrictEqual from 'util';
 
 /* QueueItem:
 {
@@ -467,17 +468,18 @@ export default async function (MONGO_URI, collection) {
   async function setOperations({correlationId, addOperation, removeOperation = undefined}) {
     const cleanCorrelationId = sanitize(correlationId);
 
-    //logger.info(`Setting queue-item operation from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
-
     const queueItem = await db.collection(collection).findOne({correlationId: cleanCorrelationId});
-    logger.debug(`We fould a queueItem: ${JSON.stringify(queueItem)}`);
+    logger.debug(`We found a queueItem: ${JSON.stringify(queueItem)}`);
 
     const oldOperations = queueItem.operations;
 
     logger.info(`Setting queue-item operation from ${JSON.stringify(oldOperations)} by adding ${addOperation} and removing ${removeOperation} for ${correlationId} to ${collection}`);
 
     const operationsAfterRemove = oldOperations.filter(operation => operation !== removeOperation);
-    const operationsAfterRemoveAndAdd = [addOperation, ...operationsAfterRemove];
+    const operationsAfterRemoveAndAdd = operationsAfterRemove.includes(addOperation) ? operationsAfterRemove : [...operationsAfterRemove, addOperation];
+
+    logger.debug(`operationsAfterRemove: ${operationsAfterRemove}`);
+    logger.debug(`operationAfterRemoveAndAdd: ${operationsAfterRemoveAndAdd}`);
 
     const result = await db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
