@@ -76,6 +76,7 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
   return recordResponseItem;
 }
 
+// eslint-disable-next-line max-statements
 function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);
@@ -106,7 +107,9 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
-    return {status: 'UNPROCESSABLE_ENTITY', message};
+    const unprocessableIds = responsePayload.ids || [];
+    const response = unprocessableIds.length > 0 ? {status: 'UNPROCESSABLE_ENTITY', message, unprocessableIds} : {status: 'UNPROCESSABLE_ENTITY', message};
+    return response;
   }
 
   if ([httpStatus.NOT_FOUND, 'NOT_FOUND'].includes(responseStatus)) {
