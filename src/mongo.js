@@ -197,7 +197,10 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function query(params) {
-    const result = await db.collection(collection).find(params, {projection: {_id: 0}})
+    const {limit = 1000, skip = 0, ...rest} = params;
+    const result = await db.collection(collection).find(rest, {projection: {_id: 0}})
+      .limit(parseInt(limit, 10))
+      .skip(parseInt(skip, 10))
       .toArray();
     logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     return result;
