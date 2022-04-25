@@ -201,8 +201,8 @@ export default async function (MONGO_URI, collection) {
     return false;
   }
 
-  async function query(params, showParams) {
-    const {showOperations, showOperationSettings, showRecordLoadParams, showImportJobState} = showParams;
+  async function query(params, showParams = {}) {
+    const {showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
     const {limit = 1000, skip = 0, ...rest} = params;
     const result = await db.collection(collection).find(rest, {projection: {
       _id: 0,
