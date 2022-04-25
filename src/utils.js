@@ -103,6 +103,10 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
       const duplicateIds = responsePayload.ids || [];
       return {status: 'DUPLICATE', message, duplicateIds};
     }
+    if ((/^MatchValidation for all/u).test(message)) {
+      const duplicateIds = responsePayload.ids || [];
+      return {status: 'DUPLICATE', message, duplicateIds};
+    }
     return {status: 'CONFLICT', message};
   }
 
