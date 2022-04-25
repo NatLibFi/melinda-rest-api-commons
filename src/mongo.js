@@ -128,10 +128,11 @@ export default async function (MONGO_URI, collection) {
         CREATE: IMPORT_JOB_STATE.EMPTY,
         UPDATE: IMPORT_JOB_STATE.EMPTY
       },
+      records: [],
+      errorMessage: '',
+      errorStatus: '',
       creationTime: time,
-      modificationTime: time,
-      handledIds: [],
-      rejectedIds: []
+      modificationTime: time
     };
 
     // eslint-disable-next-line functional/no-conditional-statement
@@ -196,9 +197,16 @@ export default async function (MONGO_URI, collection) {
     return false;
   }
 
-  async function query(params) {
+  async function query(params, showParams) {
+    const {showOperations, showOperationSettings, showRecordLoadParams, showImportJobState} = showParams;
     const {limit = 1000, skip = 0, ...rest} = params;
-    const result = await db.collection(collection).find(rest, {projection: {_id: 0}})
+    const result = await db.collection(collection).find(rest, {projection: {
+      _id: 0,
+      operations: showOperations,
+      operationSettings: showOperationSettings,
+      recordLoadParams: showRecordLoadParams,
+      importJobState: showImportJobState
+    }})
       .limit(parseInt(limit, 10))
       .skip(parseInt(skip, 10))
       .toArray();
