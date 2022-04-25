@@ -56,9 +56,12 @@ import sanitize from 'mongo-sanitize';
     "CREATE": "EMPTY",
     "UPDATE": "EMPTY"
   },
+  blobSize: 1,
+  records: [],
+  errorMessage: '',
+  errorStatus: '',
   "creationTime":"2020-01-01T00:00:00.000Z",
   "modificationTime":"2020-01-01T00:00:01.000Z",
-  "handledIds": []
 }
 */
 
@@ -85,15 +88,16 @@ export default async function (MONGO_URI, collection) {
         ...operationSettings
       },
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
+      blobSize: 1,
       importJobState: {
         CREATE: IMPORT_JOB_STATE.EMPTY,
         UPDATE: IMPORT_JOB_STATE.EMPTY
       },
-      blobSize: 1,
+      records: [],
+      errorMessage: '',
+      errorStatus: '',
       creationTime: time,
-      modificationTime: time,
-      handledIds: [],
-      rejectedIds: []
+      modificationTime: time
     };
     try {
       const result = await db.collection(collection).insertOne(newQueueItem);
