@@ -107,6 +107,10 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
       const duplicateIds = responsePayload.ids || [];
       return {status: 'CONFLICT', message, duplicateIds};
     }
+    const conflictIds = responsePayload.ids || [];
+    if (conflictIds.length > 0) {
+      return {status: 'CONFLICT', message, conflictIds};
+    }
     return {status: 'CONFLICT', message};
   }
 
