@@ -409,7 +409,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
-    const errorString = errorMessage || errorStatus ? `, Error message: '${errorMessage || ''}', Error status: '${errorStatus || ''}'` : '';
+    const errorString = errorMessage || errorStatus ? `, Error message: '${JSON.stringify(errorMessage) || ''}', Error status: '${errorStatus || ''}'` : '';
     logger.info(`Setting queue-item state ${state} for ${correlationId}${errorString} to ${collection}`);
 
     const stateInQueueItemStates = Object.values(QUEUE_ITEM_STATE).indexOf(state) > -1;
