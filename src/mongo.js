@@ -300,13 +300,18 @@ export default async function (MONGO_URI, collection) {
     const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
 
     if (result) {
-      return {
-        contentType: result.contentType,
-        readStream: gridFSBucket.openDownloadStreamByName(clean)
-      };
+      const {operationSettings} = result;
+      if (operationSettings.prio === false && operationSettings.noStream === false) {
+        return {
+          contentType: result.contentType,
+          readStream: gridFSBucket.openDownloadStreamByName(clean)
+        };
+      }
+      logger.debug(`OperationSetting for ${correlationId}: ${JSON.stringify(operationSettings)}`);
+      throw new ApiError(httpStatus.BAD_REQUEST, {message: `Content is only available for streamBulk jobs. ${correlationId} is not a streamBulk job.`});
     }
 
-    throw new ApiError(httpStatus.NOT_FOUND);
+    throw new ApiError(httpStatus.NOT_FOUND, {message: `Job ${correlationId} not found.`});
   }
 
   async function removeContent(params) {
