@@ -52,7 +52,7 @@ export default async function (MONGO_URI) {
     try {
       const result = await db.collection(collection).insertOne(newLogItem);
       if (result.acknowledged) {
-        logger.info(`New log item added.`);
+        logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId} items ${logItem.blobSequenceStart}-${logItem.blobSequenceEnd}. ***`);
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -64,13 +64,17 @@ export default async function (MONGO_URI) {
 
 
   async function query(params) {
-    const result = await db.collection(collection).find({params});
-    logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    logger.debug(`Query params: ${JSON.stringify(params)}`);
+    const result = await db.collection(collection).find(params).toArray();
+    logger.debug(result);
+    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
     return result;
   }
 
-  async function queryById(correlationId) {
-    const result = await db.collection(collection).find({correlationId});
+  async function queryById(correlationIdString) {
+    logger.debug(`QueryById: ${correlationIdString}`);
+    const result = await db.collection(collection).find({correlationId: correlationIdString}).toArray();
+    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
     return result;
   }
 

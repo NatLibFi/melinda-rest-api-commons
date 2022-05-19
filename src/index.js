@@ -27,11 +27,12 @@
 */
 
 import mongoFactory from './mongo';
+import mongoLogFactory from './mongoLog';
 import amqpFactory from './amqp';
 import conversions from './helpers/conversion';
 import validations from './helpers/validation';
 import * as format from './helpers/format';
 import {logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem} from './utils';
 
-export {mongoFactory, amqpFactory, conversions, validations, format, logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem};
+export {mongoFactory, mongoLogFactory, amqpFactory, conversions, validations, format, logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem};
 export * from './constants';
