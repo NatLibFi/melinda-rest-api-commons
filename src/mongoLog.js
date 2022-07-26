@@ -62,12 +62,16 @@ export default async function (MONGO_URI) {
     }
   }
 
-
   async function query(params) {
     logger.debug(`Query params: ${JSON.stringify(params)}`);
-    const result = await db.collection(collection).find(params).toArray();
+    const {limit = 5, skip = 0, ...rest} = params;
+    const result = await db.collection(collection)
+    .find(rest)
+    .limit(parseInt(limit, 10))
+    .skip(parseInt(skip, 10))
+    .toArray();
     logger.debug(result);
-    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
+    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items! (skip: ${skip} limit: ${limit})` : 'Not found!'}`);
     return result;
   }
 
