@@ -65,19 +65,25 @@ export default async function (MONGO_URI) {
   async function query(params) {
     logger.debug(`Query params: ${JSON.stringify(params)}`);
     const {limit = 5, skip = 0, ...rest} = params;
-    const result = await db.collection(collection)
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
-      .limit(parseInt(limit, 10))
+      .sort({blobSequence: 1})
       .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10))
       .toArray();
     logger.debug(result);
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items! (skip: ${skip} limit: ${limit})` : 'Not found!'}`);
     return result;
   }
 
-  async function queryById(correlationIdString) {
+  async function queryById(correlationIdString, skip = 0, limit = 1) {
     logger.debug(`QueryById: ${correlationIdString}`);
-    const result = await db.collection(collection).find({correlationId: correlationIdString}).toArray();
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .find({correlationId: correlationIdString})
+      .sort({blobSequence: 1})
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10))
+      .toArray();
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
     return result;
   }
