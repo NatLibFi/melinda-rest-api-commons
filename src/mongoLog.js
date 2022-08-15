@@ -91,9 +91,9 @@ export default async function (MONGO_URI) {
 
   async function getListOfLogs(logItemType = 'MERGE_LOG') {
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
-      .distinct('correlationId', {logItemType})
-      logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
-      return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
+      .distinct('correlationId', {logItemType});
+    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
+    return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
 
   async function protect(correlationId, blobSequence) {
@@ -108,9 +108,10 @@ export default async function (MONGO_URI) {
         {
           $set: {
             modificationTime: moment().toDate(),
-            protect: {$not: "$protect"}
+            protect: {$not: '$protect'}
           }
-        });
+        }
+      );
       return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
     } catch (err) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
