@@ -89,13 +89,9 @@ export default async function (MONGO_URI) {
     return result;
   }
 
-  async function getListOfLogs(skip) {
+  async function getListOfLogs(logItemType = 'MERGE_LOG') {
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
-      .find({correlationId: correlationIdString})
-      .sort({modificationTime: 1})
-      .skip(parseInt(skip, 10))
-      .limit(parseInt(limit, 10))
-      .toArray();
+      .distinct('correlationId', {logItemType})
       logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
       return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
@@ -121,12 +117,13 @@ export default async function (MONGO_URI) {
     }
   }
 
-  async function remove(correlationId) {
+  async function remove(correlationId, force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
     const clean = sanitize(correlationId);
+    const filter = force ? {correlationId: clean} : {correlationId: clean, protected: {$ne: true}};
 
     try {
-      const result = await db.collection(collection).deleteMany({correlationId: clean, protected: {$ne: true}});
+      const result = await db.collection(collection).deleteMany(filter);
       return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
     } catch (err) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
