@@ -41,13 +41,14 @@ export default async function (MONGO_URI) {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
   const collection = 'logs';
-  return {addLogItem, query, queryById, remove};
+  return {addLogItem, query, queryById, getListOfLogs, protect, remove};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
     const newLogItem = {
       ...logItem,
-      creationTime: time
+      creationTime: time,
+      protected: false
     };
     try {
       const result = await db.collection(collection).insertOne(newLogItem);
@@ -88,15 +89,45 @@ export default async function (MONGO_URI) {
     return result;
   }
 
-  async function remove(params) {
-    logger.silly(`${JSON.stringify(params)}`);
-    logger.info(`Removing from Mongo (${collection}) correlationId: ${params.correlationId}`);
-    const clean = sanitize(params.correlationId);
-    logger.silly(`mongo/remove: clean: ${JSON.stringify(clean)}`);
+  async function getListOfLogs(skip) {
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .find({correlationId: correlationIdString})
+      .sort({modificationTime: 1})
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10))
+      .toArray();
+      logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
+      return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
+  }
+
+  async function protect(correlationId, blobSequence) {
+    logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanBlobSequence = sanitize(blobSequence);
+    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: cleanBlobSequence} : {correlationId: cleanCorrelationId};
 
     try {
-      await db.collection(collection).deleteMany({correlationId: clean});
-      return true;
+      const result = await db.collection(collection).updateMany(
+        filter,
+        {
+          $set: {
+            modificationTime: moment().toDate(),
+            protect: {$not: "$protect"}
+          }
+        });
+      return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
+    } catch (err) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    }
+  }
+
+  async function remove(correlationId) {
+    logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
+    const clean = sanitize(correlationId);
+
+    try {
+      const result = await db.collection(collection).deleteMany({correlationId: clean, protected: {$ne: true}});
+      return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
     } catch (err) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
