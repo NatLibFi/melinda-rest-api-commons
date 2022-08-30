@@ -88,7 +88,7 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
   logger.debug(`Response message: ${message}`);
 
   // Non-http statuses
-  if (['UPDATED', 'CREATED', 'INVALID', 'ERROR'].includes(responseStatus)) {
+  if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'NO_CHANGES'].includes(responseStatus)) {
     return {status: responseStatus, message};
   }
 
