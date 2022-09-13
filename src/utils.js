@@ -89,44 +89,44 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
 
   // Non-http statuses
   if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'SKIPPED'].includes(responseStatus)) {
-    return {status: responseStatus, message};
+    return {recordStatus: responseStatus, message};
   }
 
   if (['UNKNOWN'].includes(responseStatus)) {
     const possibleIds = responsePayload.ids || [];
-    return {status: responseStatus, message, possibleIds};
+    return {recordStatus: responseStatus, message, possibleIds};
   }
 
   // Duplicates and other CONFLICT statuses
   if ([httpStatus.CONFLICT, 'CONFLICT'].includes(responseStatus)) {
     if ((/^Duplicates in database/u).test(message)) {
       const duplicateIds = responsePayload.ids || [];
-      return {status: 'DUPLICATE', message, duplicateIds};
+      return {recordStatus: 'DUPLICATE', message, duplicateIds};
     }
     if ((/^MatchValidation for all/u).test(message)) {
       const duplicateIds = responsePayload.ids || [];
-      return {status: 'CONFLICT', message, duplicateIds};
+      return {recordStatus: 'CONFLICT', message, duplicateIds};
     }
     const conflictIds = responsePayload.ids || [];
     // use conflictIds only if there are more than one id or the id in payload does not match databaseId
     if (conflictIds.length > 1 || conflictIds[0] !== id) {
-      return {status: 'CONFLICT', message, conflictIds};
+      return {recordStatus: 'CONFLICT', message, conflictIds};
     }
-    return {status: 'CONFLICT', message};
+    return {recordStatus: 'CONFLICT', message};
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
     const unprocessableIds = responsePayload.ids || [];
-    const response = unprocessableIds.length > 0 ? {status: 'UNPROCESSABLE_ENTITY', message, unprocessableIds} : {status: 'UNPROCESSABLE_ENTITY', message};
+    const response = unprocessableIds.length > 0 ? {recordStatus: 'UNPROCESSABLE_ENTITY', message, unprocessableIds} : {recordStatus: 'UNPROCESSABLE_ENTITY', message};
     return response;
   }
 
   if ([httpStatus.NOT_FOUND, 'NOT_FOUND'].includes(responseStatus)) {
-    return {status: 'NOT_FOUND', message};
+    return {recordStatus: 'NOT_FOUND', message};
   }
 
   // Otherwise
-  return {status: 'ERROR', message};
+  return {recordStatus: 'ERROR', message};
 }
 
 function getMessageFromResponsePayload(responsePayload) {
