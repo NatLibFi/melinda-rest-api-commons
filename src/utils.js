@@ -67,7 +67,7 @@ export function createImportJobState(operation, state, queryImportJobState = fal
 }
 
 export function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
-  const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload);
+  const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload, id);
   const recordResponseItem = {
     databaseId: id || '000000000',
     recordMetadata: responsePayload.recordMetadata || recordMetadata || undefined,
@@ -77,7 +77,7 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
 }
 
 // eslint-disable-next-line max-statements
-function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
+function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);
   const responseStatusName = httpStatus[`${responseStatus}_NAME`];
@@ -108,7 +108,8 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
       return {status: 'CONFLICT', message, duplicateIds};
     }
     const conflictIds = responsePayload.ids || [];
-    if (conflictIds.length > 0) {
+    // use conflictIds only if there are more than one id or the id in payload does not match databaseId
+    if (conflictIds.length > 1 || conflictIds[0] !== id) {
       return {status: 'CONFLICT', message, conflictIds};
     }
     return {status: 'CONFLICT', message};
