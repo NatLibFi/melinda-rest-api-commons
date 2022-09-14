@@ -88,44 +88,47 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
 
   logger.debug(`Response message: ${message}`);
 
+  // We map responseStatus here for a wider recordStatus and more detailed detailedRecordStatus
+  // recordStatus corresponds to RECORD_IMPORT_STATEs used in https://github.com/NatLibFi/melinda-record-import-commons-js
+
   // Non-http statuses
   if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'SKIPPED'].includes(responseStatus)) {
-    return {recordStatus: responseStatus, message};
+    return {recordStatus: responseStatus, detailedRecordStatus: responseStatus, message};
   }
 
   if (['UNKNOWN'].includes(responseStatus)) {
-    return {recordStatus: responseStatus, message, ids};
+    return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message, ids};
   }
 
   // Duplicates and other CONFLICT statuses
   if ([httpStatus.CONFLICT, 'CONFLICT'].includes(responseStatus)) {
     if ((/^Duplicates in database/u).test(message)) {
-      return {recordStatus: 'DUPLICATE', message, ids};
+      return {recordStatus: 'DUPLICATE', detailedRecordStatus: 'DUPLICATE', message, ids};
     }
     if ((/^MatchValidation for all/u).test(message)) {
-      return {recordStatus: 'CONFLICT', message, ids};
+      return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message, ids};
     }
 
     // Use ids only if there are more than one id or the id in payload does not match databaseId
     if (ids.length > 1 || ids[0] !== id) {
-      return {recordStatus: 'CONFLICT', message, ids};
+      return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message, ids};
     }
-    return {recordStatus: 'CONFLICT', message};
+    return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message};
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
     if (ids.length > 1 || ids[0] !== id) {
-      return {recordStatus: 'UNPROCESSABLE_ENTITY', message, ids};
+      return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message, ids};
     }
-    return {recordStatus: 'UNPROCESSABLE_ENTITY', message};
+    return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message};
   }
 
   if ([httpStatus.NOT_FOUND, 'NOT_FOUND'].includes(responseStatus)) {
-    return {recordStatus: 'NOT_FOUND', message};
+    return {recordStatus: 'ERROR', detailedRecordStatus: 'NOT_FOUND', message};
   }
 
   // Otherwise
-  return {recordStatus: 'ERROR', message};
+  return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message};
 }
 
 function getMessageFromResponsePayload(responsePayload) {
