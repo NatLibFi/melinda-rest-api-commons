@@ -84,7 +84,7 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   logger.debug(`Response status name: ${responseStatusName}`);
 
   const message = getMessageFromResponsePayload(responsePayload);
-  const {ids} = responsePayload || [];
+  const ids = responsePayload.ids || [];
 
   logger.debug(`Response message: ${message}`);
 
