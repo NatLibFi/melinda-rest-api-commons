@@ -84,6 +84,7 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   logger.debug(`Response status name: ${responseStatusName}`);
 
   const message = getMessageFromResponsePayload(responsePayload);
+  const {ids} = responsePayload || [];
 
   logger.debug(`Response message: ${message}`);
 
@@ -93,32 +94,30 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   }
 
   if (['UNKNOWN'].includes(responseStatus)) {
-    const possibleIds = responsePayload.ids || [];
-    return {recordStatus: responseStatus, message, possibleIds};
+    return {recordStatus: responseStatus, message, ids};
   }
 
   // Duplicates and other CONFLICT statuses
   if ([httpStatus.CONFLICT, 'CONFLICT'].includes(responseStatus)) {
     if ((/^Duplicates in database/u).test(message)) {
-      const duplicateIds = responsePayload.ids || [];
-      return {recordStatus: 'DUPLICATE', message, duplicateIds};
+      return {recordStatus: 'DUPLICATE', message, ids};
     }
     if ((/^MatchValidation for all/u).test(message)) {
-      const duplicateIds = responsePayload.ids || [];
-      return {recordStatus: 'CONFLICT', message, duplicateIds};
+      return {recordStatus: 'CONFLICT', message, ids};
     }
-    const conflictIds = responsePayload.ids || [];
-    // use conflictIds only if there are more than one id or the id in payload does not match databaseId
-    if (conflictIds.length > 1 || conflictIds[0] !== id) {
-      return {recordStatus: 'CONFLICT', message, conflictIds};
+
+    // Use ids only if there are more than one id or the id in payload does not match databaseId
+    if (ids.length > 1 || ids[0] !== id) {
+      return {recordStatus: 'CONFLICT', message, ids};
     }
     return {recordStatus: 'CONFLICT', message};
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
-    const unprocessableIds = responsePayload.ids || [];
-    const response = unprocessableIds.length > 0 ? {recordStatus: 'UNPROCESSABLE_ENTITY', message, unprocessableIds} : {recordStatus: 'UNPROCESSABLE_ENTITY', message};
-    return response;
+    if (ids.length > 1 || ids[0] !== id) {
+      return {recordStatus: 'UNPROCESSABLE_ENTITY', message, ids};
+    }
+    return {recordStatus: 'UNPROCESSABLE_ENTITY', message};
   }
 
   if ([httpStatus.NOT_FOUND, 'NOT_FOUND'].includes(responseStatus)) {
