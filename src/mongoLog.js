@@ -55,7 +55,7 @@ export default async function (MONGO_URI) {
       if (result.acknowledged) {
         const {blobSequence, blobSequenceStart, blobSequenceEnd} = logItem;
         const itemString = blobSequenceStart && blobSequenceEnd ? `${blobSequenceStart} - ${blobSequenceEnd}` : `${blobSequence}`;
-        logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId} items ${itemString}. ***`);
+        logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId}, blobSequence(s): ${itemString}. ***`);
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
