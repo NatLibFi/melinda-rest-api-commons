@@ -33,6 +33,7 @@ import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
+import {LOG_ITEM_TYPE} from './constants';
 
 export default async function (MONGO_URI) {
   const logger = createLogger();
@@ -51,6 +52,7 @@ export default async function (MONGO_URI) {
       protected: false
     };
     try {
+      checkLogItemType(logItem.logItemType, false);
       const result = await db.collection(collection).insertOne(newLogItem);
       if (result.acknowledged) {
         const {blobSequence, blobSequenceStart, blobSequenceEnd} = logItem;
@@ -92,6 +94,7 @@ export default async function (MONGO_URI) {
   }
 
   async function getListOfLogs(logItemType = 'MERGE_LOG') {
+    checkLogItemType(logItemType, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .distinct('correlationId', {logItemType});
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
@@ -99,7 +102,7 @@ export default async function (MONGO_URI) {
   }
 
   async function protect(correlationId, blobSequence) {
-    logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
+    logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanBlobSequence = sanitize(blobSequence);
     const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: cleanBlobSequence} : {correlationId: cleanCorrelationId};
@@ -131,5 +134,16 @@ export default async function (MONGO_URI) {
     } catch (err) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
+  }
+
+  function checkLogItemType(logItemType, errorUnknown = false) {
+    const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
+    if (typeInLogItemTypes) {
+      return logger.debug(`Valid logItemType: ${logItemType}`);
+    }
+    if (errorUnknown) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Unknown logItemType: ${logItemType}`);
+    }
+    return logger.debug(`WARN: We have unknown logType: ${logItemType}`);
   }
 }

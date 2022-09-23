@@ -65,6 +65,12 @@ export const OPERATIONS = {
 
 export const CHUNK_SIZE = 100;
 
+export const LOG_ITEM_TYPE = {
+  MERGE_LOG: 'MERGE_LOG',
+  MATCH_LOG: 'MATCH_LOG',
+  SPLITTER_LOG: 'SPLITTER_LOG'
+};
+
 export const CONVERSION_FORMATS = {
   MARCXML: 'MARCXML',
   ISO2709: 'ISO2709',
