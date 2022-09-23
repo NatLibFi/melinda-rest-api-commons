@@ -53,7 +53,9 @@ export default async function (MONGO_URI) {
     try {
       const result = await db.collection(collection).insertOne(newLogItem);
       if (result.acknowledged) {
-        logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId} items ${logItem.blobSequenceStart}-${logItem.blobSequenceEnd}. ***`);
+        const {blobSequence, blobSequenceStart, blobSequenceEnd} = logItem;
+        const itemString = blobSequenceStart && blobSequenceEnd ? `${blobSequenceStart} - ${blobSequenceEnd}` : `${blobSequence}`;
+        logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId} items ${itemString}. ***`);
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -72,7 +74,7 @@ export default async function (MONGO_URI) {
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
       .toArray();
-    logger.debug(result);
+    logger.debug(`Query result: ${result}`);
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items! (skip: ${skip} limit: ${limit})` : 'Not found!'}`);
     return result;
   }
