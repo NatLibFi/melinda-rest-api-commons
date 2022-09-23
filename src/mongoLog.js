@@ -69,6 +69,7 @@ export default async function (MONGO_URI) {
 
   async function query(params) {
     logger.debug(`Query params: ${JSON.stringify(params)}`);
+    checkLogItemType(params.logItemType, false, false);
     const {limit = 5, skip = 0, ...rest} = params;
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
@@ -94,7 +95,7 @@ export default async function (MONGO_URI) {
   }
 
   async function getListOfLogs(logItemType = 'MERGE_LOG') {
-    checkLogItemType(logItemType, false);
+    checkLogItemType(logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .distinct('correlationId', {logItemType});
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
@@ -136,14 +137,22 @@ export default async function (MONGO_URI) {
     }
   }
 
-  function checkLogItemType(logItemType, errorUnknown = false) {
-    const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
-    if (typeInLogItemTypes) {
-      return logger.debug(`Valid logItemType: ${logItemType}`);
+  function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
+
+    if (logItemType) {
+      const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
+      if (typeInLogItemTypes) {
+        return logger.debug(`Valid logItemType: ${logItemType}`);
+      }
+      if (errorUnknown) {
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Unknown logItemType: ${logItemType}`);
+      }
+      return logger.debug(`WARN: We have unknown logType: ${logItemType}`);
     }
-    if (errorUnknown) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Unknown logItemType: ${logItemType}`);
+
+    if (errorNotExisting) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `No logItemType: ${logItemType}`);
     }
-    return logger.debug(`WARN: We have unknown logType: ${logItemType}`);
+    return logger.debug(`No logItemType: ${logItemType}`);
   }
 }
