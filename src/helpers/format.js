@@ -28,16 +28,24 @@
 
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
+import createDebugLogger from 'debug';
 
-export function formatRecord(record, settings = []) {
+export function formatRecord(record, settings = {}) {
   const logger = createLogger();
+  const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:format');
+  const debugData = debug.extend('data');
 
-  logger.verbose('Applying formating');
+  logger.verbose(`We will apply formating to the record by ${JSON.stringify(settings)}`);
   const newRecord = MarcRecord.clone(record, {subfieldValues: false});
+  debugData(`settings: ${JSON.stringify(settings)}`);
 
-  generateMissingSIDs();
+  const generateMissingSIDsOptions = settings.generateMissingSIDs || undefined;
+  generateMissingSIDs(generateMissingSIDsOptions);
 
-  settings.forEach(options => {
+  const replacePrefixesOptions = settings.replacePrefixes || [];
+  debugData(`replacePrefixesOptions: ${JSON.stringify(replacePrefixesOptions)}`);
+
+  replacePrefixesOptions.forEach(options => {
     replacePrefixes(options);
   });
 
@@ -46,6 +54,7 @@ export function formatRecord(record, settings = []) {
   // Replace prefix in all specified subfields
   function replacePrefixes(options) {
     const {oldPrefix, newPrefix, prefixReplaceCodes} = options;
+    debug(`Replacing ${oldPrefix} with ${newPrefix} in subfields ${prefixReplaceCodes}`);
     const pattern = `(${oldPrefix})`;
     const replacement = `(${newPrefix})`;
     newRecord.getDatafields()
@@ -59,9 +68,17 @@ export function formatRecord(record, settings = []) {
   }
 
 
-  function generateMissingSIDs() {
-    const f035Filters = [/^\(FI-BTJ\)/u, /^\(FI-TATI\)/u];
-    const fSIDFilters = ['FI-BTJ', 'tati'];
+  function generateMissingSIDs(options) {
+    debugData(`generateMissingSIDs options: ${JSON.stringify(options)}`);
+
+    const f035Filters = options && options.f035Filters ? options.f035Filters : [];
+    const fSIDFilters = options && options.fSIDFilters ? options.fSIDFilters : [];
+
+    if (f035Filters.length !== fSIDFilters.length || f035Filters.length < 1 || fSIDFilters.length < 1) {
+      debug(`No sane options for generating missing SIDs`);
+      return;
+    }
+
     const f035s = f035ToSidInfo(newRecord.get(/^035$/u));
     const fSIDs = sidsToSidInfo(newRecord.get(/^SID$/u));
 
@@ -110,8 +127,13 @@ export function formatRecord(record, settings = []) {
   }
 }
 
-// If placed in config.js testing needs envs
-export const BIB_FORMAT_SETTINGS = [
+// This could be formatted so that 035-prefix and SID contents would be better connected than by just an array index
+export const BIB_F035_TO_SID = {
+  f035Filters: [/^\(FI-BTJ\)/u, /^\(FI-TATI\)/u],
+  fSIDFilters: ['FI-BTJ', 'tati']
+};
+
+export const REPLACE_PREFIXES = [
   {
     oldPrefix: 'FI-MELINDA',
     newPrefix: 'FIN01',
@@ -128,3 +150,20 @@ export const BIB_FORMAT_SETTINGS = [
     prefixReplaceCodes: ['0']
   }
 ];
+
+
+// If placed in config.js testing needs envs
+export const BIB_FORMAT_SETTINGS = {
+  replacePrefixes: REPLACE_PREFIXES,
+  generateMissingSIDs: BIB_F035_TO_SID
+};
+
+export const BIB_PREVALIDATION_FIX_SETTINGS = {
+  generateMissingSIDs: BIB_F035_TO_SID
+};
+
+export const BIB_POSTVALIDATION_FIX_SETTINGS = {
+  replacePrefixes: REPLACE_PREFIXES
+};
+
+
