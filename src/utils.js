@@ -80,8 +80,8 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
 function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);
-  const responseStatusName = httpStatus[`${responseStatus}_NAME`];
-  logger.debug(`Response status name: ${responseStatusName}`);
+  //const responseStatusName = httpStatus[`${responseStatus}_NAME`];
+  //logger.debug(`Response status name: ${responseStatusName}`);
 
   const message = getMessageFromResponsePayload(responsePayload);
   const ids = responsePayload.ids || [];
