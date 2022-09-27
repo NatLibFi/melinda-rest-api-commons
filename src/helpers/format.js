@@ -35,7 +35,7 @@ export function formatRecord(record, settings = {}) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:format');
   const debugData = debug.extend('data');
 
-  logger.verbose(`We will apply formating to the record by ${JSON.stringify(settings)}`);
+  logger.verbose(`We will apply formatting to the record according to settings: ${JSON.stringify(settings)}`);
   const newRecord = MarcRecord.clone(record, {subfieldValues: false});
   debugData(`settings: ${JSON.stringify(settings)}`);
 
@@ -48,6 +48,8 @@ export function formatRecord(record, settings = {}) {
   replacePrefixesOptions.forEach(options => {
     replacePrefixes(options);
   });
+
+  handleTempUrns(settings.handleTempUrns);
 
   return newRecord.toObject();
 
@@ -125,6 +127,112 @@ export function formatRecord(record, settings = {}) {
       }).filter(value => value !== undefined);
     }
   }
+
+
+  // eslint-disable-next-line max-statements
+  function handleTempUrns(options) {
+    debugData(JSON.stringify(options));
+
+    if (options !== true) {
+      return;
+    }
+
+    // If we have an non-temp URN, we can delete tempURNs, otherwise we should delete the temp subfield from URN
+
+    const hasURN = f => f.tag === '856' && f.subfields.some(({code, value}) => code === 'u' && (/urn.fi/u).test(value));
+
+    const hasTempSubfield = f => f.subfields.some(({code, value}) => code === '9' && (/^MELINDA<TEMP>$/u).test(value));
+    const hasNoTempSubfield = f => !f.subfields.some(({code, value}) => code === '9' && (/^MELINDA<TEMP>$/u).test(value));
+
+    const f856sUrn = newRecord.fields.filter(hasURN);
+    const f856sUrnsWithTempSubfields = f856sUrn.filter(hasTempSubfield);
+    const f856sUrnsWithNoTempSubfields = f856sUrn.filter(hasNoTempSubfield);
+
+    debugData(`URN f856s: ${JSON.stringify(f856sUrn)}`);
+    debugData(`URN f856s with temp subfield: ${JSON.stringify(f856sUrnsWithTempSubfields)}`);
+
+    // None of the URNs has temp subfields, we don't need to do anything
+    if (f856sUrnsWithTempSubfields.length < 1) {
+      debug(`No Urns with temp subfield`);
+      return;
+    }
+
+    // Do we have an existing URN with legal deposit subfields, if we have, we can remove the temp URN field(s)
+    const existingLegalDepositURN = validateLD(f856sUrnsWithNoTempSubfields);
+    debug(`existingLegalDepositURN: ${existingLegalDepositURN}`);
+
+    if (existingLegalDepositURN) {
+      debug(`We have an existing LD URN, we can delete temp fields (${f856sUrnsWithTempSubfields.length})`);
+      newRecord.removeFields(f856sUrnsWithTempSubfields);
+      return;
+    }
+
+    // We do not have an existing legalDepositURN, we should use the tempURN and remove the temp subfields from it
+    if (!existingLegalDepositURN && f856sUrnsWithTempSubfields.length > 0) {
+      //debug(`All Urns (${f856sUrn.length}) have a temp subfield`);
+      debugData(`Original temp URNs: (${JSON.stringify(f856sUrnsWithTempSubfields)})`);
+      const fixedFields = f856sUrnsWithTempSubfields.map(removeTempSubfield);
+      debug(`We removed temp subfields: (${JSON.stringify(fixedFields)})`);
+      newRecord.removeFields(f856sUrnsWithTempSubfields);
+      newRecord.insertFields(fixedFields);
+      return;
+    }
+
+    // Should we check that the non-temp URN has 2nd ind '0' - meaning that the URN handles the actual resource itself?
+  }
+
+  // ---- LD-functions below are same as in https://github.com/NatLibFi/marc-record-validators-melinda/blob/feature-updates-to-urn/src/urn.js
+  // we propably should develop the urn/legaldeposit -validator to use also here
+
+  function createLDSubfields() {
+    return [
+      {
+        code: 'z',
+        value: 'Käytettävissä vapaakappalekirjastoissa'
+      },
+      {
+        code: '5',
+        value: 'FI-Vapaa'
+      }
+    ];
+  }
+
+  function validateLD(f856sUrn) {
+    debug(`Validating the existence of legal deposit subfields`);
+    const ldSubfields = createLDSubfields();
+    const f856sUrnWithLdSubfields = f856sUrn.filter(field => fieldHasLDSubfields(field, ldSubfields));
+    if (f856sUrnWithLdSubfields.length > 0) {
+      debug(`Record has ${f856sUrnWithLdSubfields.length} URN fields with all necessary legal deposit subfields`);
+      debugData(`f856sUrnWithLdSubfields: ${JSON.stringify(f856sUrnWithLdSubfields)}`);
+      return true;
+    }
+    return false;
+  }
+
+  function fieldHasLDSubfields(field, ldSubfields) {
+    if (ldSubfields.every(ldsf => field.subfields.some(sf => sf.code === ldsf.code && sf.value === ldsf.value))) {
+      return true;
+    }
+  }
+
+  // ---
+
+  function removeTempSubfield(field) {
+
+    // Sanity check for control fields
+    if (field.subfields === undefined) {
+      return field;
+    }
+
+    // we probably should check that we don't return field that has no subfields left
+    return {
+      tag: field.tag,
+      ind1: field.ind1,
+      ind2: field.ind2,
+      subfields: field.subfields.filter(sf => sf.code !== '9' && !(/^MELINDA<TEMP>$/u).test(sf.value))
+    };
+  }
+
 }
 
 // This could be formatted so that 035-prefix and SID contents would be better connected than by just an array index
@@ -133,6 +241,7 @@ export const BIB_F035_TO_SID = {
   fSIDFilters: ['FI-BTJ', 'tati']
 };
 
+// There is somewhere other implementations of this same standardPrefixes to alephInternalPrefixes normalization
 export const REPLACE_PREFIXES = [
   {
     oldPrefix: 'FI-MELINDA',
@@ -148,9 +257,18 @@ export const REPLACE_PREFIXES = [
     oldPrefix: 'FI-ASTERI-N',
     newPrefix: 'FIN11',
     prefixReplaceCodes: ['0']
+  },
+  {
+    oldPrefix: 'FI-ASTERI-A',
+    newPrefix: 'FIN12',
+    prefixReplaceCodes: ['0']
+  },
+  {
+    oldPrefix: 'FI-ASTERI-W',
+    newPrefix: 'FIN13',
+    prefixReplaceCodes: ['0']
   }
 ];
-
 
 // If placed in config.js testing needs envs
 export const BIB_FORMAT_SETTINGS = {
@@ -166,4 +284,6 @@ export const BIB_POSTVALIDATION_FIX_SETTINGS = {
   replacePrefixes: REPLACE_PREFIXES
 };
 
-
+export const BIB_HANDLE_TEMP_URNS_SETTINGS = {
+  handleTempUrns: true
+};

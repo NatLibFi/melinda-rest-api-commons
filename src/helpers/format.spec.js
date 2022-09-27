@@ -29,7 +29,7 @@
 import {expect} from 'chai';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {formatRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_POSTVALIDATION_FIX_SETTINGS} from './format';
+import {formatRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_POSTVALIDATION_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS} from './format';
 //import {createDebugLogger} from 'debug';
 
 describe('services/format', () => {
@@ -41,10 +41,6 @@ describe('services/format', () => {
     'format'
   ];
   const {getFixture} = fixtureFactory({root: FIXTURES_PATH, reader: READERS.JSON});
-
-  //const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:format');
-  //const debugData = debug.extend('data');
-  //debugData(`${JSON.stringify(BIB_FORMAT_SETTINGS)}`);
 
   describe('Undefined options', () => {
     it(`Should not update link subfield prefixes if options are undefined`, () => {
@@ -182,7 +178,10 @@ describe('services/format', () => {
           'f035fibtjAndTati.json'
         ]
       });
-
+      // eslint-disable-next-line no-console
+      //console.log(`result: ${JSON.stringify(result)}`);
+      // eslint-disable-next-line no-console
+      //console.log(`expect: ${JSON.stringify(expected)}`);
       expect(result).to.eql(expected);
     });
   });
@@ -241,6 +240,80 @@ describe('services/format', () => {
         components: [
           'out',
           'f035tatiAndFin11-for-postvalidation.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('handle tempURNs', () => {
+    it('It should do nothing if there are not tempURNs', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnNoTemp.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnNoTemp.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a single tempURN and remove the temp subfield', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTemp.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTemp.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a tempURN and an existing legal deposit URN and remove the tempURN', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTempAndLD.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTempAndLD.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a tempURN and an existing non-legal deposit URN and remove the temp subfields from tempURN', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTempAndNoLD.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTempAndNoLD.json'
         ]
       });
 
