@@ -220,6 +220,7 @@ export function formatRecord(record, settings = {}) {
   function removeTempSubfield(field) {
 
     // Handle non-numeric fields, and fields with a numeric tag of 010 and greater
+    // Aleph's FMT as a controlfield might be a problem
     if (!isNaN(field.tag) && parseInt(field.tag, 10) >= 10) {
 
       const filteredSubfields = field.subfields.filter(sf => sf.code !== '9' && !(/^MELINDA<TEMP>$/u).test(sf.value));
