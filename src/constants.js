@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -64,6 +64,14 @@ export const OPERATIONS = {
 };
 
 export const CHUNK_SIZE = 100;
+
+// We could configure here whether a logItemType is for a several records of a single record
+// ie. whether is has bulkSequence or bulkSequenceStart & bulkSequenceEnd
+export const LOG_ITEM_TYPE = {
+  MERGE_LOG: 'MERGE_LOG',
+  MATCH_LOG: 'MATCH_LOG',
+  SPLITTER_LOG: 'SPLITTER_LOG'
+};
 
 export const CONVERSION_FORMATS = {
   MARCXML: 'MARCXML',

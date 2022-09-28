@@ -67,7 +67,7 @@ export function createImportJobState(operation, state, queryImportJobState = fal
 }
 
 export function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
-  const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload);
+  const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload, id);
   const recordResponseItem = {
     databaseId: id || '000000000',
     recordMetadata: responsePayload.recordMetadata || recordMetadata || undefined,
@@ -77,55 +77,58 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
 }
 
 // eslint-disable-next-line max-statements
-function getRecordResponseStatusAndMessage(responseStatus, responsePayload) {
+function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);
-  const responseStatusName = httpStatus[`${responseStatus}_NAME`];
-  logger.debug(`Response status name: ${responseStatusName}`);
+  //const responseStatusName = httpStatus[`${responseStatus}_NAME`];
+  //logger.debug(`Response status name: ${responseStatusName}`);
 
   const message = getMessageFromResponsePayload(responsePayload);
+  const ids = responsePayload.ids || [];
 
   logger.debug(`Response message: ${message}`);
 
+  // We map responseStatus here for a wider recordStatus and more detailed detailedRecordStatus
+  // recordStatus corresponds to RECORD_IMPORT_STATEs used in https://github.com/NatLibFi/melinda-record-import-commons-js
+
   // Non-http statuses
   if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'SKIPPED'].includes(responseStatus)) {
-    return {status: responseStatus, message};
+    return {recordStatus: responseStatus, detailedRecordStatus: responseStatus, message};
   }
 
   if (['UNKNOWN'].includes(responseStatus)) {
-    const possibleIds = responsePayload.ids || [];
-    return {status: responseStatus, message, possibleIds};
+    return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message, ids};
   }
 
   // Duplicates and other CONFLICT statuses
   if ([httpStatus.CONFLICT, 'CONFLICT'].includes(responseStatus)) {
     if ((/^Duplicates in database/u).test(message)) {
-      const duplicateIds = responsePayload.ids || [];
-      return {status: 'DUPLICATE', message, duplicateIds};
+      return {recordStatus: 'DUPLICATE', detailedRecordStatus: 'DUPLICATE', message, ids};
     }
     if ((/^MatchValidation for all/u).test(message)) {
-      const duplicateIds = responsePayload.ids || [];
-      return {status: 'CONFLICT', message, duplicateIds};
+      return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message, ids};
     }
-    const conflictIds = responsePayload.ids || [];
-    if (conflictIds.length > 0) {
-      return {status: 'CONFLICT', message, conflictIds};
+
+    // Use ids only if there are more than one id or the id in payload does not match databaseId
+    if (ids.length > 1 || ids[0] !== id) {
+      return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message, ids};
     }
-    return {status: 'CONFLICT', message};
+    return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message};
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
-    const unprocessableIds = responsePayload.ids || [];
-    const response = unprocessableIds.length > 0 ? {status: 'UNPROCESSABLE_ENTITY', message, unprocessableIds} : {status: 'UNPROCESSABLE_ENTITY', message};
-    return response;
+    if (ids.length > 1 || ids[0] !== id) {
+      return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message, ids};
+    }
+    return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message};
   }
 
   if ([httpStatus.NOT_FOUND, 'NOT_FOUND'].includes(responseStatus)) {
-    return {status: 'NOT_FOUND', message};
+    return {recordStatus: 'ERROR', detailedRecordStatus: 'NOT_FOUND', message};
   }
 
   // Otherwise
-  return {status: 'ERROR', message};
+  return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message};
 }
 
 function getMessageFromResponsePayload(responsePayload) {

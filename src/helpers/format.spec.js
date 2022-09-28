@@ -29,7 +29,8 @@
 import {expect} from 'chai';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {formatRecord, BIB_FORMAT_SETTINGS} from './format';
+import {formatRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_POSTVALIDATION_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS} from './format';
+//import {createDebugLogger} from 'debug';
 
 describe('services/format', () => {
   const FIXTURES_PATH = [
@@ -40,6 +41,27 @@ describe('services/format', () => {
     'format'
   ];
   const {getFixture} = fixtureFactory({root: FIXTURES_PATH, reader: READERS.JSON});
+
+  describe('Undefined options', () => {
+    it(`Should not update link subfield prefixes if options are undefined`, () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'fiAsteriN0Fin11.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), undefined);
+      const expected = getFixture({
+        components: [
+          'in',
+          'fiAsteriN0Fin11.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
 
   describe('fiAsteriN0Fin11', () => {
     it('Should succeed', () => {
@@ -109,7 +131,7 @@ describe('services/format', () => {
           'f035fibtj.json'
         ]
       }));
-      const result = formatRecord(record.toObject());
+      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
@@ -129,7 +151,7 @@ describe('services/format', () => {
           'f035tati.json'
         ]
       }));
-      const result = formatRecord(record.toObject());
+      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
@@ -149,15 +171,154 @@ describe('services/format', () => {
           'f035fibtjAndTati.json'
         ]
       }));
-      const result = formatRecord(record.toObject());
+      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
           'f035fibtjAndTati.json'
         ]
       });
+      // eslint-disable-next-line no-console
+      //console.log(`result: ${JSON.stringify(result)}`);
+      // eslint-disable-next-line no-console
+      //console.log(`expect: ${JSON.stringify(expected)}`);
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('f035tati', () => {
+    it('Should NOT add tati SID with undefined options', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035tati.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), undefined);
+      const expected = getFixture({
+        components: [
+          'in',
+          'f035tati.json'
+        ]
+      });
 
       expect(result).to.eql(expected);
     });
   });
+
+  describe('bib-prevalidation-fix -settings', () => {
+    it('Should add missing SIDs, but not handle sf $0s when running with BIB_PREVALIDATION_FIX_SETTINGS', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035tatiAndFin11-for-prevalidation.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_PREVALIDATION_FIX_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f035tatiAndFin11-for-prevalidation.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+
+  describe('bib-postvalidation-fix -settings', () => {
+    it('Should handle link subfields, but not add missing SIDs, when running with BIB_POSTVALIDATION_FIX_SETTINGS', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f035tatiAndFin11-for-postvalidation.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_POSTVALIDATION_FIX_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f035tatiAndFin11-for-postvalidation.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
+  describe('handle tempURNs', () => {
+    it('It should do nothing if there are not tempURNs', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnNoTemp.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnNoTemp.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a single tempURN and remove the temp subfield', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTemp.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTemp.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a tempURN and an existing legal deposit URN and remove the tempURN', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTempAndLD.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTempAndLD.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('It should find a tempURN and an existing non-legal deposit URN and remove the temp subfields from tempURN', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'tempUrnWithTempAndNoLD.json'
+        ]
+      }));
+      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'tempUrnWithTempAndNoLD.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+  });
+
 });

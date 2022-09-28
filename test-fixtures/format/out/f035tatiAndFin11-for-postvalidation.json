@@ -43,17 +43,6 @@
       "subfields": [
         {
           "code": "a",
-          "value": "(FI-BTJ)fuu"
-        }
-      ]
-    },
-    {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
           "value": "(FI-TATI)faa"
         }
       ]
@@ -118,7 +107,7 @@
         },
         {
           "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "value": "(FIN11)"
         }
       ]
     },
@@ -218,7 +207,7 @@
       "subfields": [
         {
           "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "value": "(FIN11)"
         }
       ]
     },
@@ -383,7 +372,7 @@
       "subfields": [
         {
           "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "value": "(FIN11)"
         }
       ]
     },
@@ -591,38 +580,6 @@
     },
     {
       "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "faa"
-        },
-        {
-          "code": "b",
-          "value": "tati"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "fuu"
-        },
-        {
-          "code": "b",
-          "value": "FI-BTJ"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
       "subfields": [
         {
           "code": "c",
@@ -632,7 +589,9 @@
           "code": "b",
           "value": "helme"
         }
-      ]
+      ],
+      "ind1": " ",
+      "ind2": " "
     }
   ]
 }
