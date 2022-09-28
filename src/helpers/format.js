@@ -171,7 +171,7 @@ export function formatRecord(record, settings = {}) {
     if (!existingLegalDepositURN && f856sUrnsWithTempSubfields.length > 0) {
       //debug(`All Urns (${f856sUrn.length}) have a temp subfield`);
       debugData(`Original temp URNs: (${JSON.stringify(f856sUrnsWithTempSubfields)})`);
-      const fixedFields = f856sUrnsWithTempSubfields.map(removeTempSubfield);
+      const fixedFields = f856sUrnsWithTempSubfields.map(removeTempSubfield).filter(field => field);
       debug(`We removed temp subfields: (${JSON.stringify(fixedFields)})`);
       newRecord.removeFields(f856sUrnsWithTempSubfields);
       newRecord.insertFields(fixedFields);
@@ -219,20 +219,26 @@ export function formatRecord(record, settings = {}) {
 
   function removeTempSubfield(field) {
 
-    // Sanity check for control fields
-    if (field.subfields === undefined) {
-      return field;
+    // Handle non-numeric fields, and fields with a numeric tag of 010 and greater
+    if (!isNaN(field.tag) && parseInt(field.tag, 10) >= 10) {
+
+      const filteredSubfields = field.subfields.filter(sf => sf.code !== '9' && !(/^MELINDA<TEMP>$/u).test(sf.value));
+
+      // Remove whole field if there are no subfields left
+      if (filteredSubfields.length < 1) {
+        return false;
+      }
+
+      return {
+        tag: field.tag,
+        ind1: field.ind1,
+        ind2: field.ind2,
+        subfields: filteredSubfields
+      };
     }
-
-    // we probably should check that we don't return field that has no subfields left
-    return {
-      tag: field.tag,
-      ind1: field.ind1,
-      ind2: field.ind2,
-      subfields: field.subfields.filter(sf => sf.code !== '9' && !(/^MELINDA<TEMP>$/u).test(sf.value))
-    };
+    // return controlFields as is
+    return field;
   }
-
 }
 
 // This could be formatted so that 035-prefix and SID contents would be better connected than by just an array index
