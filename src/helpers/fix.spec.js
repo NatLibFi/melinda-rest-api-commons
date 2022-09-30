@@ -29,10 +29,10 @@
 import {expect} from 'chai';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {formatRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_POSTVALIDATION_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS} from './format';
+import {fixRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_PREIMPORT_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS} from './fix';
 //import {createDebugLogger} from 'debug';
 
-describe('services/format', () => {
+describe('services/fix', () => {
   const FIXTURES_PATH = [
     __dirname,
     '..',
@@ -50,7 +50,7 @@ describe('services/format', () => {
           'fiAsteriN0Fin11.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), undefined);
+      const result = fixRecord(record.toObject(), undefined);
       const expected = getFixture({
         components: [
           'in',
@@ -71,7 +71,7 @@ describe('services/format', () => {
           'fiAsteriN0Fin11.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -91,7 +91,7 @@ describe('services/format', () => {
           'fiAsteriS0Fin10.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -111,7 +111,7 @@ describe('services/format', () => {
           'fiMelindaWFin01.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_FORMAT_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_FORMAT_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -131,7 +131,7 @@ describe('services/format', () => {
           'f035fibtj.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
+      const result = fixRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
@@ -151,7 +151,7 @@ describe('services/format', () => {
           'f035tati.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
+      const result = fixRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
@@ -171,7 +171,7 @@ describe('services/format', () => {
           'f035fibtjAndTati.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
+      const result = fixRecord(record.toObject(), {generateMissingSIDs: BIB_F035_TO_SID});
       const expected = getFixture({
         components: [
           'out',
@@ -194,7 +194,7 @@ describe('services/format', () => {
           'f035tati.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), undefined);
+      const result = fixRecord(record.toObject(), undefined);
       const expected = getFixture({
         components: [
           'in',
@@ -214,7 +214,7 @@ describe('services/format', () => {
           'f035tatiAndFin11-for-prevalidation.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_PREVALIDATION_FIX_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_PREVALIDATION_FIX_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -228,14 +228,14 @@ describe('services/format', () => {
 
 
   describe('bib-postvalidation-fix -settings', () => {
-    it('Should handle link subfields, but not add missing SIDs, when running with BIB_POSTVALIDATION_FIX_SETTINGS', () => {
+    it('Should handle link subfields, but not add missing SIDs, when running with BIB_PREIMPORT_FIX_SETTINGS', () => {
       const record = new MarcRecord(getFixture({
         components: [
           'in',
           'f035tatiAndFin11-for-postvalidation.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_POSTVALIDATION_FIX_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_PREIMPORT_FIX_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -255,7 +255,7 @@ describe('services/format', () => {
           'tempUrnNoTemp.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -273,7 +273,7 @@ describe('services/format', () => {
           'tempUrnWithTemp.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -291,7 +291,7 @@ describe('services/format', () => {
           'tempUrnWithTempAndLD.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
       const expected = getFixture({
         components: [
           'out',
@@ -309,7 +309,7 @@ describe('services/format', () => {
           'tempUrnWithTempAndNoLD.json'
         ]
       }));
-      const result = formatRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
+      const result = fixRecord(record.toObject(), BIB_HANDLE_TEMP_URNS_SETTINGS);
       const expected = getFixture({
         components: [
           'out',

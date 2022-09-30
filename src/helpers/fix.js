@@ -30,9 +30,9 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
 
-export function formatRecord(record, settings = {}) {
+export function fixRecord(record, settings = {}) {
   const logger = createLogger();
-  const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:format');
+  const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord');
   const debugData = debug.extend('data');
 
   logger.verbose(`We will apply formatting to the record according to settings: ${JSON.stringify(settings)}`);
@@ -131,7 +131,7 @@ export function formatRecord(record, settings = {}) {
 
   // eslint-disable-next-line max-statements
   function handleTempUrns(options) {
-    debugData(JSON.stringify(options));
+    debugData(`Options for handleTempUrns: ${JSON.stringify(options)}`);
 
     if (options !== true) {
       return;
@@ -278,6 +278,7 @@ export const REPLACE_PREFIXES = [
 ];
 
 // If placed in config.js testing needs envs
+// BIB_FORMAT_SETTINGS is outdated, use other settings instead
 export const BIB_FORMAT_SETTINGS = {
   replacePrefixes: REPLACE_PREFIXES,
   generateMissingSIDs: BIB_F035_TO_SID
@@ -287,7 +288,15 @@ export const BIB_PREVALIDATION_FIX_SETTINGS = {
   generateMissingSIDs: BIB_F035_TO_SID
 };
 
-export const BIB_POSTVALIDATION_FIX_SETTINGS = {
+export const BIB_POSTMERGE_FIX_SETTINGS = {
+  handleTempUrns: true
+};
+
+export const BIB_PREIMPORT_FIX_SETTINGS = {
+  replacePrefixes: REPLACE_PREFIXES
+};
+
+export const AUTNAME_PREIMPORT_FIX_SETTINGS = {
   replacePrefixes: REPLACE_PREFIXES
 };
 
