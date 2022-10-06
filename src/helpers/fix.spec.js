@@ -29,7 +29,7 @@
 import {expect} from 'chai';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {fixRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_PREIMPORT_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS} from './fix';
+import {fixRecord, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_PREIMPORT_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS, BIB_STRIP_F884S_SETTINGS} from './fix';
 //import {createDebugLogger} from 'debug';
 
 describe('services/fix', () => {
@@ -38,7 +38,7 @@ describe('services/fix', () => {
     '..',
     '..',
     'test-fixtures',
-    'format'
+    'fix'
   ];
   const {getFixture} = fixtureFactory({root: FIXTURES_PATH, reader: READERS.JSON});
 
@@ -227,7 +227,7 @@ describe('services/fix', () => {
   });
 
 
-  describe('bib-postvalidation-fix -settings', () => {
+  describe('bib-preimport-fix -settings', () => {
     it('Should handle link subfields, but not add missing SIDs, when running with BIB_PREIMPORT_FIX_SETTINGS', () => {
       const record = new MarcRecord(getFixture({
         components: [
@@ -320,5 +320,83 @@ describe('services/fix', () => {
       expect(result).to.eql(expected);
     });
   });
+
+
+  describe('Strip f884s', () => {
+    it('Should strip newer f884', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f884s-1.json'
+        ]
+      }));
+      const result = fixRecord(record.toObject(), BIB_STRIP_F884S_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f884s-1.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('Should be able to handle a f884 without subfield $g - but it should keep the oldest with existing $g', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f884s-2.json'
+        ]
+      }));
+      const result = fixRecord(record.toObject(), BIB_STRIP_F884S_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f884s-2.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('Should keep f884s with differing $a', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f884s-3.json'
+        ]
+      }));
+      const result = fixRecord(record.toObject(), BIB_STRIP_F884S_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f884s-3.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+    it('Should keep f884s without $5 MELINDA even if the are duplicates', () => {
+      const record = new MarcRecord(getFixture({
+        components: [
+          'in',
+          'f884s-4.json'
+        ]
+      }));
+      const result = fixRecord(record.toObject(), BIB_STRIP_F884S_SETTINGS);
+      const expected = getFixture({
+        components: [
+          'out',
+          'f884s-4.json'
+        ]
+      });
+
+      expect(result).to.eql(expected);
+    });
+
+
+  });
+
 
 });
