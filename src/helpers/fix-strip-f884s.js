@@ -34,11 +34,14 @@ import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
 export function stripF884s(newRecord, options) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:stripF884s');
   const debugData = debug.extend('data');
-  debugData(`Options for stripF884s: ${JSON.stringify(options)}`);
 
   if (options !== true) {
+    debug(`NOT running stripF884s fixer, no options`);
     return newRecord;
   }
+
+  debug(`Running stripF884s fixer`);
+  debugData(`Options for stripF884s: ${JSON.stringify(options)}`);
 
   // Handle only f884 with $5 MELINDA - let's no remove random f884s
   const isMelindaf884 = f => f.tag === '884' && f.subfields.some(({code, value}) => code === '5' && value === 'MELINDA');

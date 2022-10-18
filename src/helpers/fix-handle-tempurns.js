@@ -33,13 +33,16 @@ import createDebugLogger from 'debug';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:handleTempUrns');
 const debugData = debug.extend('data');
 
+// eslint-disable-next-line max-statements
 export function handleTempUrns(newRecord, options) {
 
-  debugData(`Options for handleTempUrns: ${JSON.stringify(options)}`);
-
   if (options !== true) {
+    debug(`NOT running handleTempUrns fixer, no options`);
     return newRecord;
   }
+
+  debug(`Running handleTempUrns fixer`);
+  debugData(`Options for handleTempUrns: ${JSON.stringify(options)}`);
 
   const {f856sUrnsWithTempSubfields, f856sUrnsWithNoTempSubfields} = getf856sUrns(newRecord);
 
