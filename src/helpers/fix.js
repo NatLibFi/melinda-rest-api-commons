@@ -30,6 +30,9 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
 
+import {handleTempUrns} from './fix-handle-tempurns';
+import {stripF884s} from './fix-strip-f884s';
+
 export * from './fix-constants';
 
 export function fixRecord(record, settings = {}) {
@@ -51,10 +54,12 @@ export function fixRecord(record, settings = {}) {
     replacePrefixes(options);
   });
 
-  handleTempUrns(settings.handleTempUrns);
-  stripF884s(settings.stripF884s);
+  // Imported fixers need the record as input and return the fixed record
+  // This should be handled as a reducer or something nicer
+  const newRecord2 = handleTempUrns(newRecord, settings.handleTempUrns);
+  const newRecord3 = stripF884s(newRecord2, settings.stripF884s);
 
-  return newRecord.toObject();
+  return newRecord3.toObject();
 
   // Replace prefix in all specified subfields
   function replacePrefixes(options) {
@@ -131,206 +136,5 @@ export function fixRecord(record, settings = {}) {
     }
   }
 
-  function stripF884s(options) {
-    debugData(`Options for stripF884s: ${JSON.stringify(options)}`);
 
-    if (options !== true) {
-      return;
-    }
-
-    // Handle only f884 with $5 MELINDA - let's no remove random f884s
-    const isMelindaf884 = f => f.tag === '884' && f.subfields.some(({code, value}) => code === '5' && value === 'MELINDA');
-
-    const f884Melindas = newRecord.fields.filter(isMelindaf884);
-    debugData(`Melinda's f884s (${f884Melindas.length}) \n ${JSON.stringify(f884Melindas)}`);
-
-    if (f884Melindas.length < 2) {
-      debug(`Not enough Melinda's f884.s to filter (${f884Melindas.length})`);
-      return;
-    }
-
-    // Sort fields by date subfield $g, so we'll keep the oldest one
-    const sortedFields = sortFieldsBySubfieldValue(f884Melindas, 'g');
-    debugData(`Melinda's f884s sorted by 'g' - oldest first: (${sortedFields.length}) \n ${JSON.stringify(sortedFields)}`);
-
-    // Drop fields that are similar without date subfield $g
-    const uniqFields = uniqWithOutSubfield(sortedFields, 'g');
-    debugData(`Melindas f884s uniqued without sf $g (${uniqFields.length}) \n ${JSON.stringify(uniqFields)}`);
-
-    // Replace original Melinda-f884s with remaining Melinda-f884s
-    // NOTE: this sorts MELINDA-f884s after possible other f884s
-    newRecord.removeFields(f884Melindas);
-    newRecord.insertFields(uniqFields);
-    return;
-
-    // Keep just first instance of each similar field, compare without subfield with subfieldCode
-    function uniqWithOutSubfield(fields, subfieldCode) {
-      return fields.reduce((uniq, field) => {
-        if (!uniq.some(f => MarcRecord.isEqual(removeSubfield(f, subfieldCode), removeSubfield(field, subfieldCode)))) { // eslint-disable-line functional/no-conditional-statement
-          uniq.push(field); // eslint-disable-line functional/immutable-data
-        }
-
-        return uniq;
-      }, []);
-    }
-
-    // sort fields by value of each fields first subfield with subfielCode
-    function sortFieldsBySubfieldValue(fields, subfieldCode) {
-      return [...fields].sort((a, b) => {
-        const a1value = getFirstSubfieldValue(a, subfieldCode);
-        const b1value = getFirstSubfieldValue(b, subfieldCode);
-        if (a1value && !b1value) {
-          return -1;
-        }
-        if (!a1value && b1value) {
-          return 1;
-        }
-        if (a1value > b1value) {
-          return 1;
-        }
-        if (b1value > a1value) {
-          return -1;
-        }
-        return 0;
-      });
-
-      // get value for the for instance of subfield with subfieldCode
-      function getFirstSubfieldValue(field, subfieldCode) {
-        const subs = field.subfields ? field.subfields.filter(subf => subf.code === subfieldCode) : [];
-        return subs.length > 0 ? subs[0].value : '';
-      }
-    }
-
-  }
-
-  function removeSubfield(field, code) {
-
-    // Handle non-numeric fields, and fields with a numeric tag of 010 and greater
-    // Aleph's FMT as a controlfield might be a problem
-    if (!isNaN(field.tag) && parseInt(field.tag, 10) >= 10) {
-
-      const filteredSubfields = field.subfields.filter(sf => sf.code !== code);
-
-      // Remove whole field if there are no subfields left
-      if (filteredSubfields.length < 1) {
-        return false;
-      }
-
-      return {
-        tag: field.tag,
-        ind1: field.ind1,
-        ind2: field.ind2,
-        subfields: filteredSubfields
-      };
-    }
-    // return controlFields as is
-    return field;
-  }
-
-
-  // eslint-disable-next-line max-statements
-  function handleTempUrns(options) {
-    debugData(`Options for handleTempUrns: ${JSON.stringify(options)}`);
-
-    if (options !== true) {
-      return;
-    }
-
-    // If we have an non-temp URN, we can delete tempURNs, otherwise we should delete the temp subfield from URN
-
-    const hasURN = f => f.tag === '856' && f.subfields.some(({code, value}) => code === 'u' && (/urn.fi/u).test(value));
-
-    const hasTempSubfield = f => f.subfields.some(({code, value}) => code === '9' && (/^MELINDA<TEMP>$/u).test(value));
-    const hasNoTempSubfield = f => !f.subfields.some(({code, value}) => code === '9' && (/^MELINDA<TEMP>$/u).test(value));
-
-    const f856sUrn = newRecord.fields.filter(hasURN);
-    const f856sUrnsWithTempSubfields = f856sUrn.filter(hasTempSubfield);
-    const f856sUrnsWithNoTempSubfields = f856sUrn.filter(hasNoTempSubfield);
-
-    debugData(`URN f856s: ${JSON.stringify(f856sUrn)}`);
-    debugData(`URN f856s with temp subfield: ${JSON.stringify(f856sUrnsWithTempSubfields)}`);
-
-    // None of the URNs has temp subfields, we don't need to do anything
-    if (f856sUrnsWithTempSubfields.length < 1) {
-      debug(`No Urns with temp subfield`);
-      return;
-    }
-
-    // Do we have an existing URN with legal deposit subfields, if we have, we can remove the temp URN field(s)
-    const existingLegalDepositURN = validateLD(f856sUrnsWithNoTempSubfields);
-    debug(`existingLegalDepositURN: ${existingLegalDepositURN}`);
-
-    if (existingLegalDepositURN) {
-      debug(`We have an existing LD URN, we can delete temp fields (${f856sUrnsWithTempSubfields.length})`);
-      newRecord.removeFields(f856sUrnsWithTempSubfields);
-      return;
-    }
-
-    // We do not have an existing legalDepositURN, we should use the tempURN and remove the temp subfields from it
-    if (!existingLegalDepositURN && f856sUrnsWithTempSubfields.length > 0) {
-      //debug(`All Urns (${f856sUrn.length}) have a temp subfield`);
-      debugData(`Original temp URNs: (${JSON.stringify(f856sUrnsWithTempSubfields)})`);
-      const fixedFields = f856sUrnsWithTempSubfields.map(removeTempSubfield).filter(field => field);
-      debug(`We removed temp subfields: (${JSON.stringify(fixedFields)})`);
-      newRecord.removeFields(f856sUrnsWithTempSubfields);
-      newRecord.insertFields(fixedFields);
-      return;
-    }
-
-    // Should we check that the non-temp URN has 2nd ind '0' - meaning that the URN handles the actual resource itself?
-  }
-
-  // ---- LD-functions below are same as in https://github.com/NatLibFi/marc-record-validators-melinda/blob/feature-updates-to-urn/src/urn.js
-  // we propably should develop the urn/legaldeposit -validator to use also here
-
-  function validateLD(f856sUrn) {
-    debug(`Validating the existence of legal deposit subfields`);
-
-    const LD_SUBFIELDS = [
-      {code: 'z', value: 'Käytettävissä vapaakappalekirjastoissa'},
-      {code: '5', value: 'FI-Vapaa'}
-    ];
-
-    const f856sUrnWithLdSubfields = f856sUrn.filter(field => fieldHasLDSubfields(field, LD_SUBFIELDS));
-    if (f856sUrnWithLdSubfields.length > 0) {
-      debug(`Record has ${f856sUrnWithLdSubfields.length} URN fields with all necessary legal deposit subfields`);
-      debugData(`f856sUrnWithLdSubfields: ${JSON.stringify(f856sUrnWithLdSubfields)}`);
-      return true;
-    }
-    return false;
-  }
-
-  function fieldHasLDSubfields(field, ldSubfields) {
-    if (ldSubfields.every(ldsf => field.subfields.some(sf => sf.code === ldsf.code && sf.value === ldsf.value))) {
-      return true;
-    }
-  }
-
-  // ---
-
-  function removeTempSubfield(field) {
-
-    // Handle non-numeric fields, and fields with a numeric tag of 010 and greater
-    // Aleph's FMT as a controlfield might be a problem
-    if (!isNaN(field.tag) && parseInt(field.tag, 10) >= 10) {
-
-      const filteredSubfields = field.subfields.filter(sf => sf.code !== '9' && !(/^MELINDA<TEMP>$/u).test(sf.value));
-
-      // Remove whole field if there are no subfields left
-      if (filteredSubfields.length < 1) {
-        return false;
-      }
-
-      return {
-        tag: field.tag,
-        ind1: field.ind1,
-        ind2: field.ind2,
-        subfields: filteredSubfields
-      };
-    }
-    // return controlFields as is
-    return field;
-  }
 }
-
-
