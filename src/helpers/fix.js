@@ -29,7 +29,8 @@
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
-import './fix-constants';
+
+export * from './fix-constants';
 
 export function fixRecord(record, settings = {}) {
   const logger = createLogger();
