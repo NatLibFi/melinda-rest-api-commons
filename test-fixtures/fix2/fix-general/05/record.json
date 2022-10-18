@@ -48,17 +48,6 @@
       ]
     },
     {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "(FI-TATI)faa"
-        }
-      ]
-    },
-    {
       "tag": "040",
       "ind1": " ",
       "ind2": " ",
@@ -104,21 +93,6 @@
         {
           "code": "2",
           "value": "1974/fin/fennica"
-        }
-      ]
-    },
-    {
-      "tag": "084",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "86.2"
-        },
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -208,17 +182,6 @@
         {
           "code": "c",
           "value": "Teemu Keskisarja."
-        }
-      ]
-    },
-    {
-      "tag": "246",
-      "ind1": "3",
-      "ind2": "0",
-      "subfields": [
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -373,17 +336,6 @@
         {
           "code": "a",
           "value": "suomi"
-        }
-      ]
-    },
-    {
-      "tag": "574",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -591,38 +543,6 @@
     },
     {
       "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "faa"
-        },
-        {
-          "code": "b",
-          "value": "tati"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "fuu"
-        },
-        {
-          "code": "b",
-          "value": "FI-BTJ"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
       "subfields": [
         {
           "code": "c",
@@ -632,7 +552,9 @@
           "code": "b",
           "value": "helme"
         }
-      ]
+      ],
+      "ind1": " ",
+      "ind2": " "
     }
   ]
 }

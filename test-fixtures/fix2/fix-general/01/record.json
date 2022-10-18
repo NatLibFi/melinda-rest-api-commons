@@ -37,17 +37,6 @@
       ]
     },
     {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "(FI-BTJ)fuu"
-        }
-      ]
-    },
-    {
       "tag": "040",
       "ind1": " ",
       "ind2": " ",
@@ -592,21 +581,6 @@
       ],
       "ind1": " ",
       "ind2": " "
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "fuu"
-        },
-        {
-          "code": "b",
-          "value": "FI-BTJ"
-        }
-      ]
     }
   ]
 }

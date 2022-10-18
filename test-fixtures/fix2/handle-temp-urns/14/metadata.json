@@ -1,0 +1,4 @@
+{
+    "description":"HandleTempURNs should find a tempURN and an existing non-legal deposit URN and remove the temp subfields from tempURN",
+    "settings": "BIB_HANDLE_TEMP_URNS_SETTINGS"
+}
