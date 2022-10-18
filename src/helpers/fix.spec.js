@@ -10,14 +10,9 @@ import createDebugLogger from 'debug';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fix:test');
 const debugData = debug.extend('data');
 
-//const debugData = debug.extent('data');
-
-
-//, BIB_FORMAT_SETTINGS, BIB_F035_TO_SID, BIB_PREVALIDATION_FIX_SETTINGS, BIB_PREIMPORT_FIX_SETTINGS, BIB_HANDLE_TEMP_URNS_SETTINGS, BIB_STRIP_F884S_SETTINGS} from './fix';
-
 generateTests({
   callback,
-  path: [__dirname, '..', '..', 'test-fixtures', 'fix2'],
+  path: [__dirname, '..', '..', 'test-fixtures', 'fix'],
   recurse: true,
   useMetadataFile: true,
   fixura: {
