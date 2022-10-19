@@ -1,0 +1,4 @@
+{
+    "description":"HandleTempURNs should do nothing if there are not tempURN",
+    "settings": "BIB_HANDLE_TEMP_URNS_SETTINGS"
+}

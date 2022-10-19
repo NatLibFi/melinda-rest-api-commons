@@ -106,7 +106,7 @@ export default async function (MONGO_URI) {
     logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: cleanBlobSequence} : {correlationId: cleanCorrelationId};
+    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
 
     try {
       const result = await db.collection(collection).updateMany(

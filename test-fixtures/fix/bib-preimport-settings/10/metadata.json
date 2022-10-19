@@ -1,0 +1,4 @@
+{
+    "description":"Should handle link subfields, but not add missing SIDs, when running with BIB_PREIMPORT_FIX_SETTINGS",
+    "settings": "BIB_PREIMPORT_FIX_SETTINGS"
+}

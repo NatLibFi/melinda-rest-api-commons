@@ -7,7 +7,7 @@
     },
     {
       "tag": "003",
-      "value": "FI-BTJ"
+      "value": "FI-MELINDA"
     },
     {
       "tag": "005",
@@ -33,28 +33,6 @@
         {
           "code": "z",
           "value": "978-952-234-385-7"
-        }
-      ]
-    },
-    {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "(FI-BTJ)fuu"
-        }
-      ]
-    },
-    {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "(FI-TATI)faa"
         }
       ]
     },
@@ -87,8 +65,8 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "a",
-          "value": "fin"
+          "code": "w",
+          "value": "(FIN01)"
         }
       ]
     },
@@ -117,8 +95,8 @@
           "value": "86.2"
         },
         {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "code": "2",
+          "value": "ykl"
         }
       ]
     },
@@ -217,8 +195,8 @@
       "ind2": "0",
       "subfields": [
         {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "code": "w",
+          "value": "(FIN01)"
         }
       ]
     },
@@ -382,8 +360,8 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
+          "code": "w",
+          "value": "(FIN01)"
         }
       ]
     },
@@ -479,8 +457,8 @@
           "value": "kertomakirjallisuus"
         },
         {
-          "code": "2",
-          "value": "ysa"
+          "code": "w",
+          "value": "(FIN01)"
         }
       ]
     },
@@ -591,23 +569,6 @@
     },
     {
       "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "fuu"
-        },
-        {
-          "code": "b",
-          "value": "FI-BTJ"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
       "subfields": [
         {
           "code": "c",
@@ -617,7 +578,9 @@
           "code": "b",
           "value": "helme"
         }
-      ]
+      ],
+      "ind1": " ",
+      "ind2": " "
     }
   ]
 }

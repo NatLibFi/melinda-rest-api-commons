@@ -7,7 +7,7 @@
     },
     {
       "tag": "003",
-      "value": "FI-MELINDA"
+      "value": "FI-BTJ"
     },
     {
       "tag": "005",
@@ -33,17 +33,6 @@
         {
           "code": "z",
           "value": "978-952-234-385-7"
-        }
-      ]
-    },
-    {
-      "tag": "035",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "(FI-BTJ)fuu"
         }
       ]
     },
@@ -117,8 +106,8 @@
           "value": "86.2"
         },
         {
-          "code": "2",
-          "value": "ykl"
+          "code": "0",
+          "value": "(FIN11)"
         }
       ]
     },
@@ -217,8 +206,8 @@
       "ind2": "0",
       "subfields": [
         {
-          "code": "a",
-          "value": "Saapasnahkatorni"
+          "code": "0",
+          "value": "(FIN11)"
         }
       ]
     },
@@ -382,8 +371,8 @@
       "ind2": " ",
       "subfields": [
         {
-          "code": "a",
-          "value": "LK"
+          "code": "0",
+          "value": "(FIN11)"
         }
       ]
     },
@@ -588,21 +577,6 @@
           "value": "Linkki e-kirjaan"
         }
       ]
-    },
-    {
-      "tag": "SID",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "fuu"
-        },
-        {
-          "code": "b",
-          "value": "FI-BTJ"
-        }
-      ],
-      "ind1": " ",
-      "ind2": " "
     },
     {
       "tag": "SID",

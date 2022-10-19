@@ -313,10 +313,6 @@
         {
           "code": "5",
           "value": "FI-Vapaa"
-        },
-        {
-          "code": "9",
-          "value": "MELINDA<TEMP>"
         }
       ]
     },
@@ -331,7 +327,34 @@
         },
         {
           "code": "g",
-          "value": "20220714"
+          "value": "20000718"
+        },
+        {
+          "code": "k",
+          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
+        },
+        {
+          "code": "q",
+          "value": "FI-NL"
+        },
+        {
+          "code": "5",
+          "value": "MELINDA"
+        }
+      ]
+    },
+    {
+      "tag": "884",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ONIX3 to MARC transformation v2"
+        },
+        {
+          "code": "g",
+          "value": "20000718"
         },
         {
           "code": "k",

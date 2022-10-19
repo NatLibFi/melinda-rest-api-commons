@@ -97,21 +97,6 @@
       ]
     },
     {
-      "tag": "084",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "86.2"
-        },
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
-        }
-      ]
-    },
-    {
       "tag": "091",
       "ind1": " ",
       "ind2": " ",
@@ -197,17 +182,6 @@
         {
           "code": "c",
           "value": "Teemu Keskisarja."
-        }
-      ]
-    },
-    {
-      "tag": "246",
-      "ind1": "3",
-      "ind2": "0",
-      "subfields": [
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -362,17 +336,6 @@
         {
           "code": "a",
           "value": "suomi"
-        }
-      ]
-    },
-    {
-      "tag": "574",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "0",
-          "value": "(FI-ASTERI-N)"
         }
       ]
     },
@@ -592,6 +555,21 @@
       ],
       "ind1": " ",
       "ind2": " "
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "fuu"
+        },
+        {
+          "code": "b",
+          "value": "FI-BTJ"
+        }
+      ]
     }
   ]
 }

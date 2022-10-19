@@ -1,0 +1,4 @@
+{
+    "description":"Should keep f884s with differing $a",
+    "settings": "BIB_STRIP_F884S_SETTINGS"
+}

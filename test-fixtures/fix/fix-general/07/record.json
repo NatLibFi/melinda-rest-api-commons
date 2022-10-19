@@ -7,7 +7,7 @@
     },
     {
       "tag": "003",
-      "value": "FI-MELINDA"
+      "value": "FI-BTJ"
     },
     {
       "tag": "005",
@@ -108,21 +108,6 @@
       ]
     },
     {
-      "tag": "084",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "86.2"
-        },
-        {
-          "code": "2",
-          "value": "ykl"
-        }
-      ]
-    },
-    {
       "tag": "091",
       "ind1": " ",
       "ind2": " ",
@@ -208,17 +193,6 @@
         {
           "code": "c",
           "value": "Teemu Keskisarja."
-        }
-      ]
-    },
-    {
-      "tag": "246",
-      "ind1": "3",
-      "ind2": "0",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "Saapasnahkatorni"
         }
       ]
     },
@@ -373,17 +347,6 @@
         {
           "code": "a",
           "value": "suomi"
-        }
-      ]
-    },
-    {
-      "tag": "574",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "LK"
         }
       ]
     },
@@ -591,6 +554,8 @@
     },
     {
       "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
       "subfields": [
         {
           "code": "c",
@@ -600,12 +565,12 @@
           "code": "b",
           "value": "FI-BTJ"
         }
-      ],
-      "ind1": " ",
-      "ind2": " "
+      ]
     },
     {
       "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
       "subfields": [
         {
           "code": "c",
@@ -615,9 +580,7 @@
           "code": "b",
           "value": "helme"
         }
-      ],
-      "ind1": " ",
-      "ind2": " "
+      ]
     }
   ]
 }

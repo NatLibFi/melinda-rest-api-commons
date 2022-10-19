@@ -31,8 +31,8 @@ import mongoLogFactory from './mongoLog';
 import amqpFactory from './amqp';
 import conversions from './helpers/conversion';
 import validations from './helpers/validation';
-import * as format from './helpers/format';
+import * as fixes from './helpers/fix';
 import {logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem} from './utils';
 
-export {mongoFactory, mongoLogFactory, amqpFactory, conversions, validations, format, logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem};
+export {mongoFactory, mongoLogFactory, amqpFactory, conversions, validations, fixes, logError, createImportJobState, createImportJobStateForQuery, createRecordResponseItem, addRecordResponseItem};
 export * from './constants';
