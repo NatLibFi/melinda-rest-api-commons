@@ -146,3 +146,12 @@ export async function addRecordResponseItem({recordResponseItem, correlationId, 
   return true;
 }
 
+// Use addRecordResponseItems to add several recordResponseItems in one mongo operation to avoid writeconflicts
+export async function addRecordResponseItems({recordResponseItems, correlationId, mongoOperator}) {
+  if (!Array.isArray(recordResponseItems)) {
+    throw new Error('RecordResponseItems is not an array!');
+  }
+  await mongoOperator.pushMessages({correlationId, messages: recordResponseItems, messageField: 'records'});
+  return true;
+}
+
