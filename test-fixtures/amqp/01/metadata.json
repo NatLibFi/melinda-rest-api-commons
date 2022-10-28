@@ -1,0 +1,6 @@
+{
+    "description":"Test amqp locally",
+    "testLocalAmqp": true,
+    "skip": true,
+    "only": false
+}

@@ -30,17 +30,39 @@ import amqplib from 'amqplib';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
+import createDebugLogger from 'debug';
 import {CHUNK_SIZE} from './constants';
-import {logError} from './utils';
+//import {logError} from './utils';
 import {inspect} from 'util';
 import httpStatus from 'http-status';
 
+
 export default async function (AMQP_URL) {
+  const logger = createLogger();
+  const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp');
+
+  debug(`Creating an AMQP operator to ${AMQP_URL}`);
+
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
-  const logger = createLogger();
 
-  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords};
+  debug(`Connection: ${connection}`);
+  debug(`Channel: ${channel}`);
+
+  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
+
+  async function closeChannel() {
+    debug(`Closing channel`);
+    await channel.close();
+    debug(`Channel: ${channel}`);
+  }
+
+  async function closeConnection() {
+    debug(`Closing connection`);
+    await connection.close();
+    debug(`Connection: ${connection}`);
+  }
+
 
   // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
@@ -158,28 +180,35 @@ export default async function (AMQP_URL) {
   }
 
   async function sendToQueue({queue, correlationId, headers, data}) {
-    try {
-      logger.silly(`Queue ${queue}`);
-      logger.silly(`CorrelationId ${correlationId}`);
-      logger.silly(`Data ${JSON.stringify(data)}`);
-      logger.silly(`Headers ${JSON.stringify(headers)}`);
+    debug(`sendToQueue`);
+    //try {
+    debug(`Queue ${queue}`);
+    debug(`CorrelationId ${correlationId}`);
+    debug(`Data ${JSON.stringify(data)}`);
+    debug(`Headers ${JSON.stringify(headers)}`);
 
-      errorUndefinedQueue(queue);
-      await channel.assertQueue(queue, {durable: true});
+    errorUndefinedQueue(queue);
 
-      channel.sendToQueue(
-        queue,
-        Buffer.from(JSON.stringify({data})),
-        {
-          correlationId,
-          persistent: true,
-          headers
-        }
-      );
-      logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
+    debug(`Asserting queue: ${queue}`);
+    await channel.assertQueue(queue, {durable: true});
+
+    debug(`Actually sendToQueue: ${queue}`);
+    await channel.sendToQueue(
+      queue,
+      Buffer.from(JSON.stringify({data})),
+      {
+        correlationId,
+        persistent: true,
+        headers
+      }
+    );
+    debug(`Send message for ${correlationId} to queue: ${queue}`);
+
+    /*
     } catch (error) {
       handleAmqpErrors(error);
     }
+    */
   }
 
   async function removeQueue(queue) {
@@ -254,8 +283,9 @@ export default async function (AMQP_URL) {
   }
 
   function handleAmqpErrors(error) {
-    logError(error);
-    throw new Error(error);
+    //debug(error);
+    //logError(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `AMQP errored: ${error.message}`);
   }
 
 }
