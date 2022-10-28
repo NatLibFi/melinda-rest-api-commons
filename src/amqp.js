@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -84,7 +84,7 @@ export default async function (AMQP_URL) {
       // Defaults:
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY);
     } catch (error) {
-      logError(error);
+      handleAmqpErrors(error);
     }
 
     function purgeQueue(purge) {
@@ -111,7 +111,7 @@ export default async function (AMQP_URL) {
 
       return {headers, messages};
     } catch (error) {
-      logError(error);
+      handleAmqpErrors(error);
     }
   }
 
@@ -139,7 +139,7 @@ export default async function (AMQP_URL) {
 
       return false;
     } catch (error) {
-      logError(error);
+      handleAmqpErrors(error);
     }
   }
 
@@ -178,7 +178,7 @@ export default async function (AMQP_URL) {
       );
       logger.silly(`Send message for ${correlationId} to queue: ${queue}`);
     } catch (error) {
-      logError(error);
+      handleAmqpErrors(error);
     }
   }
 
@@ -221,7 +221,7 @@ export default async function (AMQP_URL) {
 
       return messages;
     } catch (error) {
-      logError(error);
+      handleAmqpErrors(error);
     }
 
     async function pump(count, results = [], identifiers = []) {
@@ -252,6 +252,12 @@ export default async function (AMQP_URL) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Undefined queue!`);
     }
   }
+
+  function handleAmqpErrors(error) {
+    logError(error);
+    throw new Error(error);
+  }
+
 }
 
 
