@@ -48,12 +48,7 @@ generateTests({
   }
 });
 
-async function callback({testLocalAmqp = false}) {
-
-  if (!testLocalAmqp) {
-    debug(`Do not test amqp, if you don't have a local amqp to test with`);
-    return;
-  }
+async function callback() {
 
   debug(`Testing amqp against a local AMQP instance - we'll need some kind of mockup for this`);
   const amqpUrl = 'amqp://127.0.0.1:5672/';
@@ -64,6 +59,8 @@ async function callback({testLocalAmqp = false}) {
   //await amqpOperator.closeChannel();
   expect(amqpOperator).to.be.an('Object');
 
+
+  // Test sendToQueue
   debug(`Testing sendToQueue`);
 
   const queue = 'TESTQUEUE';

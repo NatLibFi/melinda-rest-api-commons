@@ -33,7 +33,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
 import {CHUNK_SIZE} from './constants';
 //import {logError} from './utils';
-import {inspect} from 'util';
+import {promisify, inspect} from 'util';
 import httpStatus from 'http-status';
 
 
@@ -45,9 +45,11 @@ export default async function (AMQP_URL) {
 
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
+  const healthCheckLoop = healthCheck();
 
   debug(`Connection: ${connection}`);
   debug(`Channel: ${channel}`);
+  debug(`HealthCheckLoop ${healthCheckLoop}`);
 
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
@@ -63,6 +65,21 @@ export default async function (AMQP_URL) {
     debug(`Connection: ${connection}`);
   }
 
+  async function healthCheck(wait = false) {
+    const setTimeoutPromise = promisify(setTimeout);
+    if (wait) {
+      await setTimeoutPromise(wait);
+      // wait here for wait ms
+      return healthCheck(false);
+    }
+
+    try {
+      await channel.assertQueue('HEALTHCHECK', {durable: false});
+      return healthCheck('2000');
+    } catch (error) {
+      handleAmqpErrors(error);
+    }
+  }
 
   // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
