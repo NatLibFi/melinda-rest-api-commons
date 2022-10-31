@@ -62,8 +62,9 @@ export default async function (MONGO_URI) {
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     } catch (error) {
+      const errorMessage = error.payload || error.message || '';
       logError(error);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 
@@ -119,8 +120,10 @@ export default async function (MONGO_URI) {
         }
       );
       return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
-    } catch (err) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 
@@ -132,8 +135,10 @@ export default async function (MONGO_URI) {
     try {
       const result = await db.collection(collection).deleteMany(filter);
       return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
-    } catch (err) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 
