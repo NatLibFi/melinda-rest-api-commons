@@ -31,11 +31,14 @@ import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 import {amqpFactory} from './index';
-
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 //import inspect from 'util';
+import {promisify} from 'util';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp:test');
 //const debugData = debug.extend('data');
+
+const setTimeoutPromise = promisify(setTimeout);
 
 generateTests({
   callback,
@@ -48,58 +51,157 @@ generateTests({
   }
 });
 
+// eslint-disable-next-line max-statements
 async function callback() {
+
+  const testData = {
+    queue: 'TESTQUEUE',
+    correlationId: '5b7be681-0d4d-47ca-b5d7-1531173ec6bf',
+    data: {'leader': '02518cam a2200745zi 4500', 'fields': [{'tag': '001', 'value': '000019640'}]}
+  };
 
   debug(`Testing amqp against a local AMQP instance - we'll need some kind of mockup for this`);
   const amqpUrl = 'amqp://127.0.0.1:5672/';
 
-  debug(`Connecting to ${amqpUrl}`);
-  const amqpOperator = await amqpFactory(amqpUrl);
+  debug(`Connecting to ${amqpUrl}, with healthCheck running`);
+  const amqpOperator = await amqpFactory(amqpUrl, true);
 
-  //await amqpOperator.closeChannel();
-  expect(amqpOperator).to.be.an('Object');
+  debug(`**********`);
+  await testHealthCheckLoopWorking(amqpOperator);
 
-
-  // Test sendToQueue
-  debug(`Testing sendToQueue`);
-
-  const queue = 'TESTQUEUE';
-  const correlationId = '5b7be681-0d4d-47ca-b5d7-1531173ec6bf';
-  const headers = {correlationId};
-  const data = {'leader': '02518cam a2200745zi 4500', 'fields': [{'tag': '001', 'value': '000019640'}]};
-
-  await amqpOperator.sendToQueue({queue, correlationId, headers, data});
-
-  expect(await amqpOperator.sendToQueue({correlationId, headers, data})).to.throw();
-
-  //await amqpOperator.closeChannel();
-
-  //await amqpOperator.sendToQueue({queue, correlationId, headers, data});
+  debug(`**********`);
+  await testHealthCheckLoopErroring(amqpOperator);
 
   await amqpOperator.closeConnection();
 
+  debug(`--- Create a new amqpOperator2 ----`);
+  debug(`Connecting to ${amqpUrl}, without healthCheck running`);
+  const amqpOperator2 = await amqpFactory(amqpUrl);
+
+  debug(`**********`);
+  debug(`*** Test purging the queue: ${testData.queue} *******`);
+  const purgeMessage = await amqpOperator2.checkQueue({queue: testData.queue, toRecord: false, purge: true});
+  expect(purgeMessage).to.eql(false);
+  await testSendToQueue(amqpOperator2, testData);
+  debug(`* wait, otherwise queue is not ready *`);
+  await setTimeoutPromise('100');
+
+  debug(`*** Test getting messageCount from theQueue: ${testData.queue} *******`);
+  const messageCount = await amqpOperator2.checkQueue({queue: testData.queue, style: 'messages'});
+  debug(messageCount);
+  expect(messageCount).to.eql(1);
+
+  debug(`*** Test checking theQueue: ${testData.queue} *******`);
+  const message = await amqpOperator2.checkQueue({queue: testData.queue, style: 'one', toRecord: false, purge: false});
+  expect(message).to.not.equal('goo');
+  debug(message);
+
+  debug(`*** Test nacking the message: ${testData.queue} *******`);
+  await amqpOperator2.nackMessages([message]);
+  debug(`* wait, otherwise queue is not ready *`);
+  await setTimeoutPromise('100');
+
+  const messageCountAfterNack = await amqpOperator2.checkQueue({queue: testData.queue, style: 'messages'});
+  debug(`After nack: ${messageCountAfterNack}`);
+  expect(messageCountAfterNack).to.eql(1);
+
+  const message2 = await amqpOperator2.checkQueue({queue: testData.queue, style: 'one', toRecord: false, purge: false});
+
+  debug(`*** Test acking the message: ${testData.queue} *******`);
+  await amqpOperator2.ackMessages([message2]);
+  debug(`* wait, otherwise queue is not ready *`);
+  await setTimeoutPromise('100');
+
+  const messageCountAfterAck = await amqpOperator2.checkQueue({queue: testData.queue, style: 'messages'});
+  debug(`After ack: ${messageCountAfterAck}`);
+  expect(messageCountAfterAck).to.eql(0);
+
+  debug(`*** Test removing the the queue: ${testData.queue} *******`);
+  const removeResult = await amqpOperator2.removeQueue(testData.queue);
+  debug(removeResult);
+
+
+  debug(`**********`);
   try {
-    await amqpOperator.sendToQueue({queue, correlationId, headers, data});
+    await testUndefinedQueue(amqpOperator2, testData);
   } catch (error) {
-    debug(JSON.stringify(error.message));
-    debug(JSON.stringify(error.stack));
-    expect(error.message).to.eql('Channel closed');
+  //expect(error()).to.be.an('apierror');
+    const errorAsString = JSON.stringify(error);
+    expect(error).to.be.an.instanceof(ApiError);
+    expect(errorAsString).to.eql(`{"status":500,"payload":"Undefined queue!"}`);
+  }
+  debug(`**********`);
+
+  debug(`--- Closing amqpOperator2 ----`);
+  await amqpOperator2.closeChannel();
+  await amqpOperator2.closeConnection();
+
+  debug(`**********`);
+
+  try {
+    await testSendToQueue(amqpOperator2, testData);
+  } catch (error) {
+    expect(error.message).to.eql(`Channel closed`);
+    debug(`We got an error: ${JSON.stringify(error)}`);
+  }
+  debug(`**********`);
+
+  debug(`Done`);
+  //}
+
+  async function testHealthCheckLoopWorking(amqpOperator) {
+    debug(`Testing healthCheckLoop for ${amqpOperator}`);
+    debug(`Waiting 0.5s and expecting healthCheckLoop to work`);
+    await setTimeoutPromise('500');
+    debug(`Amqp Operator should have been alive.`);
+  }
+
+  async function testHealthCheckLoopErroring(amqpOperator) {
+    debug(`Testing healthCheckLoop with closed channel`);
+    amqpOperator.closeChannel();
+    debug(`Waiting 0.5s and expecting healthCheckLoop to throw error`);
+    await setTimeoutPromise('500');
+    debug(`amqpOperator should have errored`);
+  }
+
+  async function testSendToQueue(amqpOperator, testData) {
+  // Test sendToQueue
+    debug(`*** Testing sendToQueue ***`);
+
+    const {queue, correlationId, data} = testData;
+    const headers = {correlationId};
+
+    await amqpOperator.sendToQueue({queue, correlationId, headers, data});
+    return;
+  }
+
+  /*
+  async function testCheckQueue(amqpOperator, testData) {
+    debug(`Testing checkQueue`);
+    const {queue} = testData;
+    const message = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
+    debug(message);
+    return message;
+  //expect(message).to.be.defined;
+  }
+*/
+
+  async function testUndefinedQueue(amqpOperator, testData) {
+  // Test sendToQueue
+    debug(`Testing sendToQueue with undefined queue`);
+    const {correlationId, data} = testData;
+    const headers = {correlationId};
+    const queue = undefined;
+
+    expect(await amqpOperator.sendToQueue({queue, correlationId, headers, data})).to.throw();
   }
 
 
-  //await amqpOperator.closeConnection();
-  debug(`Done`);
-
-}
-
-
-/*
+  /*
 
 
   await amqpOperator.sendToQueue({queue, correlationId, headers, data});
 
-  const message = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
-  debug(message);
 
   await amqpOperator.ackMessages([message]);
   const message2 = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
@@ -136,4 +238,5 @@ const {headers, records, messages} = await amqpOperator.checkQueue({queue: `${op
 
   */
 
+}
 
