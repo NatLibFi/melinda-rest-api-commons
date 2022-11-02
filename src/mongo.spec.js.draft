@@ -1,0 +1,54 @@
+import {expect} from 'chai';
+import {READERS} from '@natlibfi/fixura';
+import mongoFixturesFactory from '@natlibfi/fixura-mongo';
+import generateTests from '@natlibfi/fixugen';
+
+let mongoFixtures; // eslint-disable-line functional/no-let
+
+generateTests({
+  callback,
+  path: [__dirname, '..', '..', 'test-fixtures', 'xxx'],
+  recurse: false,
+  useMetadataFile: true,
+  fixura: {
+    failWhenNotFound: true,
+    reader: READERS.JSON
+  },
+  mocha: {
+    before: async () => {
+      mongoFixtures = await mongoFixturesFactory({
+        rootPath: [__dirname, '..', '..', 'test-fixtures', 'xxx'],
+        gridFS: {bucketName: 'blobs'},
+        useObjectId: true,
+        format: {
+          blobmetadatas: {
+            creationTime: v => new Date(v),
+            modificationTime: v => new Date(v)
+          }
+        }
+      });
+      await MONGOCONNECTION.connect();
+    },
+    beforeEach: async () => {
+      await mongoFixtures.clear();
+    },
+    afterEach: async () => {
+      await mongoFixtures.clear();
+    },
+    after: async () => {
+      await MONGOCONNECTION.disconnect();
+      await mongoFixtures.close();
+    }
+  }
+});
+
+async function callback({
+  getFixture
+}) {
+  try {
+    expect().to.eql();
+  } catch (error) {
+    console.log(error); // eslint-disable-line
+    throw error;
+  }
+}

@@ -32,7 +32,6 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
 import {CHUNK_SIZE} from './constants';
-//import {logError} from './utils';
 import {promisify, inspect} from 'util';
 import httpStatus from 'http-status';
 import {logError} from './utils';
@@ -46,11 +45,11 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
 
-  const healthCheckLoop = runHealthCheck ? healthCheck() : 'Not running health check';
+  const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
   debug(`Connection: ${connection}`);
   debug(`Channel: ${channel}`);
-  debug(`HealthCheckLoop ${healthCheckLoop}`);
+  debug(`HealthCheckLoop: ${healthCheckLoop ? 'Running health check' : 'Not running health check'}`);
 
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
