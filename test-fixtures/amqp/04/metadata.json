@@ -1,0 +1,9 @@
+{
+    "description":"Nack single message",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 3,
+    "sentToQueue": true,
+    "nackMessages": true,
+    "checkNextMessage": true
+}

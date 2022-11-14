@@ -40,6 +40,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp');
   const debugHC = debug.extend('HC');
+  const debugData = debug.extend('data');
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
   const connection = await amqplib.connect(AMQP_URL);
@@ -51,7 +52,11 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   debug(`Channel: ${channel}`);
   debug(`HealthCheckLoop: ${healthCheckLoop ? 'Running health check' : 'Not running health check'}`);
 
-  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
+  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection, getHealthCheckLoop};
+
+  function getHealthCheckLoop() {
+    return healthCheckLoop;
+  }
 
   async function closeChannel() {
     debug(`Closing channel`);
@@ -78,9 +83,8 @@ export default async function (AMQP_URL, runHealthCheck = false) {
       debugHC(`Waiting 200ms before running healthCheck next`);
       return healthCheck('200');
     } catch (error) {
-      const errorToThrow = error;
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
-      handleAmqpErrors(errorToThrow);
+      handleAmqpErrors(error);
     }
   }
 
@@ -167,7 +171,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
       // Returns false if 0 items in queue
       const message = await channel.get(queue);
 
-      debug(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
+      debugData(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
       // Do not spam the logs
       debug(`consumeOne from queue: ${queue} ${toRecord ? 'to records' : 'just the message'}`);
 
@@ -207,7 +211,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
     try {
       debug(`Queue ${queue}`);
       debug(`CorrelationId ${correlationId}`);
-      debug(`Data ${JSON.stringify(data)}`);
+      debugData(`Data ${JSON.stringify(data)}`);
       debug(`Headers ${JSON.stringify(headers)}`);
 
       errorUndefinedQueue(queue);
@@ -264,6 +268,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
+      // Should we have here validationOptions
       return new MarcRecord(content.data);
     });
   }
@@ -315,7 +320,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   }
 
   function handleAmqpErrors(error) {
-    const newError = error;
+    const newError = new Error(error);
     //debug(`HandleAmqpErrors got an error: ${JSON.stringify(error)}`);
     if (error instanceof ApiError) {
       throw new ApiError(newError.status, newError.payload);

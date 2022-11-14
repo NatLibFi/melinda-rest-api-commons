@@ -1,0 +1,7 @@
+{
+    "description":"Send multiple messages to queue",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 3,
+    "sentToQueue": true
+}

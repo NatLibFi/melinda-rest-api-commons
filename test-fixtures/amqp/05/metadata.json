@@ -1,0 +1,8 @@
+{
+    "description":"CheckQueue: purge queue",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 0,
+    "sentToQueue": true,
+    "checkQueueStyle": "purge"
+    }

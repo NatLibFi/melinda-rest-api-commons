@@ -1,0 +1,8 @@
+{
+    "description":"Error sending message to null queue",
+    "skip": false,
+    "only": false,
+    "sentToQueue": true,
+    "expectToFail": true,
+    "expectedErrorStatus": 500
+}

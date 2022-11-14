@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "correlationId": "aaaaaaaa-0000-aaaa-0000-000000000000"
+  },
+  "records": [
+    {
+      "_validationOptions": {},
+      "fields": [
+        {
+          "tag": "001",
+          "value": "000019641"
+        }
+      ],
+      "leader": "02518cam a2200745zi 4500"
+    }
+  ]
+}

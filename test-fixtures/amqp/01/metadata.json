@@ -1,5 +1,7 @@
 {
-    "description":"Test amqp locally",
+    "description":"Send single message to queue",
     "skip": false,
-    "only": false
+    "only": false,
+    "expectedMessageCount": 1,
+    "sentToQueue": true
 }
