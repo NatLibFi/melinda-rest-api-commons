@@ -71,14 +71,14 @@ generateTests({
     },
     after: async () => {
       await amqpOperator.closeConnection();
-      await testHeathCheck();
+      //await testHeathCheck();
     }
   }
 });
 
 // eslint-disable-next-line max-statements
 async function callback({
-  getFixture, // eslint-disable-line
+  getFixture,
   expectToFail = false,
   expectedErrorStatus = '',
   ackMessages = false,
@@ -88,7 +88,10 @@ async function callback({
   queue = testData.queue,
   sentToQueue,
   expectedMessageCount,
-  removeQueue = false
+  removeQueue = false,
+  expectedErrorMessage = undefined,
+  expectApiError = false,
+  expectFalseCheckResult = false
 }) {
   try {
     await sendMessagesToQueue();
@@ -115,8 +118,23 @@ async function callback({
       throw error;
     }
     expect(expectToFail, 'This is expected to fail').to.equal(true);
-    expect(error).to.be.instanceOf(ApiError);
-    expect(error.status).to.equal(expectedErrorStatus);
+    testErrors(error);
+  }
+
+  function testErrors(error) {
+
+    if (expectApiError) {
+      expect(error).to.be.instanceOf(ApiError);
+      expect(error.status).to.equal(expectedErrorStatus);
+      // eslint-disable-next-line no-undef, functional/no-conditional-statement
+
+      if (expectedErrorMessage) {
+        expect(error.payload).to.eql(expectedErrorMessage);
+        return;
+      }
+      return;
+    }
+    expect(error).not.to.be.instanceOf(ApiError);
   }
 
   function queueRemoval() {
@@ -137,8 +155,15 @@ async function callback({
 
   // eslint-disable-next-line max-statements
   async function checkQueue() {
+    debug(`checkQueueStyle: ${checkQueueStyle}`);
+
     if (checkQueueStyle === 'oneToRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'one', toRecord: true, purge: false});
+
+      if (expectFalseCheckResult) {
+        expect(result).to.eql(false);
+        return;
+      }
 
       expect(result).to.have.property('headers');
       expect(result).to.have.property('records');
@@ -150,7 +175,13 @@ async function callback({
     }
 
     if (checkQueueStyle === 'oneNotRecord') {
-      const {fields} = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
+      const result = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
+      const {fields} = result;
+
+      if (expectFalseCheckResult) {
+        expect(result).to.eql(false);
+        return;
+      }
 
       expect(fields).to.have.property('deliveryTag');
       expect(fields).to.have.property('exchange');
@@ -162,11 +193,16 @@ async function callback({
       expect(typeof fields.redelivered).to.be.eql('boolean');
       expect(typeof fields.routingKey).to.be.eql('string');
 
-      return; // bueno
+      return;
     }
 
     if (checkQueueStyle === 'basicToRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: true, purge: false});
+
+      if (expectFalseCheckResult) {
+        expect(result).to.eql(false);
+        return;
+      }
 
       expect(result).to.have.property('headers');
       expect(result).to.have.property('records');
@@ -181,6 +217,11 @@ async function callback({
 
     if (checkQueueStyle === 'basicNotRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: false, purge: false});
+
+      if (expectFalseCheckResult) {
+        expect(result).to.eql(false);
+        return;
+      }
 
       expect(result).to.have.property('headers');
       expect(result).to.have.property('messages');
@@ -204,6 +245,10 @@ async function callback({
 
     if (checkQueueStyle === 'purge') {
       return amqpOperator.checkQueue({queue, style: 'messages', purge: true});
+    }
+
+    if (checkQueueStyle === 'foobar') {
+      return amqpOperator.checkQueue({queue, style: 'foobar', toRecord: false, purge: false});
     }
 
     return false;
@@ -242,6 +287,7 @@ async function callback({
   }
 }
 
+/*
 function testHeathCheck() {
   return it('expects healthCheck', async () => {
 
@@ -276,3 +322,4 @@ function testHeathCheck() {
     }
   });
 }
+*/

@@ -1,0 +1,9 @@
+{
+    "description":"CheckQueue: empty queue",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 0,
+    "sentToQueue": false,
+    "checkQueueStyle": "oneToRecord",
+    "expectFalseCheckResult": true
+    }

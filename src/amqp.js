@@ -52,11 +52,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   debug(`Channel: ${channel}`);
   debug(`HealthCheckLoop: ${healthCheckLoop ? 'Running health check' : 'Not running health check'}`);
 
-  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection, getHealthCheckLoop};
-
-  function getHealthCheckLoop() {
-    return healthCheckLoop;
-  }
+  return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
   async function closeChannel() {
     debug(`Closing channel`);
@@ -108,30 +104,40 @@ export default async function (AMQP_URL, runHealthCheck = false) {
         return channelInfo.messageCount;
       }
 
-      if (channelInfo.messageCount < 1) {
-        debug(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
-        return false;
-      }
-      debug(`Queue ${queue} has ${channelInfo.messageCount} messages`);
 
       // Note: returns one message (+ record, of toRecord: true)
       // note: if toRecord is false returns just plain message / false
       // note: if toRecord is true returns {headers, records, messages} -object / false
       // should this be more consistent?
       if (style === 'one') {
-        return consumeOne(queue, toRecord);
+        if (checkMessageCount(channelInfo)) {
+          return consumeOne(queue, toRecord);
+        }
+        return false;
       }
 
       // Note: returns a chunk of (100) messages (+ records, if toRecord: true)
       // returns {headers, records, messages} object or {headers, messages} object depending on toRecord
       if (style === 'basic') {
-        return consumeChunk(queue, toRecord);
+        if (checkMessageCount(channelInfo)) {
+          return consumeChunk(queue, toRecord);
+        }
+        return false;
       }
 
       // Defaults:
-      throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `CheckQueue does not recognize style ${style}`);
     } catch (error) {
       handleAmqpErrors(error);
+    }
+
+    function checkMessageCount(channelInfo) {
+      if (channelInfo.messageCount < 1) {
+        debug(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
+        return false;
+      }
+      debug(`Queue ${queue} has ${channelInfo.messageCount} messages`);
+      return true;
     }
 
     function purgeQueue(purge) {
@@ -320,11 +326,13 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   }
 
   function handleAmqpErrors(error) {
-    const newError = new Error(error);
-    //debug(`HandleAmqpErrors got an error: ${JSON.stringify(error)}`);
+    const newError = error;
+    debug(`HandleAmqpErrors got an error: ${JSON.stringify(error)}`);
     if (error instanceof ApiError) {
+      debug(`We have an ApiError`);
       throw new ApiError(newError.status, newError.payload);
     }
+    debug(`We have a non-ApiError`);
     logError(error);
     throw newError;
   }
