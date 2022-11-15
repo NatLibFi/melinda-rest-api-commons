@@ -1,0 +1,4 @@
+{
+    "description": "Should succeed in updating FI-ASTERI-S prefix with old BIB_FORMAT_SETTINGS",
+    "settings": "BIB_FORMAT_SETTINGS"
+}

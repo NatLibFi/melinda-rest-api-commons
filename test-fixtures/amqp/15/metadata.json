@@ -1,0 +1,10 @@
+{
+    "description": "Error 500 if checkQueue style is something not defined in amqp",
+    "skip": false,
+    "only": false,
+    "checkQueueStyle": "foobar",
+    "expectToFail": true,
+    "expectApiError": true,
+    "expectedErrorStatus": 500,
+    "expectedErrorMessage": "CheckQueue does not recognize style foobar"
+}

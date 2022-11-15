@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -33,14 +33,26 @@ export const QUEUE_ITEM_STATE = {
     PENDING_QUEUING: 'PENDING_QUEUING',
     PENDING_VALIDATION: 'PENDING_VALIDATION',
     QUEUING_IN_PROGRESS: 'QUEUING_IN_PROGRESS',
+    UPLOADING: 'UPLOADING',
     VALIDATING: 'VALIDATING',
-    UPLOADING: 'UPLOADING'
+    WAITING_FOR_RECORDS: 'WAITING_FOR_RECORDS'
   },
   IMPORTER: {
     IMPORTING: 'IMPORTING',
     IN_PROCESS: 'IN_PROCESS',
     IN_QUEUE: 'IN_QUEUE'
   },
+  DONE: 'DONE',
+  ERROR: 'ERROR',
+  ABORT: 'ABORT'
+};
+
+export const IMPORT_JOB_STATE = {
+  EMPTY: 'EMPTY',
+  QUEUING: 'QUEUING',
+  IN_QUEUE: 'IN_QUEUE',
+  IMPORTING: 'IMPORTING',
+  PROCESSING: 'PROCESSING',
   DONE: 'DONE',
   ERROR: 'ERROR',
   ABORT: 'ABORT'
@@ -53,8 +65,17 @@ export const OPERATIONS = {
 
 export const CHUNK_SIZE = 100;
 
-export const conversionFormats = {
-  MARCXML: 1,
-  ISO2709: 2,
-  JSON: 3
+// We could configure here whether a logItemType is for a several records of a single record
+// ie. whether is has bulkSequence or bulkSequenceStart & bulkSequenceEnd
+export const LOG_ITEM_TYPE = {
+  MERGE_LOG: 'MERGE_LOG',
+  MATCH_LOG: 'MATCH_LOG',
+  SPLITTER_LOG: 'SPLITTER_LOG'
+};
+
+export const CONVERSION_FORMATS = {
+  MARCXML: 'MARCXML',
+  ISO2709: 'ISO2709',
+  JSON: 'JSON',
+  ALEPHSEQ: 'ALEPHSEQ'
 };

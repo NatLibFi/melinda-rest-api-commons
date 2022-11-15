@@ -10,27 +10,30 @@ Shared modules for microservices of Melinda rest api import system
 
 #### QueueItemState flow for bulk jobs (multiple records, no validations):
 
-|microservice | states                                                                   |
-|-------------| -------------------------------------------------------------------------|
-|`http`       | -> VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUING ->                  |
-|`validator`  | VALIDATOR.QUEUING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->                   |
-|`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> IMPORTER.IMPORTING -> DONE  |
-|             |                                                                          |
-|any          | any -> ERROR if errored
+| microservice | states                                                 |
+|--------------|--------------------------------------------------------|
+| `http`       | -> VALIDATOR.UPLOADING -> VALIDATOR.PENDING_QUEUING -> |
+| `validator`  | VALIDATOR.QUEUING_IN_PROGRESS -> IMPORTER.IN_QUEUE ->  |
+| `importer`   | IMPORTER.IMPORTING -> IMPORT_JOB_STATEs* -> DONE       |
+|              |                                                        |
+| any          | any -> ERROR if errored                                |
 
+*IMPORT_JOB_STATEs: EMPTY or IN_QUEUE, PROCESSING -> final: DONE, ERROR, ABORT
 
 #### QueueItemState flow for prio jobs (single record):
 
-|microservice | states                                                                   |
-|-------------| -------------------------------------------------------------------------|
-|`http`       | -> VALIDATOR.PENDING_VALIDATION ->                                       |
-|`validator`  | VALIDATOR.VALIDATING -> IMPORTER.IN_QUEUE ->                             |
-|`importer`   | IMPORTER.IMPORTING -> IMPORTER.IN_PROCESS -> DONE                        |
-|             |                                                                          |
-|`http`       | any -> ABORT if job has stayed in an active state too long               |
-|`validator`  | VALIDATOR.VALIDATING -> DONE for noop (no-operation) jobs                |
-|             |                                                                          |
-| any         | any -> ERROR if errored                                                  |
+| microservice | states                                                     |
+|--------------|------------------------------------------------------------|
+| `http`       | -> VALIDATOR.PENDING_VALIDATION ->                         |
+| `validator`  | VALIDATOR.VALIDATING -> IMPORTER.IN_QUEUE ->               |
+| `importer`   | IMPORTER.IMPORTING -> IMPORT_JOB_STATEs* -> DONE           |
+|              |                                                            |
+| `http`       | any -> ABORT if job has stayed in an active state too long |
+| `validator`  | VALIDATOR.VALIDATING -> DONE for noop (no-operation) jobs  |
+|              |                                                            |
+| any          | any -> ERROR if errored                                    |
+
+*IMPORT_JOB_STATEs: EMPTY or IN_QUEUE, PROCESSING -> final: DONE, ERROR, ABORT
 
 ### CHUNK_SIZE
 Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
