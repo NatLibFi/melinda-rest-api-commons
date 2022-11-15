@@ -1,0 +1,9 @@
+{
+    "description":"Error if checkQueue toRecord fails (data is not an object)",
+    "skip": false,
+    "only": true,
+    "sentToQueue": true,
+    "checkQueueStyle": "oneToRecord",
+    "expectToFail": true,
+    "expectApiError": false
+}

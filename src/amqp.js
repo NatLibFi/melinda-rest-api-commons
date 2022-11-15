@@ -155,6 +155,8 @@ export default async function (AMQP_URL, runHealthCheck = false) {
 
       // getData: next chunk (100) messages
       const messages = await getData(queue);
+
+      // Note: headers are from the first message of the chunk
       const headers = getHeaderInfo(messages[0]);
       debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 

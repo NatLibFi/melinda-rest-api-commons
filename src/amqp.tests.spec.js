@@ -114,7 +114,7 @@ async function callback({
     }
 
   } catch (error) {
-    if (!expectToFail) { // eslint-disable-line
+    if (!expectToFail) {
       throw error;
     }
     expect(expectToFail, 'This is expected to fail').to.equal(true);
@@ -125,16 +125,19 @@ async function callback({
 
     if (expectApiError) {
       expect(error).to.be.instanceOf(ApiError);
+      debug(`We expected and got an ApiError`);
       expect(error.status).to.equal(expectedErrorStatus);
-      // eslint-disable-next-line no-undef, functional/no-conditional-statement
 
       if (expectedErrorMessage) {
         expect(error.payload).to.eql(expectedErrorMessage);
         return;
       }
+
       return;
     }
     expect(error).not.to.be.instanceOf(ApiError);
+    debug(`We expected and got an non-ApiError`);
+    debug(`Error is a ${error.constructor.name}`);
   }
 
   function queueRemoval() {

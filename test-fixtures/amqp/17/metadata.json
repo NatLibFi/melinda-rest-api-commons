@@ -1,0 +1,9 @@
+{
+    "description":"Error if checkQueue toRecord fails (message has data that is a non-MARC-object, that fails validation in MarcRecord)",
+    "skip": false,
+    "only": true,
+    "sentToQueue": true,
+    "checkQueueStyle": "oneToRecord",
+    "expectToFail": true,
+    "expectApiError": false
+}
