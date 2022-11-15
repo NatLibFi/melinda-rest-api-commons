@@ -14,7 +14,7 @@
         "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
     },
     "license": "AGPL-3.0+",
-    "version": "2.3.2-alpha.9",
+    "version": "2.3.2-alpha.10",
     "main": "./dist/index.js",
     "engines": {
         "node": ">=14"
@@ -32,8 +32,8 @@
         "test:local": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.*.spec.js",
         "test:healthcheck": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.health.spec.js",
         "coverage": "npm run cover:unit && npm run cover:report",
-		    "cover:unit": "nyc --silent npm run test",
-		    "cover:report": "nyc report --reporter=lcov --reporter=text",
+        "cover:unit": "nyc --silent npm run test",
+        "cover:report": "nyc report --reporter=lcov --reporter=text",
         "dev": "NODE_ENV=development cross-env DEBUG='@natlibfi/*' nodemon",
         "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
     },
