@@ -1,7 +1,7 @@
 {
     "description":"Error if checkQueue toRecord fails (no data)",
     "skip": false,
-    "only": true,
+    "only": false,
     "sentToQueue": true,
     "checkQueueStyle": "oneToRecord",
     "expectToFail": true,
