@@ -31,6 +31,9 @@
         "test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register --exclude src/amqp.health.spec.js src/amqp.tests.spec.js",
         "test:local": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.*.spec.js",
         "test:healthcheck": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.health.spec.js",
+        "coverage": "npm run cover:unit && npm run cover:report",
+		    "cover:unit": "nyc --silent npm run test",
+		    "cover:report": "nyc report --reporter=lcov --reporter=text",
         "dev": "NODE_ENV=development cross-env DEBUG='@natlibfi/*' nodemon",
         "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
     },
