@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
 *
 * @licstart  The following is the entire license notice for the JavaScript code in this file.
@@ -107,11 +108,13 @@ export default async function (MONGO_URI, collection) {
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     } catch (error) {
+      const errorMessage = error.payload || error.message || '';
       logError(error);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 
+  // eslint-disable-next-line max-statements
   async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
     const time = moment().toDate();
     const newQueueItem = {
@@ -156,8 +159,9 @@ export default async function (MONGO_URI, collection) {
             }));
         });
       } catch (error) {
+        const errorMessage = error.payload || error.message || '';
         logError(error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
       }
     }
 
@@ -172,8 +176,9 @@ export default async function (MONGO_URI, collection) {
         }
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
       } catch (error) {
+        const errorMessage = error.payload || error.message || '';
         logError(error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
       }
     }
   }
@@ -359,7 +364,9 @@ export default async function (MONGO_URI, collection) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Missing parameters, cannot get queueItem');
 
     } catch (error) {
+      const errorMessage = error.payload || error.message || '';
       logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 
@@ -370,7 +377,9 @@ export default async function (MONGO_URI, collection) {
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(clean);
     } catch (error) {
+      const errorMessage = error.payload || error.message || '';
       logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
     }
   }
 

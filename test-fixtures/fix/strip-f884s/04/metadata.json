@@ -1,4 +1,4 @@
 {
-    "description":"Should keep f884s without $5 MELINDA even if they are duplicates",
+    "description": "Should keep f884s without $5 MELINDA even if they are duplicates",
     "settings": "BIB_STRIP_F884S_SETTINGS"
 }

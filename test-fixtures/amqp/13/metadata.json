@@ -1,0 +1,10 @@
+{
+    "description": "Error 500 if sending message to '' queue",
+    "skip": false,
+    "only": false,
+    "sentToQueue": true,
+    "expectToFail": true,
+    "expectApiError": true,
+    "expectedErrorStatus": 500,
+    "expectedErrorMessage": "Undefined queue!"
+}

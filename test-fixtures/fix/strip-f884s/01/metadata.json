@@ -1,4 +1,4 @@
 {
-    "description":"Should strip newer f884",
+    "description": "Should strip newer f884",
     "settings": "BIB_STRIP_F884S_SETTINGS"
 }

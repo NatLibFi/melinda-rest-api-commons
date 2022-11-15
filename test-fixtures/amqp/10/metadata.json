@@ -1,0 +1,8 @@
+{
+    "description": "Remove queue",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 0,
+    "sentToQueue": true,
+    "removeQueue": "TESTQUEUE"
+    }

@@ -1,0 +1,8 @@
+[
+  {
+  "queue": "",
+  "correlationId": "aaaaaaaa-0000-aaaa-0000-000000000000",
+  "headers": {"correlationId": "aaaaaaaa-0000-aaaa-0000-000000000000"},
+  "data": {"leader": "02518cam a2200745zi 4500", "fields": [{"tag": "001", "value": "000019640"}]}
+  }
+]
