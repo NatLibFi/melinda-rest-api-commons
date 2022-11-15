@@ -1,5 +1,5 @@
 {
-    "description":"CheckQueue: empty queue",
+    "description": "CheckQueue: empty queue",
     "skip": false,
     "only": false,
     "expectedMessageCount": 0,

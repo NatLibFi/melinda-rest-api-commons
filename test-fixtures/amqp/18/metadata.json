@@ -1,5 +1,5 @@
 {
-    "description":"Error if checkQueue toRecord fails (data is not an object)",
+    "description": "Error if checkQueue toRecord fails (data is not an object)",
     "skip": false,
     "only": false,
     "sentToQueue": true,

@@ -1,5 +1,5 @@
 {
-    "description":"CheckQueue: basic, not toRecord",
+    "description": "CheckQueue: basic, not toRecord",
     "skip": false,
     "only": false,
     "expectedMessageCount": 0,

@@ -1,5 +1,5 @@
 {
-    "description":"Remove queue",
+    "description": "Remove queue",
     "skip": false,
     "only": false,
     "expectedMessageCount": 0,

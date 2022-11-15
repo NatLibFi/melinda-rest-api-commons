@@ -1,5 +1,5 @@
 {
-    "description":"Nack single message",
+    "description": "Nack single message",
     "skip": false,
     "only": false,
     "expectedMessageCount": 3,

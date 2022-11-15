@@ -1,5 +1,5 @@
 {
-    "description":"Error 500 if sending message to null queue",
+    "description": "Error 500 if sending message to null queue",
     "skip": false,
     "only": false,
     "sentToQueue": true,

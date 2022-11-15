@@ -1,5 +1,5 @@
 {
-    "description":"CheckQueue: purge queue",
+    "description": "CheckQueue: purge queue",
     "skip": false,
     "only": false,
     "expectedMessageCount": 0,

@@ -1,5 +1,5 @@
 {
-    "description":"Send multiple messages to queue",
+    "description": "Send multiple messages to queue",
     "skip": false,
     "only": false,
     "expectedMessageCount": 3,

@@ -1,4 +1,4 @@
 {
-    "description":"HandleTempURNs should find a single tempURN and remove the temp subfield",
+    "description": "HandleTempURNs should find a single tempURN and remove the temp subfield",
     "settings": "BIB_HANDLE_TEMP_URNS_SETTINGS"
 }
