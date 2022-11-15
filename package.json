@@ -26,7 +26,7 @@
         "prepare": "npm run build",
         "lint": "eslint ./src",
         "lint:dev": "eslint ./src --fix",
-        "test": "npm run lint && npm run test:base -- src/**/*.spec.js",
+        "test": "npm run lint && npm run test:base -- src/**/*.spec.js --exclude src/amqp.*.spec.js",
         "test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
         "test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register --exclude src/amqp.*.spec.js",
         "test:local": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.*.spec.js",
