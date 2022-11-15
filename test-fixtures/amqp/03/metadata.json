@@ -1,0 +1,9 @@
+{
+    "description": "Ack single message",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 2,
+    "sentToQueue": true,
+    "ackMessages": true,
+    "checkNextMessage": true
+}

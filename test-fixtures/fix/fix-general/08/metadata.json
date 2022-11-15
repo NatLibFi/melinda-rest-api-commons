@@ -1,0 +1,3 @@
+{
+    "description": "Should not add SIDs when settings are undefined"
+}

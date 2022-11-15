@@ -1,0 +1,8 @@
+{
+    "description": "CheckQueue: one, toRecord",
+    "skip": false,
+    "only": false,
+    "expectedMessageCount": 2,
+    "sentToQueue": true,
+    "checkQueueStyle": "oneToRecord"
+    }

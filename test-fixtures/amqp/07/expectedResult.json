@@ -1,0 +1,7 @@
+{
+  "deliveryTag": 6,
+  "exchange": "",
+  "messageCount": 2,
+  "redelivered": false,
+  "routingKey": "TESTQUEUE"
+}
