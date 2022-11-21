@@ -42,7 +42,7 @@ export default async function (MONGO_URI) {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, protect, remove};
+  return {addLogItem, query, queryById, getListOfLogs, protect, remove, removeBySequences};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
@@ -131,6 +131,29 @@ export default async function (MONGO_URI) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
     const clean = sanitize(correlationId);
     const filter = force ? {correlationId: clean} : {correlationId: clean, protected: {$ne: true}};
+
+    try {
+      const result = await db.collection(collection).deleteMany(filter);
+      return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
+  }
+
+  async function removeBySequences(correlationId, sequences = [], force = false) {
+    logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
+    const clean = sanitize(correlationId);
+    // blobSequences are integers that start from 1
+    // we accept also strings that are convertilble to integers greated than 0
+    const cleanSequences = sequences.filter(sequence => Number.isInteger(Number(sequence)) && sequence > 0);
+
+    if (sequences.length !== cleanSequences.length) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Invalid sequences in removeBySequences. Sequences should be positive integers`);
+    }
+
+    const filter = force ? {correlationId: clean, blobSequence: {$in: cleanSequences}} : {correlationId: clean, blobSequence: {$in: sequences}, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
