@@ -105,7 +105,7 @@ export default async function (MONGO_URI) {
 
   async function getExpandedListOfLogs(logItemType = 'MERGE_LOG') {
     checkLogItemType(logItemType, false, false);
-
+    logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       {'$match': {}},
       {'$sort':
@@ -119,6 +119,8 @@ export default async function (MONGO_URI) {
 
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .aggregate(pipeline);
+
+    logger.debug(`Query result: ${result}`);
 
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
