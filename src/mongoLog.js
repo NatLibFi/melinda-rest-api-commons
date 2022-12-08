@@ -42,7 +42,7 @@ export default async function (MONGO_URI) {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getExpandedListOfLogs, protect, remove, removeBySequences};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
@@ -99,6 +99,27 @@ export default async function (MONGO_URI) {
     checkLogItemType(logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .distinct('correlationId', {logItemType});
+    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
+    return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
+  }
+
+  async function getExpandedListOfLogs(logItemType = 'MERGE_LOG') {
+    checkLogItemType(logItemType, false, false);
+
+    const pipeline = [
+      {'$match': {}},
+      {'$sort':
+        {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}},
+      {'$group':
+        {'_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
+          'creationTime': {'$first': '$creationTime'},
+          'cataloger': {'$first': '$cataloger'},
+          'logCount': {'$sum': 1}}}
+    ];
+
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .aggregate(pipeline);
+
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
