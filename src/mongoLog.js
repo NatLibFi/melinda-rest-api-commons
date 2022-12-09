@@ -129,9 +129,8 @@ export default async function (MONGO_URI) {
       return {correlationId, logItemType, cataloger, creationTime, logCount};
     });
 
-    logger.debug(`Query result: ${JSON.stringify(result)}`);
-    logger.debug(`Query result: ${JSON.stringify(fixedResult)}`);
-
+    logger.silly(`Query result: ${JSON.stringify(result)}`);
+    logger.silly(`Query result: ${JSON.stringify(fixedResult)}`);
 
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
     return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
