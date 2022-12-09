@@ -129,20 +129,6 @@ export default async function (MONGO_URI) {
       return {correlationId, logItemType, cataloger, creationTime, logCount};
     });
 
-    /*
-    // eslint-disable-next-line functional/no-let, prefer-const
-    //let result = [];
-
-    const result = await aggCursor.forEach(logListing => {
-      logger.debug(JSON.stringify(logListing));
-      const {correlationId, logItemType} = logListing._id;
-      const {cataloger, creationTime, logCount} = logListing;
-      //return {correlationId, logItemType, cataloger, creationTime, logCount};
-      // eslint-disable-next-line functional/immutable-data
-      result.push({correlationId, logItemType, cataloger, creationTime, logCount});
-    });
-    */
-
     logger.debug(`Query result: ${JSON.stringify(result)}`);
     logger.debug(`Query result: ${JSON.stringify(fixedResult)}`);
 
