@@ -14,7 +14,7 @@
         "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
     },
     "license": "AGPL-3.0+",
-    "version": "3.0.1",
+    "version": "3.0.2-alpha.5",
     "main": "./dist/index.js",
     "engines": {
         "node": ">=14"
@@ -40,21 +40,21 @@
     "dependencies": {
         "@natlibfi/fixugen": "^1.1.0",
         "@natlibfi/marc-record": "^7.2.2",
-        "@natlibfi/marc-record-serializers": "^9.0.3",
+        "@natlibfi/marc-record-serializers": "^9.0.4",
         "@natlibfi/marc-record-validate": "^7.0.2",
-        "@natlibfi/marc-record-validators-melinda": "^9.0.14",
+        "@natlibfi/marc-record-validators-melinda": "^9.1.1",
         "@natlibfi/melinda-backend-commons": "^2.1.0",
-        "@natlibfi/melinda-commons": "^12.0.6",
+        "@natlibfi/melinda-commons": "^12.0.7",
         "amqplib": ">=0.8.0 <1.0.0",
         "debug": "^4.3.4",
         "http-status": "^1.5.3",
         "moment": "^2.29.4",
         "mongo-sanitize": "^1.1.0",
-        "mongodb": "^4.11.0"
+        "mongodb": "^4.12.1"
     },
     "devDependencies": {
         "@babel/cli": "^7.19.3",
-        "@babel/core": "^7.20.2",
+        "@babel/core": "^7.20.5",
         "@babel/eslint-parser": "^7.19.1",
         "@babel/plugin-syntax-dynamic-import": "^7.8.3",
         "@babel/preset-env": "^7.20.2",
@@ -65,7 +65,7 @@
         "babel-plugin-rewire": "^1.2.0",
         "chai": "^4.3.7",
         "cross-env": "^7.0.3",
-        "eslint": "^8.27.0",
+        "eslint": "^8.29.0",
         "mocha": "^10.1.0",
         "nodemon": "^2.0.20",
         "nyc": "^15.1.0"
