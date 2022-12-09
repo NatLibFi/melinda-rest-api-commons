@@ -107,23 +107,48 @@ export default async function (MONGO_URI) {
     checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
-      {'$match': {}},
+      // currently return only MERGE_LOG and MATCH_LOG
+      {'$match': {'logItemType': {'$in': ['MERGE_LOG', 'MATCH_LOG']}}},
       {'$sort':
         {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}},
       {'$group':
         {'_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
           'creationTime': {'$first': '$creationTime'},
+          // We don't currently have cataloger in logs, this will always be null
           'cataloger': {'$first': '$cataloger'},
           'logCount': {'$sum': 1}}}
     ];
 
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
-      .aggregate(pipeline);
+      .aggregate(pipeline)
+      .toArray();
 
-    logger.debug(`Query result: ${result}`);
+    const fixedResult = result.map((logListing) => {
+      const {correlationId, logItemType} = logListing._id;
+      const {cataloger, creationTime, logCount} = logListing;
+      return {correlationId, logItemType, cataloger, creationTime, logCount};
+    });
 
-    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
-    return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
+    /*
+    // eslint-disable-next-line functional/no-let, prefer-const
+    //let result = [];
+
+    const result = await aggCursor.forEach(logListing => {
+      logger.debug(JSON.stringify(logListing));
+      const {correlationId, logItemType} = logListing._id;
+      const {cataloger, creationTime, logCount} = logListing;
+      //return {correlationId, logItemType, cataloger, creationTime, logCount};
+      // eslint-disable-next-line functional/immutable-data
+      result.push({correlationId, logItemType, cataloger, creationTime, logCount});
+    });
+    */
+
+    logger.debug(`Query result: ${JSON.stringify(result)}`);
+    logger.debug(`Query result: ${JSON.stringify(fixedResult)}`);
+
+
+    logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
+    return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
   }
 
   async function protect(correlationId, blobSequence) {
