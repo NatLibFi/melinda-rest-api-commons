@@ -145,12 +145,12 @@ export default async function (MONGO_URI) {
     try {
       const result = await db.collection(collection).updateMany(
         filter,
-        {
+        [{
           $set: {
             modificationTime: moment().toDate(),
             protect: {$not: '$protect'}
           }
-        }
+        }]
       );
       return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
     } catch (error) {
