@@ -140,19 +140,21 @@ export default async function (MONGO_URI) {
     logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+    const filter = blobSequence ? { correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10) } : { correlationId: cleanCorrelationId };
 
     try {
       const result = await db.collection(collection).updateMany(
         filter,
-        [{
-          $set: {
-            modificationTime: moment().toDate(),
-            protect: {$not: '$protect'}
+        [
+          {
+            $set: {
+              modificationTime: moment().toDate(),
+              protect: { $not: '$protect' }
+            }
           }
-        }]
+        ]
       );
-      return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
+      return { status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found' };
     } catch (error) {
       const errorMessage = error.payload || error.message || '';
       logError(error);
