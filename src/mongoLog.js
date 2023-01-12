@@ -149,7 +149,7 @@ export default async function (MONGO_URI) {
           {
             $set: {
               modificationTime: moment().toDate(),
-              protect: {$not: '$protect'}
+              protected: {$not: '$protected'}
             }
           }
         ]
