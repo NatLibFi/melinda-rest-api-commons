@@ -59,7 +59,7 @@ export function stripF884s(newRecord, options) {
   const results = f884Melindas.reduce((allResults, f884, index) => {
     debugData(`All results: ${JSON.stringify(allResults)}`);
     //debugData(`Handling field (${index}): ${inspect(f884, {depth: 3})}`);
-    debugData(`Handling field (${index}): ${JSON.stringify(f884)}`);
+    debugData(`Handling field *(${index})*: ${JSON.stringify(f884)}`);
 
     const conversion = findConversion(f884);
     const source = findSource(f884);
@@ -114,10 +114,13 @@ export function stripF884s(newRecord, options) {
   // We update each field based on the results we got from fields
   // Note: we do not add $g:s or $k:s if the field doesn't have them
   function editFields(fields, results) {
+    debug(`EDITING FIELDS (${fields.length})`);
     const editedFields = fields.map((field) => {
       const convSource = `${findConversion(field)}:${findSource(field)}`;
+      debug(`Looking for: ${convSource}`);
 
       if (convSource && results[convSource]) {
+        debugData(`Found: ${JSON.stringify(results[convSource])}`);
         const firstDate = results[convSource].firstDate && results[convSource].firstDate !== '00000000' ? results[convSource].firstDate : '';
         const lastDate = results[convSource].lastDate && results[convSource].lastDate !== '00000000' ? results[convSource].lastDate : '';
 
@@ -125,6 +128,7 @@ export function stripF884s(newRecord, options) {
         const hash = results[convSource].hash && results[convSource].hash !== '0000000000000000000000000000000000000000000000000000000000000000' ? results[convSource].hash : '';
 
         const sfGAll = firstDate === lastDate ? `${firstDate}` : `${firstDate} - ${lastDate}`;
+        debugData(`EditedDates: ${sfGAll}`);
         const sfKAll = `${source}:${hash}`;
 
         const sfG = sfGAll.replace(/^ - /u, '').replace(/ - $/u, '');
@@ -153,10 +157,8 @@ export function stripF884s(newRecord, options) {
           })
 
         };
-
-
       }
-
+      debug(`Not found: ${convSource}`);
       return field;
     });
     return editedFields;
@@ -225,13 +227,14 @@ export function stripF884s(newRecord, options) {
   function findDates(f884) {
     const [sfG] = f884.subfields.filter((subfield) => subfield.code === 'g').map(subfield => subfield.value);
     if (sfG && (/ - /u).test(sfG)) {
-      const firstDate = sfG.replace(/ - .*$/u, '');
-      const lastDate = sfG.replace(/^.* - /u, '');
+      const firstDate = sfG.replace(/ - .*$/u, '').padStart(8, '0');
+      const lastDate = sfG.replace(/^.* - /u, '').padStart(8, '0');
       debugData(`FirstDate: "${firstDate}", LastDate: "${lastDate}"`);
       return {firstDate, lastDate};
     }
-    const firstDate = sfG || '00000000';
-    const lastDate = sfG || '00000000';
+    const firstDate = sfG ? sfG.padStart(8, '0') : '00000000';
+    const lastDate = sfG ? sfG.padStart(8, '0') : '00000000';
+
     debugData(`FirstDate: "${firstDate}", LastDate: "${lastDate}"`);
     return {firstDate, lastDate};
   }

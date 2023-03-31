@@ -35,7 +35,34 @@
         },
         {
           "code": "g",
-          "value": "20220101 - 20220202"
+          "value": "220101"
+        },
+        {
+          "code": "k",
+          "value": "MELINDA_RECORD_IMPORT_SOURCE_4:30514eb07424e2455963a39d831d489c8534e8ca089fbf810a8cb50c5917f811"
+        },
+        {
+          "code": "q",
+          "value": "FI-NL"
+        },
+        {
+          "code": "5",
+          "value": "MELINDA"
+        }
+      ]
+    },
+    {
+      "tag": "884",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ONIX3 to MARC transformation"
+        },
+        {
+          "code": "g",
+          "value": "20220202"
         },
         {
           "code": "k",
@@ -45,7 +72,7 @@
           "code": "q",
           "value": "FI-NL"
         },
-                {
+        {
           "code": "5",
           "value": "MELINDA"
         }
