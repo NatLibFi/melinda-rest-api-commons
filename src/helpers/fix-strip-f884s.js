@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -28,8 +28,8 @@
 
 import {MarcRecord} from '@natlibfi/marc-record';
 import createDebugLogger from 'debug';
-import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
-
+//import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
+import {inspect} from 'util';
 
 export function stripF884s(newRecord, options) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:stripF884s');
@@ -48,34 +48,192 @@ export function stripF884s(newRecord, options) {
 
   const f884Melindas = newRecord.fields.filter(isMelindaf884);
   debugData(`Melinda's f884s (${f884Melindas.length}) \n ${JSON.stringify(f884Melindas)}`);
+  //debugData(`Melinda's f884s (${f884Melindas.length}) \n ${inspect(f884Melindas, {depth: 3})}`);
 
   if (f884Melindas.length < 2) {
-    debug(`Not enough Melinda's f884.s to filter (${f884Melindas.length})`);
+    debug(`Not enough Melinda's f884s to filter (${f884Melindas.length})`);
     return newRecord;
   }
 
-  // Sort fields by date subfield $g, so we'll keep the oldest one
-  const sortedFields = sortFieldsBySubfieldValue(f884Melindas, 'g');
-  debugData(`Melinda's f884s sorted by 'g' - oldest first: (${sortedFields.length}) \n ${JSON.stringify(sortedFields)}`);
+  // Pick data (firstDate, lastDate, hash with latest date) for all conversion : source combinations
+  const results = f884Melindas.reduce((allResults, f884, index) => {
+    debugData(`All results: ${JSON.stringify(allResults)}`);
+    //debugData(`Handling field (${index}): ${inspect(f884, {depth: 3})}`);
+    debugData(`Handling field (${index}): ${JSON.stringify(f884)}`);
 
-  // Drop fields that are similar without date subfield $g
-  const uniqFields = uniqWithOutSubfield(sortedFields, 'g');
-  debugData(`Melindas f884s uniqued without sf $g (${uniqFields.length}) \n ${JSON.stringify(uniqFields)}`);
+    const conversion = findConversion(f884);
+    const source = findSource(f884);
+    const convSource = `${conversion}:${source}`;
+    const {firstDate, lastDate} = findDates(f884);
+    const hash = findHash(f884);
 
-  // Replace original Melinda-f884s with remaining Melinda-f884s
-  // NOTE: this sorts MELINDA-f884s after possible other f884s
-  newRecord.removeFields(f884Melindas);
-  newRecord.insertFields(uniqFields);
-  return newRecord;
+    // Find currently existing data for conversion : source combination
+    const currResult = allResults[convSource];
+    debugData(JSON.stringify(currResult));
 
-  // Keep just first instance of each similar field, compare without subfield with subfieldCode
-  function uniqWithOutSubfield(fields, subfieldCode) {
+    // If we do not have any current data, add data from field
+    if (!currResult) {
+      debug(`Add a new convSource ${convSource} to results`);
+      const newResult = {
+        conversion,
+        source,
+        firstDate,
+        lastDate,
+        hash
+      };
+      debugData(`- New result: ${JSON.stringify(newResult)}`);
+      return {
+        ...allResults,
+        [convSource]: newResult
+      };
+    }
+    // If we have current data, update it from the data from field, if needed
+    debug(`Update result for ${convSource}`);
+    debugData(`- Current result: ${JSON.stringify(currResult)}`);
+
+    const updatedResult = {
+      ...currResult,
+      firstDate: currResult.firstDate > firstDate && firstDate !== '00000000' ? firstDate : currResult.firstDate,
+      lastDate: currResult.lastDate < lastDate ? lastDate : currResult.lastDate,
+      hash: currResult.lastDate < lastDate && lastDate !== '00000000' && hash !== '0000000000000000000000000000000000000000000000000000000000000000' ? hash : currResult.hash
+    };
+    debugData(`- Updated result: ${JSON.stringify(updatedResult)}`);
+    return {
+      ...allResults,
+      [convSource]: updatedResult
+    };
+  }, {});
+
+  debugData(`RESULTS: ${JSON.stringify(results)}`);
+  const editedf884s = editFields(f884Melindas, results);
+
+  debug(`Edited fields (${editedf884s.length})`);
+  //debugData(inspect(editedf884s, {depth: 3}));
+  debugData(`${JSON.stringify(editedf884s)}`);
+
+  // We update each field based on the results we got from fields
+  // Note: we do not add $g:s or $k:s if the field doesn't have them
+  function editFields(fields, results) {
+    const editedFields = fields.map((field) => {
+      const convSource = `${findConversion(field)}:${findSource(field)}`;
+
+      if (convSource && results[convSource]) {
+        const firstDate = results[convSource].firstDate && results[convSource].firstDate !== '00000000' ? results[convSource].firstDate : '';
+        const lastDate = results[convSource].lastDate && results[convSource].lastDate !== '00000000' ? results[convSource].lastDate : '';
+
+        const source = results[convSource].source && results[convSource].source !== 'NO_SOURCE' ? results[convSource].source : '';
+        const hash = results[convSource].hash && results[convSource].hash !== '0000000000000000000000000000000000000000000000000000000000000000' ? results[convSource].hash : '';
+
+        const sfGAll = firstDate === lastDate ? `${firstDate}` : `${firstDate} - ${lastDate}`;
+        const sfKAll = `${source}:${hash}`;
+
+        const sfG = sfGAll.replace(/^ - /u, '').replace(/ - $/u, '');
+        const sfK = sfKAll.replace(/^:/u, '').replace(/:$/u, '');
+
+        return {
+          ...field,
+          subfields: field.subfields.map(subfield => {
+
+            // we don't get $g or $k if the original field doesn't have them
+            if (subfield.code === 'g') {
+              return {
+                code: subfield.code,
+                value: sfG
+              };
+            }
+
+            if (subfield.code === 'k') {
+              return {
+                code: subfield.code,
+                value: sfK
+              };
+            }
+
+            return subfield;
+          })
+
+        };
+
+
+      }
+
+      return field;
+    });
+    return editedFields;
+  }
+
+  // we'll need to uniq these too
+
+  const uniq884s = uniqFields(editedf884s);
+  debug(`UniqFields (${uniq884s.length})`);
+  debugData(inspect(uniq884s, {depth: 3}));
+
+
+  function uniqFields(fields) {
     return fields.reduce((uniq, field) => {
-      if (!uniq.some(f => MarcRecord.isEqual(removeSubfield(f, subfieldCode), removeSubfield(field, subfieldCode)))) { // eslint-disable-line functional/no-conditional-statement
+      if (!uniq.some(f => MarcRecord.isEqual(f, field))) { // eslint-disable-line functional/no-conditional-statement
         uniq.push(field); // eslint-disable-line functional/immutable-data
       }
 
       return uniq;
     }, []);
   }
+  // Replace original Melinda-f884s with remaining Melinda-f884s
+  // NOTE: this sorts MELINDA-f884s after possible other f884s
+  newRecord.removeFields(f884Melindas);
+  newRecord.insertFields(uniq884s);
+
+  return newRecord;
+
+
+  // Find conversion:source pairs
+  // Find first date
+  // Find last date and last hash
+
+
+  function findConversion(f884) {
+    const [sfA] = f884.subfields.filter((subfield) => subfield.code === 'a').map(subfield => subfield.value);
+    const conversion = sfA;
+    debugData(`Conversion: "${conversion}"`);
+    return conversion;
+  }
+
+  function findSource(f884) {
+    const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
+    const source = sfK.replace(/:.*$/u, '');
+    if (source && source.length !== 64) {
+      debugData(`Source: "${source}"`);
+      return source;
+    }
+    const emptySource = 'NO_SOURCE';
+    debugData(`Source: "${emptySource}"`);
+    return emptySource;
+  }
+
+  function findHash(f884) {
+    const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
+    const hash = sfK.replace(/^.*:/u, '');
+    if (hash && hash.length === 64) {
+      debugData(`Hash: "${hash}"`);
+      return hash;
+    }
+    const emptyHash = '0000000000000000000000000000000000000000000000000000000000000000';
+    debugData(`Hash: "${emptyHash}"`);
+    return emptyHash;
+  }
+
+  function findDates(f884) {
+    const [sfG] = f884.subfields.filter((subfield) => subfield.code === 'g').map(subfield => subfield.value);
+    if (sfG && (/ - /u).test(sfG)) {
+      const firstDate = sfG.replace(/ - .*$/u, '');
+      const lastDate = sfG.replace(/^.* - /u, '');
+      debugData(`FirstDate: "${firstDate}", LastDate: "${lastDate}"`);
+      return {firstDate, lastDate};
+    }
+    const firstDate = sfG || '00000000';
+    const lastDate = sfG || '00000000';
+    debugData(`FirstDate: "${firstDate}", LastDate: "${lastDate}"`);
+    return {firstDate, lastDate};
+  }
+
 }
