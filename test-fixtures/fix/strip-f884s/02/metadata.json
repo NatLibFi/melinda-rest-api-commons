@@ -1,4 +1,6 @@
 {
-    "description": "Should be able to handle a f884 without subfield $g - but it should keep the oldest with existing $g",
-    "settings": "BIB_STRIP_F884S_SETTINGS"
+    "description": "Should be able to handle a f884 without subfield $g - do not try to add $g",
+    "settings": "BIB_STRIP_F884S_SETTINGS",
+    "skip": false,
+    "only": false
 }

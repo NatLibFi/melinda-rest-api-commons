@@ -1,0 +1,6 @@
+{
+    "description": "Should be able to handle combine dates in $g and keep the latest (existing) hash in $k",
+    "settings": "BIB_STRIP_F884S_SETTINGS",
+    "skip": false,
+    "only": false
+}
