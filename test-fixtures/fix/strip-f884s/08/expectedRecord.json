@@ -6,39 +6,12 @@
       "value": "017631749"
     },
     {
-      "tag": "003",
-      "value": "FI-MELINDA"
-    },
-    {
-      "tag": "005",
-      "value": "20220818041047.0"
-    },
-    {
       "tag": "008",
       "value": "220714s2022    fi |||||o|||||||||0|fin||"
     },
     {
-      "tag": "100",
-      "ind1": "1",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "Aitolehti, Martina,"
-        },
-        {
-          "code": "e",
-          "value": "kirjoittaja."
-        },
-        {
-          "code": "0",
-          "value": "https://isni.org/isni/0000000132762526"
-        }
-      ]
-    },
-    {
       "tag": "245",
-      "ind1": "1",
+      "ind1": "0",
       "ind2": "0",
       "subfields": [
         {
@@ -62,11 +35,11 @@
         },
         {
           "code": "g",
-          "value": "20000718 - 20220101"
+          "value": "20200101 - 20220202"
         },
         {
           "code": "k",
-          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
+          "value": "MELINDA_RECORD_IMPORT_SOURCE_4:55514eb07424e2455963a39d831d489c8534e8ca089fbf810a8cb50c5917f811"
         },
         {
           "code": "q",

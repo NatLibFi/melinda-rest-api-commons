@@ -35,7 +35,7 @@
         },
         {
           "code": "g",
-          "value": "20220101"
+          "value": "20220101 - 20220202"
         },
         {
           "code": "k",
@@ -51,7 +51,7 @@
         }
       ]
     },
-       {
+    {
       "tag": "884",
       "ind1": " ",
       "ind2": " ",
@@ -61,10 +61,6 @@
           "value": "ONIX3 to MARC transformation"
         },
         {
-          "code": "g",
-          "value": "20000718"
-        },
-        {
           "code": "k",
           "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
         },
@@ -85,15 +81,11 @@
       "subfields": [
         {
           "code": "a",
-          "value": "ONIX3 to MARC transformation v2"
-        },
-        {
-          "code": "g",
-          "value": "20000718"
+          "value": "ONIX3 to MARC transformation"
         },
         {
           "code": "k",
-          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
+          "value": "30514eb07424e2455963a39d831d489c8534e8ca089fbf810a8cb50c5917f811"
         },
         {
           "code": "q",
@@ -102,54 +94,10 @@
         {
           "code": "5",
           "value": "MELINDA"
-        }
-      ]
-    },
-    {
-      "tag": "884",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "ONIX3 to MARC transformation v2"
-        },
-        {
-          "code": "g",
-          "value": "20020718"
-        },
-        {
-          "code": "k",
-          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
-        },
-        {
-          "code": "q",
-          "value": "FI-NL"
-        }
-      ]
-    },
-    {
-      "tag": "884",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "ONIX3 to MARC transformation v2"
-        },
-        {
-          "code": "g",
-          "value": "20010718"
-        },
-        {
-          "code": "k",
-          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
-        },
-        {
-          "code": "q",
-          "value": "FI-NL"
         }
       ]
     }
+
+
   ]
 }

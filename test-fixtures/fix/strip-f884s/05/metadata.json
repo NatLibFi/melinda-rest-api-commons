@@ -1,0 +1,6 @@
+{
+    "description": "Should be able to handle a f884s with sourcehash in $k - should keep the oldest indentical",
+    "settings": "BIB_STRIP_F884S_SETTINGS",
+    "skip": false,
+    "only": false
+}
