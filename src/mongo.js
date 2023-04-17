@@ -142,7 +142,7 @@ export default async function (MONGO_URI, collection) {
       modificationTime: time
     };
 
-    // eslint-disable-next-line functional/no-conditional-statement
+    // eslint-disable-next-line functional/no-conditional-statements
     if (stream) {
       try {
         // No await here, promises later
@@ -166,7 +166,7 @@ export default async function (MONGO_URI, collection) {
     }
 
     logger.debug(`No stream`);
-    // eslint-disable-next-line functional/no-conditional-statement
+    // eslint-disable-next-line functional/no-conditional-statements
     if (!stream) {
       try {
         const result = await db.collection(collection).insertOne(newQueueItem);
