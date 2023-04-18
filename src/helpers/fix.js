@@ -121,6 +121,8 @@ function generateMissingSIDs(record, options) {
   // test that SIDs are not there yet
     : f035s.filter(f035SidInfo => fSIDs.some(fSIDInfo => f035SidInfo.SID !== fSIDInfo.SID && f035SidInfo.value !== fSIDInfo.value)));
 
+  debugData(`Adding (${sidsToBeAdded.length}) SIDs: ${JSON.stringify(sidsToBeAdded)}`);
+
   // Add new SIDs
   sidsToBeAdded.forEach(sidField => record.insertField(sidField));
   return record;
