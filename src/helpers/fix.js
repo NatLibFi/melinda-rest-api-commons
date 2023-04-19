@@ -119,7 +119,7 @@ function generateMissingSIDs(record, options) {
   const sidsToBeAdded = genNewSids(fSIDs.length === 0
     ? f035s
   // test that SIDs are not there yet
-    : f035s.filter(f035SidInfo => fSIDs.some(fSIDInfo => f035SidInfo.SID !== fSIDInfo.SID && f035SidInfo.value !== fSIDInfo.value)));
+    : f035s.filter(f035SidInfo => !fSIDs.some(fSIDInfo => f035SidInfo.SID === fSIDInfo.SID && f035SidInfo.value === fSIDInfo.value)));
 
   debugData(`Adding (${sidsToBeAdded.length}) SIDs: ${JSON.stringify(sidsToBeAdded)}`);
 
