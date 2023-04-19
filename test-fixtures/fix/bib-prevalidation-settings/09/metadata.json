@@ -1,4 +1,6 @@
 {
     "description": "Should add missing SIDs, but not handle sf $0s when running with BIB_PREVALIDATION_FIX_SETTINGS",
-    "settings": "BIB_PREVALIDATION_FIX_SETTINGS"
+    "settings": "BIB_PREVALIDATION_FIX_SETTINGS",
+    "only": false,
+    "skip": false
 }

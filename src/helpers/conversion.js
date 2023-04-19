@@ -61,7 +61,7 @@ export default function () {
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
       logError(err);
-      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statements
         throw err;
       }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while serializing record');
@@ -98,7 +98,7 @@ export default function () {
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
       logError(err);
-      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statement
+      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statements
         throw err;
       }
       throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while unserializing record');

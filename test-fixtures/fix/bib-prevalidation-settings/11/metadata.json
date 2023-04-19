@@ -1,0 +1,6 @@
+{
+    "description": "Should add missing SIDs, but not add duplicates if SID already exists",
+    "settings": "BIB_PREVALIDATION_FIX_SETTINGS",
+    "only": false,
+    "skip": false
+}

@@ -5,7 +5,7 @@ import generateTests from '@natlibfi/fixugen';
 import {fixRecord} from './fix';
 import * as fixSettings from './fix-constants';
 import createDebugLogger from 'debug';
-//import inspect from 'util';
+// import inspect from 'util';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fix:test');
 const debugData = debug.extend('data');
@@ -34,8 +34,8 @@ function callback({getFixture, settings = undefined}) {
   debugData(JSON.stringify(runSettings, null, 2));
 
   const resultRecord = fixRecord(record, runSettings);
-  debugData(resultRecord);
-  debugData(expectedRecord);
+  debugData(`Result:   ${JSON.stringify(resultRecord)}`);
+  debugData(`Expected: ${JSON.stringify(expectedRecord)}`);
   expect(resultRecord).to.eql(expectedRecord);
 
 }

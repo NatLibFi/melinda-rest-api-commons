@@ -106,11 +106,12 @@ async function callback({
     debug(`MessageCount: ${messageCount}`);
     expect(messageCount).to.eql(expectedMessageCount);
 
-    if (checkNextMessage) { // eslint-disable-line
+    if (checkNextMessage) {
       const {headers, records} = await queueCheckNextMessage();
       const nextMessage = {headers, records};
       const expectedNextMessage = getFixture('expectedMessage.json');
       expect(nextMessage).to.eql(expectedNextMessage);
+      return;
     }
 
   } catch (error) {
