@@ -49,7 +49,7 @@
         "http-status": "^1.6.2",
         "moment": "^2.29.4",
         "mongo-sanitize": "^1.1.0",
-        "mongodb": "^4.13.0"
+        "mongodb": "^4.16.0"
     },
     "devDependencies": {
         "@babel/cli": "^7.21.5",
