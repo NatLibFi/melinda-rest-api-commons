@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2021, 2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -96,6 +96,11 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
     return {recordStatus: responseStatus, detailedRecordStatus: responseStatus, message};
   }
 
+  // More detailed SKIPPED statuses
+  if (['SKIPPED_CHANGE', 'SKIPPED_UPDATE'].includes(responseStatus)) {
+    return {recordStatus: 'SKIPPED', detailedRecordStatus: responseStatus, message};
+  }
+
   if (['UNKNOWN'].includes(responseStatus)) {
     return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message, ids};
   }
@@ -128,7 +133,9 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   }
 
   // Otherwise
-  return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message};
+  logger.debug(`Unknown responseStatus: ${responseStatus}`);
+  const newMessage = `${message} - Unknown recordStatus: ${responseStatus}`;
+  return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message: newMessage};
 }
 
 function getMessageFromResponsePayload(responsePayload) {
