@@ -208,17 +208,7 @@ export default async function (MONGO_URI, collection) {
 
   async function query(params, showParams = {}) {
     logger.debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
-    //const {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
-    //logger.debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
     const {limit = 1000, skip = 0, ...rest} = params;
-
-    /*    const result = await db.collection(collection).find(rest, {projection: {
-      _id: 0,
-      operations: showOperations,
-      operationSettings: showOperationSettings,
-      recordLoadParams: showRecordLoadParams,
-      importJobState: showImportJobState
-    }})*/
 
     const result = await db.collection(collection).find(rest, {projection: createProjection(showParams)})
       .limit(parseInt(limit, 10))
