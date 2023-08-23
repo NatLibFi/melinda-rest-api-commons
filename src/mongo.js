@@ -5,7 +5,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2021 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -207,20 +207,53 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function query(params, showParams = {}) {
-    const {showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+    logger.debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
-    const result = await db.collection(collection).find(rest, {projection: {
-      _id: 0,
-      operations: showOperations,
-      operationSettings: showOperationSettings,
-      recordLoadParams: showRecordLoadParams,
-      importJobState: showImportJobState
-    }})
+
+    const result = await db.collection(collection).find(rest, {projection: createProjection(showParams)})
       .limit(parseInt(limit, 10))
       .skip(parseInt(skip, 10))
       .toArray();
     logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
+    logger.silly(`${JSON.stringify(result)}`);
     return result;
+  }
+
+  // We default to NOT showing operations, operationSettings, recordLoadParams and importJobState when a queueItem is queried
+  // These can all be shown with showAll
+  // Single fields can be shown by showOperation, showOperationSettings, showRecordLoadParams and showImportJobState
+
+  function createProjection(showParams = {}) {
+    logger.silly(`Creating projection for query: ${JSON.stringify(showParams)}`);
+    const {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+    logger.debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
+
+    if (showAll) {
+      return {
+        _id: 0
+      };
+    }
+
+    const showParamToField = {
+      'showOperations': 'operations',
+      'showOperationSettings': 'operationSettings',
+      'showRecordLoadParams': 'recordLoadParams',
+      'showImportJobState': 'importJobState'
+    };
+
+    const result = Object.keys(showParams)
+      .filter(param => param !== 'showAll' && showParams[param] !== true && showParams[param] !== 1)
+      .filter(param => showParamToField[param])
+      .map((param) => showParamToField[param]);
+    logger.debug(`We want to exclude from projection: ${JSON.stringify(result)}`);
+
+    const excludeObject = Object.fromEntries(result.map(param => [param, 0]));
+    logger.debug(`We want to exclude from projection: ${JSON.stringify(excludeObject)}`);
+
+    return {
+      _id: 0,
+      ...excludeObject
+    };
   }
 
   async function queryById({correlationId, checkModTime = false}) {
