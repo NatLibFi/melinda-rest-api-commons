@@ -38,7 +38,7 @@
         "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
     },
     "dependencies": {
-        "@natlibfi/marc-record": "^7.3.0",
+        "@natlibfi/marc-record": "^7.3.1",
         "@natlibfi/marc-record-serializers": "^10.1.0",
         "@natlibfi/marc-record-validate": "^8.0.1",
         "@natlibfi/marc-record-validators-melinda": "^10.11.1",
