@@ -98,10 +98,12 @@ export default function () {
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
     } catch (err) {
       logError(err);
+      const message = err.message || err.payload?.message || err.payload;
+      logger.debug(`${message}`);
       if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statements
         throw err;
       }
-      throw new ConversionError(httpStatus.BAD_REQUEST, 'Error while unserializing record');
+      throw new ConversionError(httpStatus.BAD_REQUEST, `Error while unserializing record. ${message}`);
     }
   }
 }
