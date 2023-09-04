@@ -72,9 +72,12 @@ export default async function (MONGO_URI) {
     logger.debug(`Query params: ${JSON.stringify(params)}`);
     checkLogItemType(params.logItemType, false, false);
     const {limit = 5, skip = 0, ...rest} = params;
+    logger.debug(`Actual query params: ${JSON.stringify(rest)}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
-      .sort({blobSequence: 1})
+      // DEVELOP: we'd like to sort so, that correlationIds would be sorted latest first, but when corralationId is
+      //          same sorting would be based on blobSequence
+      .sort({correlationId: 1}, {blobSequence: 1})
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
       .toArray();
