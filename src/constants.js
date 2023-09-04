@@ -68,8 +68,10 @@ export const CHUNK_SIZE = 100;
 // We could configure here whether a logItemType is for a several records of a single record
 // ie. whether is has bulkSequence or bulkSequenceStart & bulkSequenceEnd
 export const LOG_ITEM_TYPE = {
+  INPUT_RECORD_LOG: 'INPUT_RECORD_LOG',
   MERGE_LOG: 'MERGE_LOG',
   MATCH_LOG: 'MATCH_LOG',
+  RESULT_RECORD_LOG: 'RESULT_RECORD_LOG',
   SPLITTER_LOG: 'SPLITTER_LOG'
 };
 
