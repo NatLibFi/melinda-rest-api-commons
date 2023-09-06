@@ -72,9 +72,10 @@ export default async function (MONGO_URI) {
     logger.debug(`Query params: ${JSON.stringify(params)}`);
     checkLogItemType(params.logItemType, false, false);
     const {limit = 5, skip = 0, ...rest} = params;
+    logger.debug(`Actual query params: ${JSON.stringify(rest)}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
-      .sort({blobSequence: 1})
+      .sort({creationTime: 1})
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
       .toArray();
@@ -114,7 +115,6 @@ export default async function (MONGO_URI) {
       {'$group':
         {'_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
           'creationTime': {'$first': '$creationTime'},
-          // We don't currently have cataloger in logs, this will always be null
           'cataloger': {'$first': '$cataloger'},
           'logCount': {'$sum': 1}}}
     ];
