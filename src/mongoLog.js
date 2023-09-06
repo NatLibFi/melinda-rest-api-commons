@@ -75,9 +75,7 @@ export default async function (MONGO_URI) {
     logger.debug(`Actual query params: ${JSON.stringify(rest)}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
-      // DEVELOP: we'd like to sort so, that correlationIds would be sorted latest first, but when corralationId is
-      //          same sorting would be based on blobSequence
-      .sort({correlationId: 1}, {blobSequence: 1})
+      .sort({creationTime: 1})
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
       .toArray();
@@ -117,7 +115,6 @@ export default async function (MONGO_URI) {
       {'$group':
         {'_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
           'creationTime': {'$first': '$creationTime'},
-          // We don't currently have cataloger in logs, this will always be null
           'cataloger': {'$first': '$cataloger'},
           'logCount': {'$sum': 1}}}
     ];
