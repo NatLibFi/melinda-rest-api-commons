@@ -79,11 +79,12 @@ export default async function (MONGO_URI) {
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
       .toArray();
-    logger.debug(`Query result: ${result}`);
+    //logger.debug(`Query result: ${result}`);
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items! (skip: ${skip} limit: ${limit})` : 'Not found!'}`);
     return result;
   }
 
+  // DEVELOP: queryById returns jsut one (randomish) log! is this useful?
   async function queryById(correlationIdString, skip = 0, limit = 1) {
     logger.debug(`QueryById: ${correlationIdString}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
@@ -96,6 +97,8 @@ export default async function (MONGO_URI) {
     return result;
   }
 
+  // getListOfLogs returns list of correlationIds that have logs of given logItemType
+  // if logItemType is not given, getListOfLogs returns list of correlationIds that have MERGE_LOG
   async function getListOfLogs(logItemType = 'MERGE_LOG') {
     checkLogItemType(logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
@@ -104,8 +107,9 @@ export default async function (MONGO_URI) {
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
 
-  async function getExpandedListOfLogs(logItemType = 'MERGE_LOG') {
-    checkLogItemType(logItemType, false, false);
+  // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
+  async function getExpandedListOfLogs() {
+    //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
