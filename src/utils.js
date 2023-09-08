@@ -132,6 +132,10 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
     return {recordStatus: 'ERROR', detailedRecordStatus: 'NOT_FOUND', message};
   }
 
+  if ([httpStatus.FORBIDDEN, 'FORBIDDEN'].includes(responseStatus)) {
+    return {recordStatus: 'ERROR', detailedRecordStatus: 'FORBIDDEN', message};
+  }
+
   // Otherwise
   logger.debug(`Unknown responseStatus: ${responseStatus}`);
   const newMessage = `${message} - Unknown recordStatus: ${responseStatus}`;
