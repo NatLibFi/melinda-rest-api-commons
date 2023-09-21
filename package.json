@@ -54,10 +54,9 @@
     "devDependencies": {
         "@babel/cli": "^7.22.15",
         "@babel/core": "^7.22.15",
-        "@babel/eslint-parser": "^7.22.15",
         "@babel/plugin-transform-runtime": "7.22.15",
         "@babel/preset-env": "^7.22.15",
-        "@natlibfi/eslint-config-melinda-backend": "^3.0.2-alpha.10",
+        "@natlibfi/eslint-config-melinda-backend": "^3.0.2-alpha.14",
         "@natlibfi/fixugen": "^2.0.1",
         "@natlibfi/fixura": "^3.0.1",
         "babel-plugin-istanbul": "^6.1.1",
@@ -70,8 +69,7 @@
         "nyc": "^15.1.0"
     },
     "eslintConfig": {
-        "extends": "@natlibfi/melinda-backend",
-        "parser": "@babel/eslint-parser"
+        "extends": "@natlibfi/melinda-backend"
     },
     "babel": {
         "presets": [
