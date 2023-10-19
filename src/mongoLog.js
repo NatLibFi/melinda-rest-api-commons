@@ -42,7 +42,7 @@ export default async function (MONGO_URI) {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('rest-api');
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getCatalogersListOfLogs, getExpandedListOfLogs, protect, remove, removeBySequences};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
@@ -107,13 +107,28 @@ export default async function (MONGO_URI) {
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
 
+  async function getCatalogersListOfLogs() {
+    logger.debug(`Getting expanded list of logs`);
+    const pipeline = [
+      // currently return only MERGE_LOG and MATCH_LOG
+      {'$mach': {'logItemType': {'$in': [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]}}},
+      {'$group': {'cataloger': {'$first': '$cataloger'}}}
+    ];
+
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .aggregate(pipeline)
+      .toArray();
+
+    return result;
+  }
+
   // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
-  async function getExpandedListOfLogs() {
+  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = false, dateAfter = false}) {
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      {'$match': {'logItemType': {'$in': ['MERGE_LOG', 'MATCH_LOG']}}},
+      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter),
       {'$sort':
         {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}},
       {'$group':
@@ -138,6 +153,18 @@ export default async function (MONGO_URI) {
 
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
     return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
+
+    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
+      const matchOptions = [];
+      matchOptions.push(logItemTypes.length > 0 ? {'logItemType': {'$in': logItemTypes}} : false); // eslint-disable-line functional/immutable-data
+      matchOptions.push(catalogers.length > 0 ? {'cataloger': {'$in': catalogers}} : false); // eslint-disable-line functional/immutable-data
+      matchOptions.push(dateBefore || dateAfter ? {'creationTime': { // eslint-disable-line functional/immutable-data
+        '$gte': dateBefore ? new Date(dateBefore) : new Date(),
+        '$lte': dateAfter ? new Date(dateAfter) : new Date('2000-01-01')
+      }} : false); // eslint-disable-line functional/immutable-data
+
+      return {'$mach': {...matchOptions.filter[notFalse => notFalse]}};
+    }
   }
 
   async function protect(correlationId, blobSequence) {
