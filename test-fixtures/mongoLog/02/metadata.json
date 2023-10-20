@@ -1,10 +1,8 @@
 {
-  "description": "addLog 2",
+  "description": "Function: getCatalogersListOfLogs, gets 3 uniq catalogers from 3 logs (MATCH_LOG and MERGE_LOG)",
   "only": false,
-  "skip": true,
-  "params": [
-    {
-      "test": "works"
-    }
-  ]
+  "skip": false,
+  "functionName": "getCatalogersListOfLogs",
+  "preFillDb": true,
+  "params": []
 }

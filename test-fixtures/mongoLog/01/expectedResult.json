@@ -1,3 +1,125 @@
 {
-  "logs": []
+  "_id": "64d047221f61fa986baf465a",
+  "logItemType": "MERGE_LOG",
+  "cataloger": "IMP_TEST",
+  "correlationId": "bdce85eb-0ca2-4525-b00e-ae67d43b68ec",
+  "blobSequence": 1,
+  "sourceIds": [
+    "(FI-TEST)001"
+  ],
+  "title": "Test title",
+  "standardIdentifiers": [
+    "978-952-00-0000-0"
+  ],
+  "databaseId": "001234567",
+  "preference": {
+    "name": "B won leader (validation and preference)",
+    "value": "B",
+    "recordName": "databaseRecord"
+  },
+  "incomingRecord": {
+    "_validationOptions": {
+      "subfieldValues": false
+    },
+    "leader": "00000nam a22000008i 4500",
+    "fields": [
+      {
+        "tag": "008",
+        "value": "230807s2020    fi |||||||||||||||||fin||"
+      },
+      {
+        "tag": "020",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "978-952-00-0000-0"
+          },
+          {
+            "code": "q",
+            "value": "kovakantinen"
+          }
+        ]
+      }
+    ]
+  },
+  "databaseRecord": {
+    "_validationOptions": {
+      "subfieldValues": false
+    },
+    "leader": "02634cam a22005894i 4500",
+    "fields": [
+      {
+        "tag": "001",
+        "value": "001234567"
+      },
+      {
+        "tag": "003",
+        "value": "FI-MELINDA"
+      },
+      {
+        "tag": "005",
+        "value": "20230331062218.0"
+      },
+      {
+        "tag": "008",
+        "value": "200409t20202020fi ||||       |0| f|fin|c"
+      },
+      {
+        "tag": "020",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "978-952-00-0000-0"
+          },
+          {
+            "code": "q",
+            "value": "kovakantinen"
+          }
+        ]
+      }
+    ]
+  },
+  "mergedRecord": {
+    "_validationOptions": {
+      "subfieldValues": false
+    },
+    "leader": "02634cam a22005894i 4500",
+    "fields": [
+      {
+        "tag": "001",
+        "value": "001234567"
+      },
+      {
+        "tag": "003",
+        "value": "FI-MELINDA"
+      },
+      {
+        "tag": "005",
+        "value": "20230331062218.0"
+      },
+      {
+        "tag": "008",
+        "value": "200409t20202020fi ||||       |0| f|fin|c"
+      },
+      {
+        "tag": "020",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "978-952-00-0000-0"
+          },
+          {
+            "code": "q",
+            "value": "kovakantinen"
+          }
+        ]
+      }
+    ]
+  }
 }

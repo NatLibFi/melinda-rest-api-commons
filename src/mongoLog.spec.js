@@ -34,10 +34,8 @@ async function initMongofixtures() {
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
     format: {
-      blobmetadatas: {
-        creationTime: v => new Date(v),
-        modificationTime: v => new Date(v)
-      }
+      creationTime: v => new Date(v),
+      modificationTime: v => new Date(v)
     }
   });
 }
@@ -45,16 +43,38 @@ async function initMongofixtures() {
 async function callback({
   getFixture,
   functionName,
-  params
+  params,
+  preFillDb = false
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoLogOperator = await createMongoLogOperator({mongoUri});
-  if (functionName === 'addLogItem') { // eslint-disable-line functional/no-conditional-statements
-    mongoLogOperator.addLogItem(params);
+  const mongoLogOperator = await createMongoLogOperator(mongoUri, '');
+  const expectedResult = await getFixture('expectedResult.json');
+  // console.log(typeof mongoUri); // eslint-disable-line
+
+  if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
+    await mongoFixtures.populate(getFixture('dbContents.json'));
   }
 
-  const dump = await mongoFixtures.dump();
-  const expectedResult = await getFixture('expectedResult.json');
-  expect(dump).to.eql(expectedResult);
+  if (functionName === 'addLogItem') {
+    await mongoLogOperator.addLogItem(params);
+    const dump = await mongoFixtures.dump();
+
+    return expect(dump.logs[0]['0']).to.eql(expectedResult);
+  }
+
+  if (functionName === 'getCatalogersListOfLogs') {
+    const result = await mongoLogOperator.getCatalogersListOfLogs();
+    console.log(result); // eslint-disable-line
+
+    return expect(result).to.eql(expectedResult);
+  }
+
+  if (functionName === 'getExpandedListOfLogs') {
+    const result = await mongoLogOperator.getExpandedListOfLogs(params);
+    console.log(result); // eslint-disable-line
+
+    return expect(result).to.eql(expectedResult);
+  }
+
+
 }
