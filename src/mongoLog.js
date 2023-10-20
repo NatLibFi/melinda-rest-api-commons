@@ -120,7 +120,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = new Date('2000-01-01')}) {
-    console.log(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
+    logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
@@ -164,7 +164,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
       const matchOptions = {
         '$match': {
-          'logItemType': {'$in': logItemTypes},
+          'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
             '$gte': dateAfter.toISOString(),
