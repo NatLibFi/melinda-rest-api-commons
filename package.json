@@ -1,123 +1,131 @@
 {
-    "name": "@natlibfi/melinda-rest-api-commons",
-    "description": "Shared modules for microservices of Melinda rest api import system",
-    "author": {
-        "name": "The National Library of Finland"
-    },
-    "keywords": [],
-    "homepage": "https://github.com/natlibfi/melinda-rest-api-commons",
-    "bugs": {
-        "url": "https://github.com/natlibfi/melinda-rest-api-commons/issues"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
-    },
-    "license": "AGPL-3.0+",
-    "version": "4.0.16-alpha.2",
-    "main": "./dist/index.js",
-    "engines": {
-        "node": ">=18"
-    },
-    "publishConfig": {
-        "access": "public"
-    },
-    "scripts": {
-        "prepare": "npm run build",
-        "lint": "eslint ./src",
-        "lint:dev": "eslint ./src --fix",
-        "test": "npm run lint && npm run test:base -- src/**/*.spec.js",
-        "test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
-        "test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register --exclude src/amqp.health.spec.js --exclude src/amqp.tests.spec.js",
-        "test:local": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.*.spec.js",
-        "test:healthcheck": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.health.spec.js",
-        "coverage": "npm run cover:unit && npm run cover:report",
-        "cover:unit": "nyc --silent npm run test",
-        "cover:report": "nyc report --reporter=lcov --reporter=text",
-        "dev": "NODE_ENV=development cross-env DEBUG='@natlibfi/*' nodemon",
-        "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
-    },
-    "dependencies": {
-        "@natlibfi/marc-record": "^7.3.1",
-        "@natlibfi/marc-record-serializers": "^10.1.1",
-        "@natlibfi/marc-record-validate": "^8.0.3",
-        "@natlibfi/marc-record-validators-melinda": "^10.14.0",
-        "@natlibfi/melinda-backend-commons": "^2.2.1",
-        "@natlibfi/melinda-commons": "^13.0.7",
-        "amqplib": "^0.10.3",
-        "debug": "^4.3.4",
-        "http-status": "^1.7.3",
-        "moment": "^2.29.4",
-        "mongo-sanitize": "^1.1.0",
-        "mongodb": "^4.17.1"
-    },
-    "devDependencies": {
-        "@babel/cli": "^7.23.0",
-        "@babel/core": "^7.23.2",
-        "@babel/plugin-transform-runtime": "7.22.15",
-        "@babel/preset-env": "^7.23.2",
-        "@natlibfi/eslint-config-melinda-backend": "^3.0.2",
-        "@natlibfi/fixugen": "^2.0.2",
-        "@natlibfi/fixura": "^3.0.2",
-        "babel-plugin-istanbul": "^6.1.1",
-        "babel-plugin-rewire": "^1.2.0",
-        "chai": "^4.3.10",
-        "cross-env": "^7.0.3",
-        "eslint": "^8.51.0",
-        "mocha": "^10.2.0",
-        "nodemon": "^3.0.1",
-        "nyc": "^15.1.0"
-    },
-    "eslintConfig": {
-        "extends": "@natlibfi/melinda-backend"
-    },
-    "babel": {
-        "presets": [
-            [
-                "@babel/preset-env",
-                {
-                    "targets": "maintained node versions"
-                }
-            ]
-        ],
-        "plugins": [
-            [
-                "@babel/transform-runtime"
-            ]
-        ],
-        "env": {
-            "test": {
-                "plugins": [
-                    "istanbul",
-                    "rewire"
-                ]
-            }
+  "name": "@natlibfi/melinda-rest-api-commons",
+  "description": "Shared modules for microservices of Melinda rest api import system",
+  "author": {
+    "name": "The National Library of Finland"
+  },
+  "keywords": [],
+  "homepage": "https://github.com/natlibfi/melinda-rest-api-commons",
+  "bugs": {
+    "url": "https://github.com/natlibfi/melinda-rest-api-commons/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
+  },
+  "license": "AGPL-3.0+",
+  "version": "4.0.15",
+  "main": "./dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "lint": "eslint ./src",
+    "lint:dev": "eslint ./src --fix",
+    "test": "npm run lint && npm run test:base -- src/**/*.spec.js src/*.spec.js",
+    "test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
+    "test:base": "cross-env NODE_ENV=test nyc mocha --package ./package.json --exclude src/amqp.health.spec.js --exclude src/amqp.tests.spec.js",
+    "test:local": "cross-env NODE_ENV=test nyc mocha --package ./package.json -- src/amqp.*.spec.js",
+    "test:healthcheck": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.health.spec.js",
+    "coverage": "npm run cover:unit && npm run cover:report",
+    "cover:unit": "nyc --silent npm run test",
+    "cover:report": "nyc report --reporter=lcov --reporter=text",
+    "dev": "NODE_ENV=development cross-env DEBUG='@natlibfi/*' nodemon",
+    "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
+  },
+  "dependencies": {
+    "@natlibfi/marc-record": "^7.3.1",
+    "@natlibfi/marc-record-serializers": "^10.1.1",
+    "@natlibfi/marc-record-validate": "^8.0.1",
+    "@natlibfi/marc-record-validators-melinda": "^10.13.0",
+    "@natlibfi/melinda-backend-commons": "^2.2.1",
+    "@natlibfi/melinda-commons": "^13.0.6",
+    "amqplib": "^0.10.3",
+    "debug": "^4.3.4",
+    "http-status": "^1.7.0",
+    "moment": "^2.29.4",
+    "mongo-sanitize": "^1.1.0",
+    "mongodb": "^4.17.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.22.15",
+    "@babel/core": "^7.22.20",
+    "@babel/plugin-transform-runtime": "7.22.15",
+    "@babel/preset-env": "^7.22.20",
+    "@natlibfi/eslint-config-melinda-backend": "^3.0.2",
+    "@natlibfi/fixugen": "^2.0.1",
+    "@natlibfi/fixura": "^3.0.1",
+    "@natlibfi/fixura-mongo": "^2.0.10-alpha.1",
+    "babel-plugin-istanbul": "^6.1.1",
+    "babel-plugin-rewire": "^1.2.0",
+    "chai": "^4.3.8",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.49.0",
+    "mocha": "^10.2.0",
+    "nodemon": "^3.0.1",
+    "nyc": "^15.1.0"
+  },
+  "eslintConfig": {
+    "extends": "@natlibfi/melinda-backend"
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": "maintained node versions"
         }
-    },
-    "nyc": {
-        "exclude": [
-            "**/*.spec.js"
-        ],
-        "reporter": [
-            "lcov",
-            "html"
-        ],
-        "require": [
-            "@babel/register"
-        ],
-        "sourceMap": false,
-        "instrument": false,
-        "lines": 80,
-        "statements": 80,
-        "functions": 80,
-        "branches": 80
-    },
-    "nodemonConfig": {
-        "exec": "npm run test:dev",
-        "watch": [
-            "src/*"
-        ],
-        "ext": "js",
-        "delay": 2.5
+      ]
+    ],
+    "plugins": [
+      [
+        "@babel/transform-runtime"
+      ]
+    ],
+    "env": {
+      "test": {
+        "plugins": [
+          "istanbul",
+          "rewire"
+        ]
+      }
     }
+  },
+  "mocha": {
+    "spec": ["src/*.spec.js"],
+    "require": ["@babel/register"],
+    "inline-diffs": true,
+    "maxDiffSize": 25000,
+    "bail": true,
+    "exit": true
+  },
+  "nyc": {
+    "exclude": [
+      "**/*.spec.js"
+    ],
+    "reporter": [
+      "text"
+    ],
+    "require": [
+      "@babel/register"
+    ],
+    "sourceMap": false,
+    "instrument": false,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80
+  },
+  "nodemonConfig": {
+    "exec": "npm run test:dev",
+    "watch": [
+      "src/*"
+    ],
+    "ext": "js",
+    "delay": 2.5
+  }
 }
