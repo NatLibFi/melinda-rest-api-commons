@@ -168,8 +168,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': dateAfter.toISOString(),
-            '$lte': dateBefore.toISOString()
+            '$gte': new Date(dateAfter).toISOString(),
+            '$lte': new Date(dateBefore).toISOString()
           }
         }
       };
