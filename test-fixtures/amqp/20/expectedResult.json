@@ -1,6 +1,6 @@
 [
   {
-    "_validationOptions": {},
+    "_validationOptions": {"subfieldValues": false},
     "leader": "02518cam a2200745zi 4500",
     "fields": [
       {
@@ -37,7 +37,7 @@
     ]
   },
   {
-    "_validationOptions": {},
+    "_validationOptions": {"subfieldValues": false},
     "leader": "02518cam a2200745zi 4500",
     "fields": [
       {
@@ -47,7 +47,7 @@
     ]
   },
   {
-    "_validationOptions": {},
+    "_validationOptions": {"subfieldValues": false},
     "leader": "02518cam a2200745zi 4500",
     "fields": [
       {

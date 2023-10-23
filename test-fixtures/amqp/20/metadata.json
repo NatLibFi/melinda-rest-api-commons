@@ -1,7 +1,7 @@
 {
-    "description": "CheckQueue: basic, toRecord",
+    "description": "CheckQueue - accept records with empty subfield values: basic, toRecord",
     "skip": false,
-    "only": true,
+    "only": false,
     "expectedMessageCount": 0,
     "sentToQueue": true,
     "checkQueueStyle": "basicToRecord"
