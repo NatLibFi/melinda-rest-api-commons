@@ -1,0 +1,8 @@
+{
+  "description": "Function: getExpandedListOfLogs - params {dateAfter: 2023-08-07} get 2",
+  "only": false,
+  "skip": false,
+  "functionName": "getExpandedListOfLogs",
+  "preFillDb": true,
+  "params": {"dateAfter": "2023-08-07"}
+}

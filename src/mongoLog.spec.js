@@ -64,14 +64,14 @@ async function callback({
 
   if (functionName === 'getCatalogersListOfLogs') {
     const result = await mongoLogOperator.getCatalogersListOfLogs();
-    console.log(result); // eslint-disable-line
+    // console.log(result); // eslint-disable-line
 
     return expect(result).to.eql(expectedResult);
   }
 
   if (functionName === 'getExpandedListOfLogs') {
     const result = await mongoLogOperator.getExpandedListOfLogs(params);
-    console.log(result); // eslint-disable-line
+    // console.log(result); // eslint-disable-line
 
     return expect(result).to.eql(expectedResult);
   }

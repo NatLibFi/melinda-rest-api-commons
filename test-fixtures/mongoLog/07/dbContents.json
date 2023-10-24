@@ -1,0 +1,418 @@
+{
+  "logs": [
+    {
+      "_id": "64d047221f61fa986baf465a",
+      "logItemType": "MERGE_LOG",
+      "cataloger": "IMP_TEST1",
+      "correlationId": "bdce85eb-0ca2-4525-b00e-ae67d43b68ec",
+      "blobSequence": 19,
+      "sourceIds": [
+        "(FI-KV)VER2609057"
+      ],
+      "title": "Test title 1",
+      "standardIdentifiers": [
+        "978-952-00-0000-0"
+      ],
+      "databaseId": "000000001",
+      "preference": {
+        "name": "B won leader (validation and preference)",
+        "value": "B",
+        "recordName": "databaseRecord"
+      },
+      "incomingRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "00000nam a22000008i 4500",
+        "fields": [
+          {
+            "tag": "008",
+            "value": "230807s2020    fi |||||||||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-952-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "kovakantinen"
+              }
+            ]
+          }
+        ]
+      },
+      "databaseRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "02634cam a22005894i 4500",
+        "fields": [
+          {
+            "tag": "001",
+            "value": "000000001"
+          },
+          {
+            "tag": "003",
+            "value": "FI-MELINDA"
+          },
+          {
+            "tag": "005",
+            "value": "20230331062218.0"
+          },
+          {
+            "tag": "008",
+            "value": "200409t20202020fi ||||       |0| f|fin|c"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-952-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "kovakantinen"
+              }
+            ]
+          }
+        ]
+      },
+      "mergedRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "02634cam a22005894i 4500",
+        "fields": [
+          {
+            "tag": "001",
+            "value": "000000001"
+          },
+          {
+            "tag": "003",
+            "value": "FI-MELINDA"
+          },
+          {
+            "tag": "005",
+            "value": "20230331062218.0"
+          },
+          {
+            "tag": "008",
+            "value": "200409t20202020fi ||||       |0| f|fin|c"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-952-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "kovakantinen"
+              }
+            ]
+          }
+        ]
+      },
+      "creationTime": "2023-07-08T00:00:01.000Z",
+      "protected": true,
+      "modificationTime": "2023-08-07T19:21:54.534Z"
+    },
+    {
+      "_id": "64d199a71f61fa986baf5a45",
+      "logItemType": "MERGE_LOG",
+      "cataloger": "IMP_TEST2",
+      "correlationId": "f63bad0b-8820-428a-b570-c172f209ee94",
+      "blobSequence": 2,
+      "sourceIds": [],
+      "title": "Test title 2",
+      "standardIdentifiers": [
+        "978-87-00-00000-0"
+      ],
+      "databaseId": "000000002",
+      "preference": {
+        "name": "A won leader (validation and preference)",
+        "value": "A",
+        "recordName": "incomingRecord"
+      },
+      "incomingRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "00000cim a22000002i 4500",
+        "fields": [
+          {
+            "tag": "006",
+            "value": "m|||||o||h||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "sr|uunnnnnuneu"
+          },
+          {
+            "tag": "007",
+            "value": "cr|nnannnuuuuu"
+          },
+          {
+            "tag": "008",
+            "value": "230808s2023    dk |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-87-00-00000-0"
+              },
+              {
+                "code": "q",
+                "value": "MP3"
+              }
+            ]
+          }
+        ]
+      },
+      "databaseRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "01547cim a22004578i 4500",
+        "fields": [
+          {
+            "tag": "001",
+            "value": "000000002"
+          },
+          {
+            "tag": "003",
+            "value": "FI-MELINDA"
+          },
+          {
+            "tag": "005",
+            "value": "20230607044137.0"
+          },
+          {
+            "tag": "006",
+            "value": "m|||||o||h||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "sr|uunnnnnuneu"
+          },
+          {
+            "tag": "007",
+            "value": "cr|nnannnuuuuu"
+          },
+          {
+            "tag": "008",
+            "value": "230518s2023    dk |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-87-00-00000-0"
+              },
+              {
+                "code": "q",
+                "value": "MP3"
+              }
+            ]
+          }
+        ]
+      },
+      "mergedRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "00000cim a22000002i 4500",
+        "fields": [
+          {
+            "tag": "006",
+            "value": "m|||||o||h||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "sr|uunnnnnuneu"
+          },
+          {
+            "tag": "007",
+            "value": "cr|nnannnuuuuu"
+          },
+          {
+            "tag": "008",
+            "value": "230518s2023    dk |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-87-00-00000-0"
+              },
+              {
+                "code": "q",
+                "value": "MP3"
+              }
+            ]
+          }
+        ]
+      },
+      "creationTime": "2023-08-08T00:00:01.000Z",
+      "protected": true,
+      "modificationTime": "2023-08-15T06:51:30.558Z"
+    },
+    {
+      "_id": "650b974eaf2b011f1349100f",
+      "logItemType": "MATCH_LOG",
+      "cataloger": "IMP_TEST3",
+      "correlationId": "7207c1f2-cbc4-4a0c-bd64-344a746ee605",
+      "blobSequence": 2,
+      "sourceIds": [],
+      "title": "Test title 3",
+      "standardIdentifiers": [
+        "978-951-00-0000-0"
+      ],
+      "databaseId": "000000003",
+      "preference": {
+        "name": "A won leader (validation and preference)",
+        "value": "A",
+        "recordName": "incomingRecord"
+      },
+      "incomingRecord": {
+        "_validationOptions": {},
+        "leader": "00000cam a22000002i 4500",
+        "fields": [
+          {
+            "tag": "006",
+            "value": "m|||||o||d||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "cr||||||||||||"
+          },
+          {
+            "tag": "008",
+            "value": "230921s2023    fi |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-951-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "EPUB"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        ]
+      },
+      "databaseRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "01384cam a22004338i 4500",
+        "fields": [
+          {
+            "tag": "001",
+            "value": "000000003"
+          },
+          {
+            "tag": "003",
+            "value": "FI-MELINDA"
+          },
+          {
+            "tag": "005",
+            "value": "20230606044708.0"
+          },
+          {
+            "tag": "006",
+            "value": "m|||||o||d||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "cr||||||||||||"
+          },
+          {
+            "tag": "008",
+            "value": "230606s2023    fi |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-951-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "EPUB"
+              }
+            ]
+          }
+        ]
+      },
+      "mergedRecord": {
+        "_validationOptions": {
+          "subfieldValues": false
+        },
+        "leader": "00000cam a22000002i 4500",
+        "fields": [
+          {
+            "tag": "006",
+            "value": "m|||||o||d||||||||"
+          },
+          {
+            "tag": "007",
+            "value": "cr||||||||||||"
+          },
+          {
+            "tag": "008",
+            "value": "230606s2023    fi |||||o|||||||||||fin||"
+          },
+          {
+            "tag": "020",
+            "subfields": [
+              {
+                "code": "a",
+                "value": "978-951-00-0000-0"
+              },
+              {
+                "code": "q",
+                "value": "EPUB"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        ]
+      },
+      "creationTime": "2023-09-08T00:00:01.000Z",
+      "protected": true,
+      "modificationTime": "2023-09-21T08:19:32.545Z"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
-  "description": "Function: getCatalogersListOfLogs, gets 3 uniq catalogers from 3 logs (MATCH_LOG and MERGE_LOG)",
+  "description": "Function: getListOfCatalogers, gets 3 uniq catalogers from 3 logs (MATCH_LOG and MERGE_LOG)",
   "only": false,
   "skip": false,
-  "functionName": "getCatalogersListOfLogs",
+  "functionName": "getListOfCatalogers",
   "preFillDb": true,
   "params": []
 }

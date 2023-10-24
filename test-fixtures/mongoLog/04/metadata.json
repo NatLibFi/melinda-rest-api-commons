@@ -1,8 +1,8 @@
 {
-  "description": "Function: getExpandedListOfLogs - Empty params get all 3",
+  "description": "Function: getExpandedListOfLogs - params {logItemTypes: [MERGE_LOG, MATCH_LOG]} get all 3",
   "only": false,
   "skip": false,
   "functionName": "getExpandedListOfLogs",
   "preFillDb": true,
-  "params": {"logItemTypes": ["MERGE_LOG"]}
+  "params": {"logItemTypes": ["MERGE_LOG", "MATCH_LOG"]}
 }
