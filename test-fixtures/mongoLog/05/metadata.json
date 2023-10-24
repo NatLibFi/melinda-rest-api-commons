@@ -1,0 +1,8 @@
+{
+  "description": "Function: getExpandedListOfLogs - params {logItemTypes: [MERGE_LOG]} get 2",
+  "only": false,
+  "skip": false,
+  "functionName": "getExpandedListOfLogs",
+  "preFillDb": true,
+  "params": {"logItemTypes": ["MERGE_LOG"]}
+}
