@@ -13,6 +13,13 @@
         "creationTime": "2023-08-08T01:25:59.348Z",
         "logCount": 1,
         "logItemType": "MERGE_LOG"
+      },
+      {
+        "cataloger": "IMP_TEST3",
+        "correlationId": "7207c1f2-cbc4-4a0c-bd64-344a746ee605",
+        "creationTime": "2023-09-21T01:07:26.693Z",
+        "logCount": 1,
+        "logItemType": "MATCH_LOG"
       }
     ],
     "status": 200

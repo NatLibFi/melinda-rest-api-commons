@@ -42,7 +42,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db(dbName);
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getCatalogersListOfLogs, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getExpandedListOfLogs, protect, remove, removeBySequences};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
@@ -52,14 +52,14 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
       protected: false
     };
     try {
-      console.log(newLogItem); // eslint-disable-line
+      // console.log(newLogItem); // eslint-disable-line
       checkLogItemType(logItem.logItemType, false);
       const result = await db.collection(collection).insertOne(newLogItem);
       if (result.acknowledged) {
         const {blobSequence, blobSequenceStart, blobSequenceEnd} = logItem;
         const itemString = blobSequenceStart && blobSequenceEnd ? `${blobSequenceStart} - ${blobSequenceEnd}` : `${blobSequence}`;
         logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId}, blobSequence(s): ${itemString}. ***`);
-        console.log('addLogItem done', result); // eslint-disable-line
+        // console.log('addLogItem done', result); // eslint-disable-line
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -109,8 +109,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
 
-  async function getCatalogersListOfLogs() {
-    logger.debug(`Getting expanded list of logs`);
+  async function getListOfCatalogers() {
+    logger.debug(`Getting list of Catalogers`);
 
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .distinct('cataloger');
@@ -162,13 +162,15 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
 
     function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
+      const dateBeforeIso = new Date(dateBefore).toISOString();
+      const dateAfterIso = new Date(dateAfter).toISOString();
       const matchOptions = {
         '$match': {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': dateAfter.toISOString(),
-            '$lte': dateBefore.toISOString()
+            '$gte': dateAfterIso,
+            '$lte': dateBeforeIso
           }
         }
       };
