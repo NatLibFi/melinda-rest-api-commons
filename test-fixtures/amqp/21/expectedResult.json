@@ -6,6 +6,33 @@
       {
         "tag": "001",
         "value": "000019640"
+      },
+      {
+        "tag": "CAT",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "IMP_HELMET"
+          },
+          {
+            "code": "b",
+            "value": ""
+          },
+          {
+            "code": "c",
+            "value": "20220109"
+          },
+          {
+            "code": "l",
+            "value": "FIN01"
+          },
+          {
+            "code": "h",
+            "value": "0838"
+          }
+        ]
       }
     ]
   },

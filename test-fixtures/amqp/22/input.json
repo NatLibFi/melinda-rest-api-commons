@@ -1,0 +1,10 @@
+[
+  {
+    "queue": "TESTQUEUE",
+    "correlationId": "aaaaaaaa-0000-aaaa-0000-000000000000",
+    "headers": {
+      "correlationId": "aaaaaaaa-0000-aaaa-0000-000000000000"
+    },
+    "data": "foobar, broken data"
+  }
+]

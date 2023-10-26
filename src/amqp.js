@@ -276,8 +276,8 @@ export default async function (AMQP_URL, runHealthCheck = false) {
 
     return messages.map(message => {
       const content = JSON.parse(message.content.toString());
-      // Should we have here validationOptions
-      return new MarcRecord(content.data);
+      // Use subfieldValues: false validationOption here
+      return new MarcRecord(content.data, {subfieldValues: false});
     });
   }
 
