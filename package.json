@@ -54,7 +54,7 @@
   "devDependencies": {
     "@babel/cli": "^7.22.15",
     "@babel/core": "^7.22.20",
-    "@babel/plugin-transform-runtime": "7.22.15",
+    "@babel/plugin-transform-runtime": "^7.22.15",
     "@babel/preset-env": "^7.22.20",
     "@natlibfi/eslint-config-melinda-backend": "^3.0.2",
     "@natlibfi/fixugen": "^2.0.1",
