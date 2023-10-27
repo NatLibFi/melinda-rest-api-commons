@@ -1,7 +1,7 @@
 {
   "description": "Function: getExpandedListOfLogs - params {dateBefore: Wed Aug 09 2023 00:00:01 GMT+0300 (Eastern European Summer Time), dateAfter: Mon Aug 07 2023 00:00:01 GMT+0300 (Eastern European Summer Time)} get 1",
   "only": false,
-  "skip": false,
+  "skip": true,
   "functionName": "getExpandedListOfLogs",
   "preFillDb": true,
   "params": {"dateBefore": "Wed Aug 09 2023 00:00:01 GMT+0300 (Eastern European Summer Time)", "dateAfter": "Mon Aug 07 2023 00:00:01 GMT+0300 (Eastern European Summer Time)"}
