@@ -35,14 +35,14 @@ import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import {LOG_ITEM_TYPE} from './constants';
 
-export default async function (MONGO_URI) {
+export default async function (MONGO_URI, dbName = 'rest-api') {
   const logger = createLogger();
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
-  const db = client.db('rest-api');
+  const db = client.db(dbName);
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getExpandedListOfLogs, protect, remove, removeBySequences};
 
   async function addLogItem(logItem) {
     const time = moment().toDate();
@@ -52,12 +52,14 @@ export default async function (MONGO_URI) {
       protected: false
     };
     try {
+      // console.log(newLogItem); // eslint-disable-line
       checkLogItemType(logItem.logItemType, false);
       const result = await db.collection(collection).insertOne(newLogItem);
       if (result.acknowledged) {
         const {blobSequence, blobSequenceStart, blobSequenceEnd} = logItem;
         const itemString = blobSequenceStart && blobSequenceEnd ? `${blobSequenceStart} - ${blobSequenceEnd}` : `${blobSequence}`;
         logger.info(`*** New ${logItem.logItemType} added for ${logItem.correlationId}, blobSequence(s): ${itemString}. ***`);
+        // console.log('addLogItem done', result); // eslint-disable-line
         return;
       }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -107,20 +109,41 @@ export default async function (MONGO_URI) {
     return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
   }
 
+  async function getListOfCatalogers() {
+    logger.debug(`Getting list of Catalogers`);
+
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .distinct('cataloger');
+
+    return result;
+  }
+
   // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
-  async function getExpandedListOfLogs() {
+  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = new Date('2000-01-01')}) {
+    logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      {'$match': {'logItemType': {'$in': ['MERGE_LOG', 'MATCH_LOG']}}},
-      {'$sort':
-        {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}},
-      {'$group':
-        {'_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
+      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter),
+      {
+        '$sort':
+          {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
+      },
+      {
+        '$group':
+        {
+          '_id': {'correlationId': '$correlationId', 'logItemType': '$logItemType'},
           'creationTime': {'$first': '$creationTime'},
           'cataloger': {'$first': '$cataloger'},
-          'logCount': {'$sum': 1}}}
+          'logCount': {'$sum': 1}
+        }
+      },
+      {
+        '$sort':
+          {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
+      }
     ];
 
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
@@ -138,6 +161,23 @@ export default async function (MONGO_URI) {
 
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
     return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
+
+    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
+      const dateBeforeIso = new Date(dateBefore).toISOString();
+      const dateAfterIso = new Date(dateAfter).toISOString();
+      const matchOptions = {
+        '$match': {
+          'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
+          'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
+          'creationTime': {
+            '$gte': dateAfterIso,
+            '$lte': dateBeforeIso
+          }
+        }
+      };
+
+      return matchOptions;
+    }
   }
 
   async function protect(correlationId, blobSequence) {

@@ -1,0 +1,8 @@
+{
+  "description": "Function: getExpandedListOfLogs - params {catalogers: [IMP_TEST1]} get 1",
+  "only": false,
+  "skip": false,
+  "functionName": "getExpandedListOfLogs",
+  "preFillDb": true,
+  "params": {"catalogers": ["IMP_TEST1"]}
+}
