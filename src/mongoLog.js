@@ -120,14 +120,14 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
-  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01'}) {
+  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter),
+      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -163,14 +163,14 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
     return fixedResult;
 
-    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
+    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test = false) {
       const matchOptions = {
         '$match': {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate(),
-            '$lte': DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate()
+            '$gte': !test ? new Date(dateAfter) : DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate(),
+            '$lte': !test ? new Date(dateBefore) : DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate()
           }
         }
       };
