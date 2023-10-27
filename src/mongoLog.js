@@ -169,8 +169,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': !test ? new Date(dateAfter) : DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate(),
-            '$lte': !test ? new Date(dateBefore) : DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate()
+            '$gte': test ? DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate() : new Date(dateAfter),
+            '$lte': test ? DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate() : new Date(dateBefore)
           }
         }
       };
