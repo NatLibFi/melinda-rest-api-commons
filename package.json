@@ -47,6 +47,7 @@
     "amqplib": "^0.10.3",
     "debug": "^4.3.4",
     "http-status": "^1.7.0",
+    "luxon": "^3.4.3",
     "moment": "^2.29.4",
     "mongo-sanitize": "^1.1.0",
     "mongodb": "^4.17.1"

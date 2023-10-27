@@ -34,6 +34,7 @@ import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import {LOG_ITEM_TYPE} from './constants';
+import {DateTime} from 'luxon';
 
 export default async function (MONGO_URI, dbName = 'rest-api') {
   const logger = createLogger();
@@ -101,12 +102,12 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   // getListOfLogs returns list of correlationIds that have logs of given logItemType
   // if logItemType is not given, getListOfLogs returns list of correlationIds that have MERGE_LOG
-  async function getListOfLogs(logItemType = 'MERGE_LOG') {
-    checkLogItemType(logItemType, false, false);
+  async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
+    // checkLogItemType(logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .distinct('correlationId', {logItemType});
     logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
-    return {status: result.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.length > 0 ? result : 'No logs found'};
+    return result;
   }
 
   async function getListOfCatalogers() {
@@ -119,7 +120,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
-  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = new Date('2000-01-01')}) {
+  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01'}) {
     logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
@@ -160,18 +161,16 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.silly(`Query result: ${JSON.stringify(fixedResult)}`);
 
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
-    return {status: fixedResult.length > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: fixedResult.length > 0 ? fixedResult : 'No logs found'};
+    return fixedResult;
 
     function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter) {
-      const dateBeforeIso = new Date(dateBefore).toISOString();
-      const dateAfterIso = new Date(dateAfter).toISOString();
       const matchOptions = {
         '$match': {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': dateAfterIso,
-            '$lte': dateBeforeIso
+            '$gte': DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate(),
+            '$lte': DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate()
           }
         }
       };
@@ -198,7 +197,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           }
         ]
       );
-      return {status: result.modifiedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.modifiedCount > 0 ? result : 'No logs found'};
+      return result;
     } catch (error) {
       const errorMessage = error.payload || error.message || '';
       logError(error);
@@ -213,7 +212,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
-      return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
+      return result;
     } catch (error) {
       const errorMessage = error.payload || error.message || '';
       logError(error);
@@ -236,7 +235,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
-      return {status: result.deletedCount > 0 ? httpStatus.OK : httpStatus.NOT_FOUND, payload: result.deletedCount > 0 ? result : 'No logs found'};
+      return result;
     } catch (error) {
       const errorMessage = error.payload || error.message || '';
       logError(error);
@@ -245,7 +244,6 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
-
     if (logItemType) {
       const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
       if (typeInLogItemTypes) {
