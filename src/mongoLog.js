@@ -264,7 +264,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   /**
    * Remove logs
    * @param {String} correlationId
-   * @param {Boolean} force
+   * @param {Boolean} force defaults false
    * @returns result
    */
   async function remove(correlationId, force = false) {
@@ -283,10 +283,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * REmove logs by sequences
+   * Remove logs by sequences
    * @param {String} correlationId
    * @param {[Integer]} sequences
-   * @param {Boolean} force
+   * @param {Boolean} force defaults false
    * @returns result
    */
   async function removeBySequences(correlationId, sequences = [], force = false) {
