@@ -34,8 +34,13 @@ import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import {LOG_ITEM_TYPE} from './constants';
-import {DateTime} from 'luxon';
 
+/**
+ * Create log operator
+ * @param {String} MONGO_URI connnection address to mongo
+ * @param {String} dbName Mongo DB name, defaults 'rest-api
+ * @returns {Object} containing all log handling functions
+ */
 export default async function (MONGO_URI, dbName = 'rest-api') {
   const logger = createLogger();
 
@@ -45,6 +50,11 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const collection = 'logs';
   return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getExpandedListOfLogs, protect, remove, removeBySequences};
 
+  /**
+   * Add log item to collection
+   * @param {Object}} logItem contains log item data
+   * @returns void
+   */
   async function addLogItem(logItem) {
     const time = moment().toDate();
     const newLogItem = {
@@ -71,11 +81,17 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     }
   }
 
-  async function query(params) {
-    logger.debug(`Query params: ${JSON.stringify(params)}`);
-    checkLogItemType(params.logItemType, false, false);
-    const {limit = 5, skip = 0, ...rest} = params;
-    logger.debug(`Actual query params: ${JSON.stringify(rest)}`);
+  /**
+   * Querry log items
+   * @param {Integer} limit defaults 5
+   * @param {Integer} skip defaults 0
+   * @param {Object} rest query params
+   * @returns result array
+   */
+  async function query({limit = 5, skip = 0, ...rest}) {
+    logger.debug(`Query params: ${JSON.stringify(rest)}`);
+    logger.debug(`Limit and skip params: ${limit} | ${skip}`);
+    checkLogItemType(rest.logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find(rest)
       .sort({creationTime: 1})
@@ -88,10 +104,18 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   // DEVELOP: queryById returns jsut one (randomish) log! is this useful?
-  async function queryById(correlationIdString, skip = 0, limit = 1) {
-    logger.debug(`QueryById: ${correlationIdString}`);
+  /**
+   * Get single log item by correlationId
+   * @param {String} correlationId
+   * @param {String} logItemType contant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
+   * @param {Integer} skip defaults 0
+   * @param {Integer} limit defaults 1
+   * @returns query result array
+   */
+  async function queryById(correlationId, logItemType = LOG_ITEM_TYPE.MERGE_LOG, skip = 0, limit = 1) {
+    logger.debug(`QueryById: ${correlationId}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
-      .find({correlationId: correlationIdString})
+      .find({correlationId, logItemType})
       .sort({blobSequence: 1})
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
@@ -102,6 +126,11 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   // getListOfLogs returns list of correlationIds that have logs of given logItemType
   // if logItemType is not given, getListOfLogs returns list of correlationIds that have MERGE_LOG
+  /**
+   * Get list correlationId of logs filtered by logItemType
+   * @param {String} logItemType contant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
+   * @returns Array of query results
+   */
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
     // checkLogItemType(logItemType, false, false);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
@@ -110,6 +139,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     return result;
   }
 
+  /**
+   * Get list of catalogers from logs
+   * @returns Array of query results
+   */
   async function getListOfCatalogers() {
     logger.debug(`Getting list of Catalogers`);
 
@@ -119,7 +152,15 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     return result;
   }
 
-  // getExpandedListOfLogs returns groped MERGE_LOGs and MATCH_LOGs
+  /**
+   * Get filtered list of logs with extra info. Give params in Object
+   * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
+   * @param {[String]} catalogers: String array of wanted catalogers. Defaults []
+   * @param {String} dateBefore: String date schema 'YYYY-MM-DD'. Defaults new Date()
+   * @param {String} dateAfter: String date schema 'YYYY-MM-DD'. Defaults '2000-01-01'
+   * @param {Boolean} test: Boolean is this test run. Defaults false
+   * @returns Parsed Object {'correlationId', 'logItemType', 'creationTime', 'cataloger', 'logCount'}
+   */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
@@ -169,8 +210,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
           'creationTime': {
-            '$gte': test ? DateTime.fromJSDate(new Date(dateAfter)).startOf('day').toISODate() : new Date(dateAfter),
-            '$lte': test ? DateTime.fromJSDate(new Date(dateBefore)).endOf('day').toISODate() : new Date(dateBefore)
+            '$gte': test ? new Date(dateAfter).toISOString() : new Date(dateAfter),
+            '$lte': test ? new Date(dateBefore).toISOString() : new Date(dateBefore)
           }
         }
       };
@@ -179,6 +220,12 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     }
   }
 
+  /**
+   * Protect logs from cleaning. Forced cleaning defaults 30days
+   * @param {String} correlationId
+   * @param {Integer} blobSequence
+   * @returns result
+   */
   async function protect(correlationId, blobSequence) {
     logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
     const cleanCorrelationId = sanitize(correlationId);
@@ -205,6 +252,12 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     }
   }
 
+  /**
+   * Remove logs
+   * @param {String} correlationId
+   * @param {Boolean} force
+   * @returns result
+   */
   async function remove(correlationId, force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
     const clean = sanitize(correlationId);
@@ -220,6 +273,13 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     }
   }
 
+  /**
+   * REmove logs by sequences
+   * @param {String} correlationId
+   * @param {[Integer]} sequences
+   * @param {Boolean} force
+   * @returns result
+   */
   async function removeBySequences(correlationId, sequences = [], force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
     const clean = sanitize(correlationId);
@@ -243,6 +303,13 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     }
   }
 
+  /**
+   * Checks validy of logItemType
+   * @param {String} logItemType
+   * @param {Boolean} errorUnknown
+   * @param {Boolean} errorNotExisting
+   * @returns void
+   */
   function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
     if (logItemType) {
       const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
