@@ -204,6 +204,15 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.debug(`Query result: ${fixedResult.length > 0 ? `Found ${fixedResult.length} log items!` : 'Not found!'}`);
     return fixedResult;
 
+    /**
+     * Generate match object for aggregation pipeline
+     * @param {[String]} logItemTypes: String array of logItemTypes.
+     * @param {[String]} catalogers: String array of wanted catalogers
+     * @param {String} dateBefore: String date schema 'YYYY-MM-DD'
+     * @param {String} dateAfter: String date schema 'YYYY-MM-DD'
+     * @param {Boolean} test: Boolean is this test run. Defaults false
+     * @returns Match Object
+     */
     function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test = false) {
       const matchOptions = {
         '$match': {
