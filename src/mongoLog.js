@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -163,12 +163,12 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
+    logger.debug(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test),
+      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test}),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -213,7 +213,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
      * @param {Boolean} test: Boolean is this test run. Defaults false
      * @returns Match Object
      */
-    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test = false) {
+    function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test = false}) {
       const matchOptions = {
         '$match': {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
