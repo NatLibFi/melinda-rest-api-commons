@@ -4,5 +4,10 @@
   "skip": false,
   "functionName": "getExpandedListOfLogs",
   "preFillDb": true,
-  "params": {"catalogers": ["IMP_TEST1"]}
+  "params": {
+    "catalogers": [
+      "IMP_TEST1"
+    ],
+    "test": true
+  }
 }

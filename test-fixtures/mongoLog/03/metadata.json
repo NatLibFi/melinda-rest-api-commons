@@ -4,5 +4,7 @@
   "skip": false,
   "functionName": "getExpandedListOfLogs",
   "preFillDb": true,
-  "params": []
+  "params": {
+    "test": true
+  }
 }

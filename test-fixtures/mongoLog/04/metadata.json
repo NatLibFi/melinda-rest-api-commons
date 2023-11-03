@@ -4,5 +4,11 @@
   "skip": false,
   "functionName": "getExpandedListOfLogs",
   "preFillDb": true,
-  "params": {"logItemTypes": ["MERGE_LOG", "MATCH_LOG"]}
+  "params": {
+    "logItemTypes": [
+      "MERGE_LOG",
+      "MATCH_LOG"
+    ],
+    "test": true
+  }
 }

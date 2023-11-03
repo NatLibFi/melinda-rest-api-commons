@@ -1,12 +1,9 @@
+[
   {
-    "payload": [
-      {
-        "cataloger": "IMP_TEST1",
-        "correlationId": "bdce85eb-0ca2-4525-b00e-ae67d43b68ec",
-        "creationTime": "2023-08-07T01:21:38.392Z",
-        "logCount": 1,
-        "logItemType": "MERGE_LOG"
-      }
-    ],
-    "status": 200
+    "cataloger": "IMP_TEST1",
+    "correlationId": "bdce85eb-0ca2-4525-b00e-ae67d43b68ec",
+    "creationTime": "2023-08-07T01:21:38.392Z",
+    "logCount": 1,
+    "logItemType": "MERGE_LOG"
   }
+]
