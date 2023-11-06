@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2022 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -38,7 +38,7 @@ import {LOG_ITEM_TYPE} from './constants';
 /**
  * Create log operator
  * @param {String} MONGO_URI connnection address to mongo
- * @param {String} dbName Mongo DB name, defaults 'rest-api
+ * @param {String} dbName Mongo DB name, defaults 'rest-api'
  * @returns {Object} containing all log handling functions
  */
 export default async function (MONGO_URI, dbName = 'rest-api') {
@@ -52,7 +52,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   /**
    * Add log item to collection
-   * @param {Object}} logItem contains log item data
+   * @param {Object} logItem contains log item data
    * @returns void
    */
   async function addLogItem(logItem) {
@@ -82,7 +82,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * Querry log items
+   * Query log items
    * @param {Integer} limit defaults 5
    * @param {Integer} skip defaults 0
    * @param {Object} rest query params
@@ -107,7 +107,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   /**
    * Get single log item by correlationId
    * @param {String} correlationId
-   * @param {String} logItemType contant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
+   * @param {String} logItemType constant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
    * @param {Integer} skip defaults 0
    * @param {Integer} limit defaults 1
    * @returns query result array
@@ -127,8 +127,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   // getListOfLogs returns list of correlationIds that have logs of given logItemType
   // if logItemType is not given, getListOfLogs returns list of correlationIds that have MERGE_LOG
   /**
-   * Get list correlationId of logs filtered by logItemType
-   * @param {String} logItemType contant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
+   * Get list of correlationIds of logs filtered by logItemType
+   * @param {String} logItemType constant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
    * @returns Array of query results
    */
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
@@ -163,12 +163,12 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.debug(JSON.stringify(generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter))); // eslint-disable-line
+    logger.debug(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
     logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test),
+      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test}),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -213,7 +213,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
      * @param {Boolean} test: Boolean is this test run. Defaults false
      * @returns Match Object
      */
-    function generateMatchObject(logItemTypes, catalogers, dateBefore, dateAfter, test = false) {
+    function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test = false}) {
       const matchOptions = {
         '$match': {
           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
@@ -313,10 +313,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * Checks validy of logItemType
-   * @param {String} logItemType
-   * @param {Boolean} errorUnknown
-   * @param {Boolean} errorNotExisting
+   * Checks existence and validity of logItemType
+   * @param {String} logItemType constant LOG_ITEM_TYPE
+   * @param {Boolean} errorUnknown defaults false
+   * @param {Boolean} errorNotExisting defaults false
    * @returns void
    */
   function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
