@@ -24,18 +24,16 @@
   },
   "scripts": {
     "prepare": "npm run build",
+    "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist",
     "lint": "eslint ./src",
     "lint:dev": "eslint ./src --fix",
-    "test": "npm run lint && npm run test:base -- src/**/*.spec.js src/*.spec.js",
-    "test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
+    "test": "npm run lint && npm run test:base",
     "test:base": "cross-env NODE_ENV=test nyc mocha --package ./package.json --exclude src/amqp.health.spec.js --exclude src/amqp.tests.spec.js",
+    "test:dev": "npm run lint:dev && cross-env NODE_ENV=test nyc mocha --package ./package.json --exclude src/amqp.health.spec.js --exclude src/amqp.tests.spec.js",
     "test:local": "cross-env NODE_ENV=test nyc mocha --package ./package.json -- src/amqp.*.spec.js",
     "test:healthcheck": "cross-env NODE_ENV=test nyc mocha --require @babel/register -- src/amqp.health.spec.js",
-    "coverage": "npm run cover:unit && npm run cover:report",
-    "cover:unit": "nyc --silent npm run test",
-    "cover:report": "nyc report --reporter=lcov --reporter=text",
-    "dev": "NODE_ENV=development cross-env DEBUG='@natlibfi/*' nodemon",
-    "build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist"
+    "dev": "nodemon",
+    "dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test nodemon"
   },
   "dependencies": {
     "@natlibfi/marc-record": "^8.0.0",
@@ -53,9 +51,10 @@
   },
   "devDependencies": {
     "@babel/cli": "^7.22.15",
-    "@babel/core": "^7.22.20",
+    "@babel/core": "^7.23.2",
     "@babel/plugin-transform-runtime": "^7.22.15",
     "@babel/preset-env": "^7.22.20",
+    "@babel/register": "^7.22.15",
     "@natlibfi/eslint-config-melinda-backend": "^3.0.2",
     "@natlibfi/fixugen": "^2.0.1",
     "@natlibfi/fixura": "^3.0.1",
@@ -97,7 +96,8 @@
   },
   "mocha": {
     "spec": [
-      "src/*.spec.js"
+      "src/*.spec.js",
+      "src/**/*.spec.js"
     ],
     "require": [
       "@babel/register"
@@ -107,15 +107,20 @@
     "bail": true,
     "exit": true
   },
+  "nodemonConfig": {
+    "exec": "npm run test:dev",
+    "watch": [
+      "src/*",
+      "test-fixtures/*"
+    ]
+  },
   "nyc": {
     "exclude": [
-      "**/*.spec.js"
+      "src/*.spec.js",
+      "src/**/*.spec.js"
     ],
     "reporter": [
       "text"
-    ],
-    "require": [
-      "@babel/register"
     ],
     "sourceMap": false,
     "instrument": false,
@@ -123,13 +128,5 @@
     "statements": 80,
     "functions": 80,
     "branches": 80
-  },
-  "nodemonConfig": {
-    "exec": "npm run test:dev",
-    "watch": [
-      "src/*"
-    ],
-    "ext": "js",
-    "delay": 2.5
   }
 }
