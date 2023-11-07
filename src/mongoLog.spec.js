@@ -62,8 +62,8 @@ async function callback({
     return expect(dump.logs[0]['0']).to.eql(expectedResult);
   }
 
-  if (functionName === 'getCatalogersListOfLogs') {
-    const result = await mongoLogOperator.getCatalogersListOfLogs();
+  if (functionName === 'getListOfCatalogers') {
+    const result = await mongoLogOperator.getListOfCatalogers();
     // console.log(result); // eslint-disable-line
 
     return expect(result).to.eql(expectedResult);
@@ -76,5 +76,11 @@ async function callback({
     return expect(result).to.eql(expectedResult);
   }
 
-
+  if (functionName === 'getListOfLogs') {
+    const result = await mongoLogOperator.getListOfLogs(params);
+    // console.log(result); // eslint-disable-line
+    return expect(result).to.eql(expectedResult);
+  }
+  throw new Error(`Unknown functionName: ${functionName}`);
 }
+

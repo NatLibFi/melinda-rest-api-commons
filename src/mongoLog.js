@@ -132,10 +132,13 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns Array of query results
    */
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
-    // checkLogItemType(logItemType, false, false);
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
-      .distinct('correlationId', {logItemType});
-    logger.debug(`Query result: ${result.length > 0 ? `Found ${result.length} log items!` : 'Not found!'}`);
+    checkLogItemType(logItemType, true, true);
+    //logger.debug(logItemType);
+    // eslint-disable-next-line no-console
+    // console.log(`${JSON.stringify(logItemType)}`);
+    const result = await db.collection(collection)
+      .distinct('correlationId', {logItemType: `${logItemType}`});
+    logger.debug(`Query result for getListOfLogs: ${result.length > 0 ? `Found ${result.length} correlationIds for ${logItemType}!` : 'Not found!'}`);
     return result;
   }
 
