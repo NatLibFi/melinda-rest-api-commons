@@ -165,10 +165,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns Parsed Object {'correlationId', 'logItemType', 'creationTime', 'cataloger', 'logCount'}
    */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
-    logger.debug(`commons: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.debug(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
+    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
     //checkLogItemType(logItemType, false, false);
-    logger.debug(`Getting expanded list of logs`);
+    //logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
       generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test}),
