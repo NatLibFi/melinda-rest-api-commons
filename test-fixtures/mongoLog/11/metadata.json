@@ -1,0 +1,8 @@
+{
+  "description": "Function: getListOfLogs, param MATCH_LOG, return 1 correlationId",
+  "only": false,
+  "skip": false,
+  "functionName": "getListOfLogs",
+  "preFillDb": true,
+  "params": "MATCH_LOG"
+}

@@ -245,10 +245,10 @@ export default async function (MONGO_URI, collection) {
       .filter(param => param !== 'showAll' && showParams[param] !== true && showParams[param] !== 1)
       .filter(param => showParamToField[param])
       .map((param) => showParamToField[param]);
-    logger.debug(`We want to exclude from projection: ${JSON.stringify(result)}`);
+    logger.silly(`We want to exclude from projection: ${JSON.stringify(result)}`);
 
     const excludeObject = Object.fromEntries(result.map(param => [param, 0]));
-    logger.debug(`We want to exclude from projection: ${JSON.stringify(excludeObject)}`);
+    logger.silly(`We want to exclude from projection: ${JSON.stringify(excludeObject)}`);
 
     return {
       _id: 0,
@@ -345,7 +345,7 @@ export default async function (MONGO_URI, collection) {
           readStream: gridFSBucket.openDownloadStreamByName(clean)
         };
       }
-      logger.debug(`OperationSetting for ${correlationId}: ${JSON.stringify(operationSettings)}`);
+      logger.debug(`OperationSettings for ${correlationId}: ${JSON.stringify(operationSettings)}`);
       throw new ApiError(httpStatus.BAD_REQUEST, {message: `Content is only available for streamBulk jobs. ${correlationId} is not a streamBulk job.`});
     }
 

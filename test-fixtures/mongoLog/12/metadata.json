@@ -1,0 +1,7 @@
+{
+  "description": "Function: getListOfLogs - no params, default to MERGE_LOG, return 2 correlationIds",
+  "only": false,
+  "skip": false,
+  "functionName": "getListOfLogs",
+  "preFillDb": true
+}
