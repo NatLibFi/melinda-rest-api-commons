@@ -81,7 +81,7 @@ export const BIB_POSTMERGE_FIX_SETTINGS = {
 
 export const BIB_PREIMPORT_FIX_SETTINGS = {
   replacePrefixes: REPLACE_PREFIXES,
-  removeF984AFields: true
+  stripF984s: true
 };
 
 export const AUTNAME_PREIMPORT_FIX_SETTINGS = {
@@ -94,4 +94,8 @@ export const BIB_HANDLE_TEMP_URNS_SETTINGS = {
 
 export const BIB_STRIP_F884S_SETTINGS = {
   stripF884s: true
+};
+
+export const BIB_STRIP_F984S_SETTINGS = {
+  stripF984s: true
 };
