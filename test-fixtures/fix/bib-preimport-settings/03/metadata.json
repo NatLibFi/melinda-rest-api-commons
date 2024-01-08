@@ -1,5 +1,5 @@
 {
-    "description": "Should handle removing 984 with control phrases",
+    "description": "Should handle removing 984 with control phrases 2",
     "settings": "BIB_PREIMPORT_FIX_SETTINGS",
     "only": false,
     "skip": false

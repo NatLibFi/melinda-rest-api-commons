@@ -61,7 +61,6 @@ export const REPLACE_PREFIXES = [
   }
 ];
 
-
 // If placed in config.js testing needs envs
 // BIB_FORMAT_SETTINGS is outdated, use other settings instead
 
@@ -81,7 +80,8 @@ export const BIB_POSTMERGE_FIX_SETTINGS = {
 };
 
 export const BIB_PREIMPORT_FIX_SETTINGS = {
-  replacePrefixes: REPLACE_PREFIXES
+  replacePrefixes: REPLACE_PREFIXES,
+  removeF984AFields: true
 };
 
 export const AUTNAME_PREIMPORT_FIX_SETTINGS = {

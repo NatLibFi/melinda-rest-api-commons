@@ -1,7 +1,7 @@
 {
     "description": "CheckQueue - broken data doesn't fail when not toRecord: basic, not toRecord",
     "skip": true,
-    "only": true,
+    "only": false,
     "expectedMessageCount": 1,
     "sentToQueue": true,
     "checkQueueStyle": "basicNotToRecord"

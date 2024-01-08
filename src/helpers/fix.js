@@ -33,6 +33,8 @@ import createDebugLogger from 'debug';
 import {handleTempUrns} from './fix-handle-tempurns';
 import {stripF884s} from './fix-strip-f884s';
 
+import {FieldExclusion} from '@natlibfi/marc-record-validators-melinda';
+
 export * from './fix-constants';
 
 const logger = createLogger();
@@ -61,7 +63,11 @@ export function fixRecord(record, settings = {}) {
   // Fix 4, strip extra field 884s
   const newRecord4 = stripF884s(newRecord3, settings.stripF884s);
 
-  return newRecord4.toObject();
+  // Fix 5, strip extra field 884s
+  const newRecord5 = removeF984AFields(newRecord4, settings.removeF984AFields);
+  debugData(newRecord5);
+
+  return newRecord5.toObject();
 
 }
 
@@ -163,4 +169,36 @@ function generateMissingSIDs(record, options) {
   }
 }
 
+
+// eslint-disable-next-line no-unused-vars
+function removeF984AFields(record, removeF984AFieldsSettings) {
+  const field = '984';
+  const subfield = 'a';
+  const pattern = /^(?:ALWAYS)|(?:NEVER)-PREFER-IN-MERGE$/u;
+  debug(`Running removeF984AFields`);
+  debugData(`removeF984AFieldsSettings: ${JSON.stringify(removeF984AFieldsSettings)}`);
+
+  if (!removeF984AFieldsSettings || !pattern) {
+    debug(`No pattern for removeF984AFields`);
+    return record;
+  }
+
+  debug(`Removing f${field} fields with subfield ${subfield} consisting values ${pattern.toString()}`);
+  const config = [
+    {
+      tag: /^984$/u,
+      subfields: [
+        {
+          code: /a/u,
+          value: pattern
+        }
+      ]
+    }
+  ];
+  // eslint-disable-next-line new-cap
+  const validator = FieldExclusion(config);
+  validator.fix(record);
+  return record;
+
+}
 

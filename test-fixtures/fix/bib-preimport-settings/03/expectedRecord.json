@@ -579,17 +579,6 @@
       ]
     },
     {
-      "tag": "984",
-      "ind1": "4",
-      "ind2": "1",
-      "subfields": [
-        {
-          "code": "a",
-          "value": "NEVER-PREFER-IN-MERGE"
-        }
-      ]
-    },
-    {
       "tag": "SID",
       "subfields": [
         {
