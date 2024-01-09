@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2024 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -63,7 +63,7 @@ export function fixRecord(record, settings = {}) {
   // Fix 4, strip extra field 884s
   const newRecord4 = stripF884s(newRecord3, settings.stripF884s);
 
-  // Fix 5, strip extra field 884s
+  // Fix 5, strip extra field 984s
   const newRecord5 = stripF984s(newRecord4, settings.stripF984s || false);
   debugData(newRecord5);
 
@@ -172,16 +172,6 @@ function generateMissingSIDs(record, options) {
 
 function stripF984s(record, stripF984sSettings) {
   const F984A_PATTERN = /^(?:ALWAYS)|(?:NEVER)-PREFER-IN-MERGE$/u;
-
-  debug(`Running removeF984AFields`);
-  debugData(`removeF984AFieldsSettings: ${JSON.stringify(stripF984sSettings)}`);
-
-  if (!stripF984sSettings || !F984A_PATTERN || record.get('984').length < 1) {
-    debug(`No settings or pattern for removeF984AFields or f984 in record`);
-    return record;
-  }
-
-  debug(`Removing f984 fields with subfield $a consisting values ${F984A_PATTERN.toString()}`);
   const config = [
     {
       tag: /^984$/u,
@@ -193,6 +183,16 @@ function stripF984s(record, stripF984sSettings) {
       ]
     }
   ];
+
+  debug(`Running removeF984AFields`);
+  debugData(`removeF984AFieldsSettings: ${JSON.stringify(stripF984sSettings)}`);
+
+  if (!stripF984sSettings || !F984A_PATTERN || record.get('984').length < 1) {
+    debug(`No settings or pattern for removeF984AFields or f984 in record`);
+    return record;
+  }
+
+  debug(`Removing f984 fields with subfield $a consisting values ${F984A_PATTERN.toString()}`);
   // eslint-disable-next-line new-cap
   const validator = FieldExclusion(config);
   validator.fix(record);
