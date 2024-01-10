@@ -171,7 +171,7 @@ function generateMissingSIDs(record, options) {
 
 
 function stripF984s(record, stripF984sSettings) {
-  const F984A_PATTERN = /^(?:ALWAYS)|(?:NEVER)-PREFER-IN-MERGE$/u;
+  const F984A_PATTERN = /^(?:ALWAYS|NEVER)-PREFER-IN-MERGE$/u;
   const config = [
     {
       tag: /^984$/u,
