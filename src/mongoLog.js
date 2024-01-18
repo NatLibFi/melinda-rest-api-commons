@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda rest api batch import system
 *
-* Copyright (C) 2020-2023 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2020-2024 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-commons
 *
@@ -48,7 +48,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db(dbName);
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, remove, removeBySequences};
 
   /**
    * Add log item to collection
@@ -154,6 +154,20 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
     return result;
   }
+
+  /**
+   * Get list of catalogers from logs
+   * @returns Array of query results
+   */
+  async function getListOfCorrelationIds() {
+    logger.debug(`Getting list of CorrelationIds`);
+
+    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+      .distinct('correlationId');
+
+    return result;
+  }
+
 
   /**
    * Get filtered list of logs with extra info. Give params in Object
