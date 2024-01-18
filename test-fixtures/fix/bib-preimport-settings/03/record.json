@@ -585,7 +585,7 @@
       "subfields": [
         {
           "code": "a",
-          "value": "NEVER-PREFER-IN-MERGE"
+          "value": "ALWAYS-PREFER-IN-MERGE"
         }
       ]
     },
