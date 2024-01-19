@@ -113,7 +113,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns query result array
    */
   async function queryById(correlationId, logItemType = LOG_ITEM_TYPE.MERGE_LOG, skip = 0, limit = 1) {
-    logger.debug(`QueryById: ${correlationId}`);
+    logger.debug(`QueryById: ${correlationId}, logItemType: ${logItemType}, skip: ${skip}, limit: ${limit}`);
     const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
       .find({correlationId, logItemType})
       .sort({blobSequence: 1})
@@ -143,7 +143,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * Get list of catalogers from logs
+   * Get list of catalogers from all available logs
    * @returns Array of query results
    */
   async function getListOfCatalogers() {
@@ -156,7 +156,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * Get list of catalogers from logs
+   * Get list of correlationIds from all available logs
    * @returns Array of query results
    */
   async function getListOfCorrelationIds() {
