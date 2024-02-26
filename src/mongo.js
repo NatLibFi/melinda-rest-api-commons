@@ -270,6 +270,10 @@ export default async function (MONGO_URI, collection) {
         await setImportJobState({correlationId, operation: 'UPDATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
+      if (!finalImportJobStates.includes(importJobState.FIX)) { // eslint-disable-line
+        await setImportJobState({correlationId, operation: 'FIX', importJobState: IMPORT_JOB_STATE.ABORT});
+      }
+
       await setState({correlationId, state: QUEUE_ITEM_STATE.ABORT, errorStatus: httpStatus.REQUEST_TIMEOUT, errorMessage: `Timeout in ${oldState}`});
 
       return false;
@@ -470,7 +474,22 @@ export default async function (MONGO_URI, collection) {
       throw new ApiError('400', 'Invalid import job state');
     }
 
-    const newJobState = operation === OPERATIONS.CREATE ? {'importJobState.CREATE': cleanImportJobState} : {'importJobState.UPDATE': cleanImportJobState};
+    const newJobState = getNewJobState(operation, cleanImportJobState);
+
+
+    function getNewJobState(operation, cleanImportJobState) {
+      if (operation === OPERATIONS.CREATE) {
+        return {'importJobState.CREATE': cleanImportJobState};
+      }
+      if (operation === OPERATIONS.UPDATE) {
+        return {'importJobState.UPDATE': cleanImportJobState};
+      }
+      if (operation === OPERATIONS.FIX) {
+        return {'importJobState.FIX': cleanImportJobState};
+      }
+      throw new ApiError('400', 'Invalid operation for import job state');
+    }
+
     return db.collection(collection).findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
