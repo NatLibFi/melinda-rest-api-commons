@@ -32,7 +32,8 @@ export const IMPORT_JOB_STATE = {
 
 export const OPERATIONS = {
   CREATE: 'CREATE',
-  UPDATE: 'UPDATE'
+  UPDATE: 'UPDATE',
+  FIX: 'FIX'
 };
 
 export const CHUNK_SIZE = 100;
