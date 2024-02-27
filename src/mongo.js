@@ -66,7 +66,8 @@ export default async function (MONGO_URI, collection) {
       blobSize: 1,
       importJobState: {
         CREATE: IMPORT_JOB_STATE.EMPTY,
-        UPDATE: IMPORT_JOB_STATE.EMPTY
+        UPDATE: IMPORT_JOB_STATE.EMPTY,
+        FIX: IMPORT_JOB_STATE.EMPTY
       },
       records: [],
       errorMessage: '',
@@ -107,7 +108,8 @@ export default async function (MONGO_URI, collection) {
       blobSize: 0,
       importJobState: {
         CREATE: IMPORT_JOB_STATE.EMPTY,
-        UPDATE: IMPORT_JOB_STATE.EMPTY
+        UPDATE: IMPORT_JOB_STATE.EMPTY,
+        FIX: IMPORT_JOB_STATE.EMPTY
       },
       records: [],
       errorMessage: '',
@@ -258,7 +260,7 @@ export default async function (MONGO_URI, collection) {
     }
 
     const timeoutTime = moment(modificationTime).add(1, 'm');
-    logger.silly(`timeOut @ ${timeoutTime}`);
+    logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
       const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
