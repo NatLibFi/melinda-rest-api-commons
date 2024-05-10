@@ -64,7 +64,7 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   // recordStatus corresponds to RECORD_IMPORT_STATEs used in https://github.com/NatLibFi/melinda-record-import-commons-js
 
   // Non-http statuses
-  if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'SKIPPED'].includes(responseStatus)) {
+  if (['UPDATED', 'CREATED', 'INVALID', 'ERROR', 'SKIPPED', 'FIXED'].includes(responseStatus)) {
     return {recordStatus: responseStatus, detailedRecordStatus: responseStatus, message};
   }
 
