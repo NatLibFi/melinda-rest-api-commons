@@ -14,7 +14,7 @@
     "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
   },
   "license": "MIT",
-  "version": "4.1.8",
+  "version": "4.1.9",
   "main": "./dist/index.js",
   "engines": {
     "node": ">=18"
@@ -38,9 +38,9 @@
   "dependencies": {
     "@natlibfi/marc-record": "^9.0.1",
     "@natlibfi/marc-record-serializers": "^10.1.2",
-    "@natlibfi/marc-record-validate": "^8.0.9",
+    "@natlibfi/marc-record-validate": "^8.0.10",
     "@natlibfi/marc-record-validators-melinda": "^11.3.1",
-    "@natlibfi/melinda-backend-commons": "^2.3.0",
+    "@natlibfi/melinda-backend-commons": "^2.3.1",
     "@natlibfi/melinda-commons": "^13.0.16",
     "amqplib": "^0.10.4",
     "debug": "^4.3.6",
