@@ -70,12 +70,20 @@ function getf856sUrns(newRecord) {
 function validateLD(f856sUrn) {
   debug(`Validating the existence of legal deposit subfields`);
 
-  const LD_SUBFIELDS = [
+  const LD_SUBFIELDS_OLD = [
     {code: 'z', value: 'Käytettävissä vapaakappalekirjastoissa'},
     {code: '5', value: 'FI-Vapaa'}
   ];
 
-  const f856sUrnWithLdSubfields = f856sUrn.filter(field => fieldHasLDSubfields(field, LD_SUBFIELDS));
+  const LD_SUBFIELDS_NEW = [
+    {code: 'z', value: 'Käytettävissä vapaakappaletyöasemilla'},
+    {code: '5', value: 'FI-Vapaa'}
+  ];
+
+  const f856sUrnWithOldLdSubfields = f856sUrn.filter(field => fieldHasLDSubfields(field, LD_SUBFIELDS_OLD));
+  const f856sUrnWithNewLdSubfields = f856sUrn.filter(field => fieldHasLDSubfields(field, LD_SUBFIELDS_NEW));
+  const f856sUrnWithLdSubfields = [...f856sUrnWithNewLdSubfields, ...f856sUrnWithOldLdSubfields];
+
   if (f856sUrnWithLdSubfields.length > 0) {
     debug(`Record has ${f856sUrnWithLdSubfields.length} URN fields with all necessary legal deposit subfields`);
     debugData(`f856sUrnWithLdSubfields: ${JSON.stringify(f856sUrnWithLdSubfields)}`);
