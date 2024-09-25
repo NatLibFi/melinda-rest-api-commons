@@ -14,7 +14,7 @@
     "url": "git@github.com:natlibfi/melinda-rest-api-commons.git"
   },
   "license": "MIT",
-  "version": "4.2.0",
+  "version": "4.2.1-alpha.1",
   "main": "./dist/index.js",
   "engines": {
     "node": ">=18"
@@ -39,7 +39,7 @@
     "@natlibfi/marc-record": "^9.0.1",
     "@natlibfi/marc-record-serializers": "^10.1.2",
     "@natlibfi/marc-record-validate": "^8.0.10",
-    "@natlibfi/marc-record-validators-melinda": "^11.3.3",
+    "@natlibfi/marc-record-validators-melinda": "^11.3.6",
     "@natlibfi/melinda-backend-commons": "^2.3.1",
     "@natlibfi/melinda-commons": "^13.0.17",
     "amqplib": "^0.10.4",
@@ -63,10 +63,10 @@
     "babel-plugin-rewire": "^1.2.0",
     "chai": "^4.5.0",
     "cross-env": "^7.0.3",
-    "eslint": "^8.57.0",
+    "eslint": "^8.57.1",
     "mocha": "^10.7.3",
-    "nodemon": "^3.1.4",
-    "nyc": "^17.0.0"
+    "nodemon": "^3.1.7",
+    "nyc": "^17.1.0"
   },
   "eslintConfig": {
     "extends": "@natlibfi/melinda-backend"
