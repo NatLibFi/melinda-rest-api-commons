@@ -543,21 +543,6 @@
     },
     {
       "tag": "SID",
-      "subfields": [
-        {
-          "code": "c",
-          "value": "2314156"
-        },
-        {
-          "code": "b",
-          "value": "helme"
-        }
-      ],
-      "ind1": " ",
-      "ind2": " "
-    },
-    {
-      "tag": "SID",
       "ind1": " ",
       "ind2": " ",
       "subfields": [
@@ -570,6 +555,21 @@
           "value": "FI-BTJ"
         }
       ]
+    },
+    {
+      "tag": "SID",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "2314156"
+        },
+        {
+          "code": "b",
+          "value": "helme"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
     }
   ]
 }

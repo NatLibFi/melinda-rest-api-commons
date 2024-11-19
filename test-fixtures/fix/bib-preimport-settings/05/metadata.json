@@ -1,0 +1,6 @@
+{
+    "description": "Should strip Melinda temp subfields from f856 when running with BIB_PREIMPORT_FIX_SETTINGS ",
+    "settings": "BIB_PREIMPORT_FIX_SETTINGS",
+    "skip": false,
+    "only": false
+}

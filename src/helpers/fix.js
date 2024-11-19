@@ -5,7 +5,7 @@ import createDebugLogger from 'debug';
 import {handleTempUrns} from './fix-handle-tempurns';
 import {stripF884s} from './fix-strip-f884s';
 
-import {FieldExclusion} from '@natlibfi/marc-record-validators-melinda';
+import {FieldExclusion, SubfieldExclusion} from '@natlibfi/marc-record-validators-melinda';
 
 export * from './fix-constants';
 
@@ -37,9 +37,13 @@ export function fixRecord(record, settings = {}) {
 
   // Fix 5, strip extra field 984s
   const newRecord5 = stripF984s(newRecord4, settings.stripF984s || false);
-  debugData(newRecord5);
 
-  return newRecord5.toObject();
+  // Fix 6, strip $9 MELINDA<TEMP> subfields
+  const newRecord6 = stripMelindaTempSubfields(newRecord5, settings.stripMelindaTempSubfields || false);
+
+  debugData(newRecord6);
+
+  return newRecord6.toObject();
 
 }
 
@@ -172,3 +176,31 @@ function stripF984s(record, stripF984sSettings) {
 
 }
 
+function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
+  if (!stripMelindaTempSubfieldsSettings) {
+    debug(`No settings for stripMelindaTempSubfields`);
+    return record;
+  }
+  // NOTE: we remove $9 MELINDA<TEMP> subfields only from f856
+  const tagPattern = /856/u;
+  const subfieldCodePattern = /9/u;
+  const subfieldValuePattern = /^MELINDA<TEMP>$/u;
+  const config = [
+    {
+      tag: tagPattern,
+      subfields: [
+        {
+          code: subfieldCodePattern,
+          value: subfieldValuePattern
+        }
+      ]
+    }
+  ];
+
+  debug(`Running stripMelindaTempSubfields`);
+
+  // eslint-disable-next-line new-cap
+  const validator = SubfieldExclusion(config);
+  validator.fix(record);
+  return record;
+}

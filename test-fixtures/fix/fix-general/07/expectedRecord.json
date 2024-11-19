@@ -559,21 +559,6 @@
       "subfields": [
         {
           "code": "c",
-          "value": "faa"
-        },
-        {
-          "code": "b",
-          "value": "tati"
-        }
-      ]
-    },
-    {
-      "tag": "SID",
-      "ind1": " ",
-      "ind2": " ",
-      "subfields": [
-        {
-          "code": "c",
           "value": "fuu"
         },
         {
@@ -594,6 +579,21 @@
         {
           "code": "b",
           "value": "helme"
+        }
+      ]
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "faa"
+        },
+        {
+          "code": "b",
+          "value": "tati"
         }
       ]
     }

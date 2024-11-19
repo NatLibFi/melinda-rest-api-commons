@@ -53,6 +53,7 @@ export const BIB_POSTMERGE_FIX_SETTINGS = {
 
 export const BIB_PREIMPORT_FIX_SETTINGS = {
   replacePrefixes: REPLACE_PREFIXES,
+  stripMelindaTempSubfields: true,
   stripF984s: true
 };
 
@@ -70,4 +71,8 @@ export const BIB_STRIP_F884S_SETTINGS = {
 
 export const BIB_STRIP_F984S_SETTINGS = {
   stripF984s: true
+};
+
+export const BIB_STRIP_MELINDA_TEMP_SUBFIELDS_SETTINGS = {
+  stripMelindaTempSubfields: true
 };
