@@ -1,3 +1,5 @@
 {
-    "description": "Should not add SIDs when settings are undefined"
+    "description": "Should not add SIDs when settings are undefined",
+    "only": false,
+    "skip": false
 }
