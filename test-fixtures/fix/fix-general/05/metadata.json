@@ -1,6 +1,6 @@
 {
     "description": "Should succeed in adding a BTJ SID with BIB_FORMAT_SETTINGS",
     "settings": "BIB_FORMAT_SETTINGS",
-    "only": true,
+    "only": false,
     "skip": false
 }
