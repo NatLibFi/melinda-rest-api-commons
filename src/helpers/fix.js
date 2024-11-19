@@ -43,7 +43,7 @@ export function fixRecord(record, settings = {}) {
 
   debugData(newRecord6);
 
-  return newRecord5.toObject();
+  return newRecord6.toObject();
 
 }
 
