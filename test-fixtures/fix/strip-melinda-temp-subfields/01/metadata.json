@@ -1,0 +1,6 @@
+{
+    "description": "Should strip Melinda temp subfields from f856",
+    "settings": "BIB_STRIP_MELINDA_TEMP_SUBFIELDS_SETTINGS",
+    "skip": false,
+    "only": false
+}
