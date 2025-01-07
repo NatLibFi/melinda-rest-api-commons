@@ -39,7 +39,7 @@
     "@natlibfi/marc-record": "^9.1.1",
     "@natlibfi/marc-record-serializers": "^10.1.4",
     "@natlibfi/marc-record-validate": "^8.0.11",
-    "@natlibfi/marc-record-validators-melinda": "^11.4.2",
+    "@natlibfi/marc-record-validators-melinda": "^11.4.8-alpha.1",
     "@natlibfi/melinda-backend-commons": "^2.3.5",
     "@natlibfi/melinda-commons": "^13.0.18",
     "amqplib": "^0.10.4",
@@ -67,6 +67,9 @@
     "mocha": "^10.8.2",
     "nodemon": "^3.1.7",
     "nyc": "^17.1.0"
+  },
+  "overrides": {
+    "nanoid": "^3.3.8"
   },
   "eslintConfig": {
     "extends": "@natlibfi/melinda-backend"
