@@ -49,7 +49,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
       debugHC(`Health checking amqp by asserting a queue`);
       await channel.assertQueue('HEALTHCHECK', {durable: false});
       debugHC(`Waiting 200ms before running healthCheck next`);
-      return healthCheck('200');
+      return healthCheck(200);
     } catch (error) {
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
       handleAmqpErrors(error);
