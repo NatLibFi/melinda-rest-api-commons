@@ -13,6 +13,7 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp');
   const debugHC = debug.extend('HC');
   const debugData = debug.extend('data');
+  const setTimeoutPromise = promisify(setTimeout);
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
   const connection = await amqplib.connect(AMQP_URL);
@@ -39,7 +40,6 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   }
 
   async function healthCheck(wait = false) {
-    const setTimeoutPromise = promisify(setTimeout);
     if (wait) {
       await setTimeoutPromise(wait);
       return healthCheck(false);
