@@ -3,7 +3,7 @@ import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import {expect} from 'chai';
-import createMongoLogOperator from './mongoLog';
+import createMongoLogOperator from './mongoLog.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 

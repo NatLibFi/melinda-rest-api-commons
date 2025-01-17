@@ -15,6 +15,7 @@
   },
   "license": "MIT",
   "version": "4.2.3",
+  "type": "module",
   "main": "./dist/index.js",
   "engines": {
     "node": ">=18"
@@ -108,7 +109,8 @@
     "inline-diffs": true,
     "maxDiffSize": 25000,
     "bail": true,
-    "exit": true
+    "exit": true,
+    "timeout": 10000
   },
   "nodemonConfig": {
     "exec": "npm run test:dev",
