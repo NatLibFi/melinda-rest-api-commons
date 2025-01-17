@@ -7,7 +7,7 @@ import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
-import {LOG_ITEM_TYPE} from './constants';
+import {LOG_ITEM_TYPE} from './constants.js';
 
 /**
  * Create log operator

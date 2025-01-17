@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "version": "4.2.4-alpha.2",
-  "type": "module",
+  "typeFOO": "module",
   "main": "./dist/index.js",
   "engines": {
     "node": ">=18"
