@@ -19,7 +19,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const logger = createLogger();
 
   // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+  //const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+  const client = await MongoClient.connect(MONGO_URI);
   const db = client.db(dbName);
   const collection = 'logs';
   return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, remove, removeBySequences};
