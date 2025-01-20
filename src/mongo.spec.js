@@ -4,8 +4,10 @@ import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createMongoOperator from './mongo';
+import createDebugLogger from 'debug';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
 generateTests({
   callback,
@@ -40,17 +42,20 @@ async function initMongofixtures() {
   });
 }
 
+// eslint-disable-next-line max-statements
 async function callback({
   getFixture,
   functionName,
   params,
-  preFillDb = false
+  preFillDb = false,
+  expectedToThrow = false,
+  expectedError = ''
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
   const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
   const expectedResult = await getFixture('expectedResult.json');
-  // console.log(typeof mongoUri); // eslint-disable-line
+  // debug(typeof mongoUri); // eslint-disable-line
 
   if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
     await mongoFixtures.populate(getFixture('dbContents.json'));
@@ -60,21 +65,39 @@ async function callback({
 
   if (functionName === 'createPrio') {
     try {
-      console.log(`CreatePrio`);
-      console.log(JSON.stringify(params));
+      debug(`CreatePrio`);
+      debug(JSON.stringify(params));
       await mongoOperator.createPrio(params);
-      const testFromDb = await mongoOperator.getOne({queueItemState: 'PENDING_VALIDATION'});
-      console.log(`getOne: ${JSON.stringify(testFromDb)}`);
-      //console.log(`Result: ${result}`);
       const dump = await mongoFixtures.dump();
-      console.log(dump);
-      expect(testFromDb).to.eql(expectedResult);
+      const [result] = dump.foobar;
+      debug(result);
+      const formattedResult = formatQueueItem(result);
+      expect(formattedResult).to.eql(expectedResult);
     } catch (error) {
-      console.log(error); // eslint-disable-line
+      debug(error);
+      if (expectedToThrow) {
+        debug('Expected to throw');
+        if (expectedError !== '') {
+          expect(error).to.eql(expectedError);
+          return;
+        }
+        return;
+      }
+      debug('Not expexted to throw');
       throw error;
     }
     return;
   }
 
   throw new Error(`Unknown functionName: ${functionName}`);
+}
+
+function formatQueueItem(queueItem) {
+  const filteredQueueItem = {
+    ...queueItem,
+    creationTime: '',
+    modificationTime: ''
+  };
+  debug(JSON.stringify(filteredQueueItem));
+  return filteredQueueItem;
 }

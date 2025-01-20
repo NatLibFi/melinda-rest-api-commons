@@ -1,4 +1,25 @@
 {
-  "_id": "64d047221f61fa986baf465a",
-  "correalationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d"
+  "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+  "cataloger": "foobar",
+  "oCatalogerIn": "IMP_TEST",
+  "operation": "CREATE",
+  "operationSettings": {
+    "prio": true
+  },
+  "blobSize": 1,
+  "errorMessage": "",
+  "errorStatus": "",
+  "importJobState": {
+    "CREATE": "EMPTY",
+     "FIX": "EMPTY",
+     "UPDATE": "EMPTY"
+  },
+  "operations": [
+   "CREATE"
+      ],
+   "queueItemState": "PENDING_VALIDATION",
+   "records": [],
+   "creationTime": "",
+   "modificationTime": ""
 }
+
