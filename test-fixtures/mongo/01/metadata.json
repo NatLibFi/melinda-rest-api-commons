@@ -1,0 +1,15 @@
+{
+    "description": "Function: createPrio",
+    "only": true,
+    "skip": false,
+    "functionName": "createPrio",
+    "preFillDb": false,
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "foobar",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "operationSettings": {
+        }
+    }
+}

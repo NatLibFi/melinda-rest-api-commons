@@ -9,6 +9,8 @@ import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
+import createDebugLogger from 'debug';
+
 //import isDeepStrictEqual from 'util';
 
 /* QueueItem:
@@ -40,17 +42,22 @@ import sanitize from 'mongo-sanitize';
 }
 */
 
-export default async function (MONGO_URI, collection) {
+export default async function (MONGO_URI, collection, db = 'rest-api') {
   const logger = createLogger();
+  const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
+  const debugDev = debug.extend(':dev');
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(MONGO_URI);
-  const db = client.db('rest-api');
-  const gridFSBucket = new GridFSBucket(db, {bucketName: collection});
+  const dbConnection = client.db(db);
+  const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
+  const operator = dbConnection.collection(collection);
+  debugDev(`mongo: ${MONGO_URI}, ${collection}`);
 
   return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
+    debugDev('createPrio');
     const time = moment().toDate();
     const newQueueItem = {
       correlationId,
@@ -76,7 +83,9 @@ export default async function (MONGO_URI, collection) {
       modificationTime: time
     };
     try {
-      const result = await db.collection(collection).insertOne(newQueueItem);
+      debugDev(`Inserting: ${JSON.stringify(newQueueItem)} to ${collection}}`);
+      const result = await operator.insertOne(newQueueItem);
+      debugDev(JSON.stringify(result));
       if (result.acknowledged) {
         logger.info(`New PRIO queue item for ${operation} ${correlationId} has been made in ${collection}`);
         return;
@@ -122,7 +131,7 @@ export default async function (MONGO_URI, collection) {
     if (stream) {
       try {
         // No await here, promises later
-        db.collection(collection).insertOne(newQueueItem);
+        operator.insertOne(newQueueItem);
         logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
         return new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
@@ -145,7 +154,7 @@ export default async function (MONGO_URI, collection) {
     // eslint-disable-next-line functional/no-conditional-statements
     if (!stream) {
       try {
-        const result = await db.collection(collection).insertOne(newQueueItem);
+        const result = await operator.insertOne(newQueueItem);
         if (result.acknowledged) {
           logger.info(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
           return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
@@ -186,7 +195,7 @@ export default async function (MONGO_URI, collection) {
     logger.debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
 
-    const result = await db.collection(collection).find(rest, {projection: createProjection(showParams)})
+    const result = await operator.find(rest, {projection: createProjection(showParams)})
       .limit(parseInt(limit, 10))
       .skip(parseInt(skip, 10))
       .toArray();
@@ -233,7 +242,7 @@ export default async function (MONGO_URI, collection) {
   }
 
   async function queryById({correlationId, checkModTime = false}) {
-    const result = await db.collection(collection).findOne({correlationId});
+    const result = await operator.findOne({correlationId});
     if (checkModTime) {
       const timeOut = await checkTimeOut({correlationId});
       if (timeOut) {
@@ -251,7 +260,7 @@ export default async function (MONGO_URI, collection) {
   // If the state is already ABORT or ERROR return false
 
   async function checkTimeOut({correlationId}) {
-    const {modificationTime, queueitemState: oldState, importJobState} = await db.collection(collection).findOne({correlationId});
+    const {modificationTime, queueitemState: oldState, importJobState} = await operator.findOne({correlationId});
 
     // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {
@@ -295,14 +304,14 @@ export default async function (MONGO_URI, collection) {
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
       const noContent = await removeContent(params);
       if (noContent) {
-        await db.collection(collection).deleteOne({correlationId: clean});
+        await operator.deleteOne({correlationId: clean});
         return true;
       }
     } catch (err) {
       if (err instanceof MongoDriverError) {
         if (err.message.indexOf('File not found for id') !== -1) {
           logger.silly(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
-          await db.collection(collection).deleteOne({correlationId: clean});
+          await operator.deleteOne({correlationId: clean});
           return true;
         }
         logger.error(err.message);
@@ -315,7 +324,7 @@ export default async function (MONGO_URI, collection) {
   async function readContent(correlationId) {
     logger.info(`Reading content from mongo for id: ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
-    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
+    const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
 
     if (result) {
       const {operationSettings} = result;
@@ -336,7 +345,7 @@ export default async function (MONGO_URI, collection) {
     logger.info(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await db.collection(collection).findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
+    const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
     logger.silly(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
@@ -358,19 +367,19 @@ export default async function (MONGO_URI, collection) {
       // Just queueItemState
       if (queueItemState && importJobState === undefined) {
         logger.silly(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
-        return db.collection(collection).findOne({...cleanQueueItemState});
+        return operator.findOne({...cleanQueueItemState});
       }
 
       // importJobState
       if (importJobState && queueItemState === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
-        return db.collection(collection).findOne({...importJobState});
+        return operator.findOne({...importJobState});
       }
 
       // importJobState and queueItemState
       if (importJobState && queueItemState) {
         logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
-        return db.collection(collection).findOne({...cleanQueueItemState, ...importJobState});
+        return operator.findOne({...cleanQueueItemState, ...importJobState});
       }
 
       logger.debug(`getOne not working!`);
@@ -400,7 +409,7 @@ export default async function (MONGO_URI, collection) {
     logger.verbose(`Push ids (${handledIds.length}) and rejectedIds (${rejectedIds.length}) ${correlationId} to ${collection}`);
     logger.debug(`ids (${handledIds.length}): ${JSON.stringify(handledIds)}, rejectedIds ${rejectedIds.length}: ${JSON.stringify(rejectedIds)}`);
     const clean = sanitize(correlationId);
-    await db.collection(collection).updateOne({
+    await operator.updateOne({
       correlationId: clean
     }, {
       $set: {
@@ -418,7 +427,7 @@ export default async function (MONGO_URI, collection) {
     logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}}`);
     const clean = sanitize(correlationId);
     const cleanMessageField = sanitize(messageField);
-    await db.collection(collection).updateOne({
+    await operator.updateOne({
       correlationId: clean
     }, {
       $set: {
@@ -453,7 +462,7 @@ export default async function (MONGO_URI, collection) {
     // eslint-disable-next-line functional/immutable-data
     Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
 
-    return db.collection(collection)
+    return operator
       .findOneAndUpdate(
         {correlationId: clean},
         {$set: updateValues},
@@ -492,7 +501,7 @@ export default async function (MONGO_URI, collection) {
       throw new ApiError('400', 'Invalid operation for import job state');
     }
 
-    return db.collection(collection).findOneAndUpdate({
+    return operator.findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
@@ -504,12 +513,12 @@ export default async function (MONGO_URI, collection) {
 
   async function setOperation({correlationId, operation}) {
     const newOperation = operation;
-    const {operation: oldOperation} = await db.collection(collection).findOne({correlationId});
+    const {operation: oldOperation} = await operator.findOne({correlationId});
     logger.info(`Setting queue-item operation from ${oldOperation} to ${newOperation} for ${correlationId} to ${collection}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanNewOperation = sanitize(newOperation);
 
-    const result = await db.collection(collection).findOneAndUpdate({
+    const result = await operator.findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
@@ -525,7 +534,7 @@ export default async function (MONGO_URI, collection) {
   async function setOperations({correlationId, addOperation, removeOperation = undefined}) {
     const cleanCorrelationId = sanitize(correlationId);
 
-    const queueItem = await db.collection(collection).findOne({correlationId: cleanCorrelationId});
+    const queueItem = await operator.findOne({correlationId: cleanCorrelationId});
     logger.silly(`We found a queueItem: ${JSON.stringify(queueItem)}`);
 
     const oldOperations = queueItem.operations;
@@ -538,7 +547,7 @@ export default async function (MONGO_URI, collection) {
     logger.silly(`operationsAfterRemove: ${operationsAfterRemove}`);
     logger.silly(`operationAfterRemoveAndAdd: ${operationsAfterRemoveAndAdd}`);
 
-    const result = await db.collection(collection).findOneAndUpdate({
+    const result = await operator.findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
@@ -554,7 +563,7 @@ export default async function (MONGO_URI, collection) {
   async function addBlobSize({correlationId}) {
     const cleanCorrelationId = sanitize(correlationId);
 
-    const result = await db.collection(collection).findOneAndUpdate({
+    const result = await operator.findOneAndUpdate({
       correlationId: cleanCorrelationId,
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS
     }, {
@@ -574,7 +583,7 @@ export default async function (MONGO_URI, collection) {
     const cleanCorrelationId = sanitize(correlationId);
     const cleanBlobSize = sanitize(blobSize);
 
-    const result = await db.collection(collection).findOneAndUpdate({
+    const result = await operator.findOneAndUpdate({
       correlationId: cleanCorrelationId
     }, {
       $set: {
