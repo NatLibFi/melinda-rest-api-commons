@@ -1,5 +1,5 @@
 {
-    "description": "Function: setImportJobState: ERROR invalid operation",
+    "description": "Function: setImportJobState: ERROR BAD_REQUEST (400) invalid operation",
     "only": true,
     "skip": false,
     "functionName": "setImportJobState",
