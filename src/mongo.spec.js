@@ -47,6 +47,7 @@ async function callback({
   getFixture,
   functionName,
   params,
+  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
@@ -310,6 +311,9 @@ async function callback({
       debug(`addBlobSize`);
       debug(JSON.stringify(params));
       //{correlationId}
+      const opResult = await mongoOperator.addBlobSize(params);
+      debug(`addBlobSize result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
     }
@@ -330,13 +334,38 @@ async function callback({
   throw new Error(`Unknown functionName: ${functionName}`);
 }
 
+async function compareToFirstDbEntry({expectedResult, expectModificationTime = false, formatDates = true}) {
+  const dump = await mongoFixtures.dump();
+  const [result] = dump.foobar;
+  debug(`db result: ${JSON.stringify(result)}`);
+
+  checkModificationTime({result, expectModificationTime});
+  if (formatDates) {
+    const formattedResult = formatQueueItem(result);
+    expect(formattedResult).to.eql(expectedResult);
+    return;
+  }
+  expect(result).to.eql(expectedResult);
+  return;
+}
+
+function checkModificationTime({result, expectModificationTime}) {
+  if (expectModificationTime) {
+    expect(result.modificationTime).to.not.eql('');
+    debug(`OK. We have modified modificationTime`);
+    return;
+  }
+  return;
+}
+
+
 function formatQueueItem(queueItem) {
   const filteredQueueItem = {
     ...queueItem,
     creationTime: '',
     modificationTime: ''
   };
-  debug(JSON.stringify(filteredQueueItem));
+  debug(`Formatted result: ${JSON.stringify(filteredQueueItem)}`);
   return filteredQueueItem;
 }
 

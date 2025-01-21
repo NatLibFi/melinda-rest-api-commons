@@ -573,7 +573,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       $set: {
         modificationTime: moment().toDate()
       }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    }, {projection: {_id: 0}, returnDocument: 'after'});
 
     logger.verbose(`AddBlobSizeResult in mongo: ${JSON.stringify(result)}`);
     debugDev(`${JSON.stringify(result)}`);
