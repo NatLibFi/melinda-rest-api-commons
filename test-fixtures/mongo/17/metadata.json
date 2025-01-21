@@ -1,6 +1,6 @@
 {
     "description": "Function: setState: ERROR + errorStatus + errorMessage",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "setState",
     "expectModificationTime": true,

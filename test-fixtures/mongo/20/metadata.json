@@ -1,12 +1,14 @@
 {
-    "description": "Function: setState",
+    "description": "Function: pushMessages to existing messages",
     "only": false,
     "skip": false,
-    "functionName": "setState",
+    "functionName": "pushMessages",
     "expectModificationTime": true,
     "preFillDb": true,
     "params": {
         "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
-        "state": "DONE"
+        "messages": [
+            "foo", "bar", "baz"
+        ]
     }
 }

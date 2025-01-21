@@ -261,13 +261,16 @@ async function callback({
     }
     return;
   }
+*/
 
   if (functionName === 'pushMessages') {
     try {
       debug(`pushMessages`);
       debug(JSON.stringify(params));
       //{correlationId, messages, messageField = 'messages'}
-
+      const opResult = await mongoOperator.pushMessages(params);
+      debug(`pushMessages result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -275,7 +278,6 @@ async function callback({
     return;
   }
 
-*/
 
   if (functionName === 'setState') {
     try {

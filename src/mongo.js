@@ -426,6 +426,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}}`);
     const clean = sanitize(correlationId);
     const cleanMessageField = sanitize(messageField);
+    debug(`${messageField} -> ${cleanMessageField}`);
     await operator.updateOne({
       correlationId: clean
     }, {

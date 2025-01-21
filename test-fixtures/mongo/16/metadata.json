@@ -1,6 +1,6 @@
 {
     "description": "Function: setImportState: ERROR BAD_REQUEST (400) Trying to set invalid state",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "setState",
     "preFillDb": true,
