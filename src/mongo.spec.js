@@ -99,6 +99,7 @@ async function callback({
     return;
   }
 
+  /*
   if (functionName === 'checkAndSetState') {
     try {
       debug(`checkAndSetState`);
@@ -308,11 +309,15 @@ async function callback({
     return;
   }
 
+  */
   if (functionName === 'setOperations') {
     try {
       debug(`setOperations`);
       debug(JSON.stringify(params));
       //{correlationId, addOperation, removeOperation = undefined}
+      const opResult = await mongoOperator.setOperations(params);
+      debug(`addBlobSize result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -340,6 +345,9 @@ async function callback({
       debug(`setBlobSize`);
       debug(JSON.stringify(params));
       //{correlationId,  blobSize}
+      const opResult = await mongoOperator.setBlobSize(params);
+      debug(`setBlobSize result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
