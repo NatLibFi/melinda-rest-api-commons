@@ -249,11 +249,16 @@ async function callback({
     return;
   }
 
+  */
+
   if (functionName === 'pushIds') {
     try {
       debug(`pushIds`);
       debug(JSON.stringify(params));
       //{correlationId, handledIds, rejectedIds}
+      const opResult = await mongoOperator.pushIds(params);
+      debug(`pushIds result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -261,7 +266,6 @@ async function callback({
     }
     return;
   }
-*/
 
   if (functionName === 'pushMessages') {
     try {
