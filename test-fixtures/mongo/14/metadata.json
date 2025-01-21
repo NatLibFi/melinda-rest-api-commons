@@ -1,6 +1,6 @@
 {
     "description": "Function: setImportJobState: ERROR BAD_REQUEST (400) invalid importJobState",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "setImportJobState",
     "preFillDb": true,

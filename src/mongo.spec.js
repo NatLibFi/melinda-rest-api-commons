@@ -62,6 +62,7 @@ async function callback({
   const mongoUri = await mongoFixtures.getUri();
   const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
   const expectedResult = await getFixture('expectedResult.json');
+  // DEVELOP: we could test also opResults!
   // debug(typeof mongoUri); // eslint-disable-line
 
   if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
@@ -74,7 +75,8 @@ async function callback({
     try {
       debug(`CreatePrio`);
       debug(JSON.stringify(params));
-      await mongoOperator.createPrio(params);
+      const opResult = await mongoOperator.createPrio(params);
+      debug(`createPrio result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({expectedResult, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -90,7 +92,8 @@ async function callback({
       //{correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}
       const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : params.stream;
       const params2 = {...params, stream};
-      await mongoOperator.createBulk(params2);
+      const opResult = await mongoOperator.createBulk(params2);
+      debug(`createBulkResult: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({expectedResult, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -272,11 +275,16 @@ async function callback({
     return;
   }
 
+*/
+
   if (functionName === 'setState') {
     try {
       debug(`setState`);
       debug(JSON.stringify(params));
       //{correlationId, state, errorMessage = undefined, errorStatus = undefined}
+      const opResult = await mongoOperator.setState(params);
+      debug(`setState result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -284,8 +292,6 @@ async function callback({
     }
     return;
   }
-
-  */
 
   if (functionName === 'setImportJobState') {
     try {

@@ -1,6 +1,6 @@
 {
     "description": "Function: setImportJobState",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "setImportJobState",
     "expectModificationTime": true,
