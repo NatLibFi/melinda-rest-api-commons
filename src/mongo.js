@@ -526,7 +526,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
-
+    debugDev(`${JSON.stringify(result)}`);
     return result.ok;
     // logger.debug(JSON.stringify(result));
   }
@@ -555,7 +555,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         modificationTime: moment().toDate()
       }
     }, {projection: {_id: 0}, returnNewDocument: true});
-
+    debugDev(`${JSON.stringify(result)}`);
     return result.ok;
     // logger.debug(JSON.stringify(result));
   }
@@ -576,6 +576,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     }, {projection: {_id: 0}, returnNewDocument: true});
 
     logger.verbose(`AddBlobSizeResult in mongo: ${JSON.stringify(result)}`);
+    debugDev(`${JSON.stringify(result)}`);
     return result;
   }
 
@@ -593,6 +594,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     }, {projection: {_id: 0}, returnNewDocument: true});
 
     logger.verbose(`SetBlobSizeResult in mongo: ${JSON.stringify(result)}`);
+    debugDev(`${JSON.stringify(result)}`);
     return result;
   }
 

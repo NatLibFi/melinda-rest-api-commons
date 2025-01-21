@@ -105,6 +105,7 @@ async function callback({
       debug(`checkAndSetState`);
       debug(JSON.stringify(params));
       //{correlationId, state, errorMessage = undefined, errorStatus = undefined})
+      // timeout
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -117,6 +118,7 @@ async function callback({
       debug(`checkAndSetImportJobState`);
       debug(JSON.stringify(params));
       //{correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}
+      // timeout
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -141,6 +143,7 @@ async function callback({
       debug(`createProjection`);
       debug(JSON.stringify(params));
       //showParams = {}
+      //no db
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -165,6 +168,7 @@ async function callback({
       debug(`checkTimeOut`);
       debug(JSON.stringify(params));
       //{correlationId}
+      // timeout
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
