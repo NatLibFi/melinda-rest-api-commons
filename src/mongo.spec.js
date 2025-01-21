@@ -60,9 +60,10 @@ async function callback({
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
-  const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
+  const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '', true);
   const expectedResult = await getFixture('expectedResult.json');
   // DEVELOP: we could test also opResults!
+  // DEVELOP: we could use sama function for most of tests?
   // debug(typeof mongoUri); // eslint-disable-line
 
   if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
@@ -143,6 +144,7 @@ async function callback({
     return;
   }
 
+  // NOT EXPORTED
   if (functionName === 'createProjection') {
     try {
       debug(`createProjection`);
@@ -170,13 +172,16 @@ async function callback({
     return;
   }
 
+  // NOT EXPORTED!
   if (functionName === 'checkTimeOut') {
     try {
       debug(`checkTimeOut`);
       debug(JSON.stringify(params));
       //{correlationId}
       // timeout
-
+      const opResult = await mongoOperator.checkTimeOut(params);
+      debug(`checkTimeOut result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;

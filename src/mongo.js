@@ -42,7 +42,7 @@ import createDebugLogger from 'debug';
 }
 */
 
-export default async function (MONGO_URI, collection, db = 'rest-api') {
+export default async function (MONGO_URI, collection, db = 'rest-api', test = false) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
@@ -52,8 +52,12 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
   const dbConnection = client.db(db);
   const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
   const operator = dbConnection.collection(collection);
-  debugDev(`mongo: ${MONGO_URI}, ${collection}`);
+  debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}, test: ${test}`);
 
+  if (test) {
+    // return also internal functions if testing
+    return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
+  }
   return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
