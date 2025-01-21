@@ -1,0 +1,15 @@
+{
+    "description": "Function: setImportJobState: ERROR invalid operation",
+    "only": true,
+    "skip": false,
+    "functionName": "setImportJobState",
+    "preFillDb": true,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Invalid operation for import job state",
+    "expectedErrorStatus": 400,
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "operation": "FOOBAR",
+        "importJobState": "DONE"
+    }
+}

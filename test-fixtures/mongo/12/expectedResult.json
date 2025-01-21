@@ -1,8 +1,8 @@
 {
   "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
-  "cataloger": "setOperationTest",
+  "cataloger": "setImportJobStateTest",
   "oCatalogerIn": "IMP_TEST",
-  "operation": "UPDATE",
+  "operation": "CREATE",
   "operationSettings": {
     "prio": true
   },
@@ -10,7 +10,7 @@
   "errorMessage": "",
   "errorStatus": "",
   "importJobState": {
-    "CREATE": "EMPTY",
+    "CREATE": "DONE",
      "FIX": "EMPTY",
      "UPDATE": "EMPTY"
   },

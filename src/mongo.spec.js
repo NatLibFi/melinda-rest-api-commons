@@ -285,11 +285,16 @@ async function callback({
     return;
   }
 
+  */
+
   if (functionName === 'setImportJobState') {
     try {
       debug(`setImportJobState`);
       debug(JSON.stringify(params));
       //{correlationId, operation, importJobState}
+      const opResult = await mongoOperator.setImportJobState(params);
+      debug(`setImportJobState result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -297,7 +302,6 @@ async function callback({
     return;
   }
 
-  */
 
   if (functionName === 'setOperation') {
     try {

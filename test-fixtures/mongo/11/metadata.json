@@ -1,6 +1,6 @@
 {
     "description": "Function: setOperation: CREATE to UPDATE",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "setOperation",
     "expectModificationTime": true,

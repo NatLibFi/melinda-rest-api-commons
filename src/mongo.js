@@ -477,11 +477,11 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     const cleanImportJobState = sanitize(importJobState);
 
     if (!(operation in OPERATIONS)) {
-      throw new ApiError('400', 'Invalid operation for import job state');
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid operation for import job state');
     }
 
     if (!(cleanImportJobState in IMPORT_JOB_STATE)) {
-      throw new ApiError('400', 'Invalid import job state');
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid import job state');
     }
 
     const newJobState = getNewJobState(operation, cleanImportJobState);
