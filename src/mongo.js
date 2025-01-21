@@ -466,7 +466,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       .findOneAndUpdate(
         {correlationId: clean},
         {$set: updateValues},
-        {projection: {_id: 0}, returnNewDocument: true}
+        {projection: {_id: 0}, returnDocument: 'after'}
       );
   }
 
@@ -508,7 +508,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         ...newJobState,
         modificationTime: moment().toDate()
       }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    }, {projection: {_id: 0}, returnDocument: 'after'});
   }
 
   async function setOperation({correlationId, operation}) {
@@ -525,7 +525,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         operation: cleanNewOperation,
         modificationTime: moment().toDate()
       }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
     return result.ok;
     // logger.debug(JSON.stringify(result));
@@ -554,7 +554,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         operations: operationsAfterRemoveAndAdd,
         modificationTime: moment().toDate()
       }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
     return result.ok;
     // logger.debug(JSON.stringify(result));
@@ -591,7 +591,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
         blobSize: cleanBlobSize,
         modificationTime: moment().toDate()
       }
-    }, {projection: {_id: 0}, returnNewDocument: true});
+    }, {projection: {_id: 0}, returnDocument: 'after'});
 
     logger.verbose(`SetBlobSizeResult in mongo: ${JSON.stringify(result)}`);
     debugDev(`${JSON.stringify(result)}`);
