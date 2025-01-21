@@ -20,15 +20,19 @@ generateTests({
   },
   mocha: {
     before: async () => {
+      //debug(`<< Before`);
       await initMongofixtures();
     },
     beforeEach: async () => {
+      //debug(`<< BeforeEach`);
       await mongoFixtures.clear();
     },
     afterEach: async () => {
+      //debug(`<< AfterEach`);
       await mongoFixtures.clear();
     },
     after: async () => {
+      //debug(`<< After`);
       await mongoFixtures.close();
     }
   }
@@ -71,13 +75,10 @@ async function callback({
       debug(`CreatePrio`);
       debug(JSON.stringify(params));
       await mongoOperator.createPrio(params);
-      const dump = await mongoFixtures.dump();
-      const [result] = dump.foobar;
-      debug(result);
-      const formattedResult = formatQueueItem(result);
-      expect(formattedResult).to.eql(expectedResult);
+      await compareToFirstDbEntry({expectedResult, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -87,16 +88,13 @@ async function callback({
       debug(`CreateBulk`);
       debug(JSON.stringify(params));
       //{correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}
-      const stream = contentStream ? getFixture({components: ['contentStream'], reader: READERS.STREAM}) : params.stream;
+      const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : params.stream;
       const params2 = {...params, stream};
       await mongoOperator.createBulk(params2);
-      const dump = await mongoFixtures.dump();
-      const [result] = dump.foobar;
-      debug(result);
-      const formattedResult = formatQueueItem(result);
-      expect(formattedResult).to.eql(expectedResult);
+      await compareToFirstDbEntry({expectedResult, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -123,6 +121,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -135,6 +134,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -148,6 +148,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -160,6 +161,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -173,6 +175,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -185,6 +188,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -197,6 +201,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -209,6 +214,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -221,6 +227,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -233,6 +240,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -245,6 +253,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -257,6 +266,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -269,6 +279,7 @@ async function callback({
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -280,6 +291,7 @@ async function callback({
       //{correlationId, operation, importJobState}
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -291,6 +303,7 @@ async function callback({
       //{correlationId, operation}
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -302,6 +315,7 @@ async function callback({
       //{correlationId, addOperation, removeOperation = undefined}
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -316,6 +330,7 @@ async function callback({
       await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -327,6 +342,7 @@ async function callback({
       //{correlationId,  blobSize}
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
     }
     return;
   }
@@ -336,8 +352,12 @@ async function callback({
 
 async function compareToFirstDbEntry({expectedResult, expectModificationTime = false, formatDates = true}) {
   const dump = await mongoFixtures.dump();
+  debug(`--- We have ${dump.foobar.length} documents in db`);
+  debug(dump.foobar);
   const [result] = dump.foobar;
   debug(`db result: ${JSON.stringify(result)}`);
+  const dump2 = await mongoFixtures.dump();
+  debug(`--- We have ${dump2.foobar.length} documents in db now`);
 
   checkModificationTime({result, expectModificationTime});
   if (formatDates) {

@@ -130,10 +130,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     // eslint-disable-next-line functional/no-conditional-statements
     if (stream) {
       try {
-        // No await here, promises later
-        operator.insertOne(newQueueItem);
-        logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
 
           stream
@@ -143,6 +140,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
               resolve(correlationId);
             }));
         });
+        logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
+        return operator.insertOne(newQueueItem);
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
         logError(error);

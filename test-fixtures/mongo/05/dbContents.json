@@ -1,9 +1,8 @@
 {
   "foobar": [
     {
-      "_id": "64d047221f61fa986baf465a",
       "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
-      "cataloger": "foobar",
+      "cataloger": "addBlobSizeTest",
       "oCatalogerIn": "IMP_TEST",
       "operation": "CREATE",
       "operationSettings": {

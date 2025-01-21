@@ -1,6 +1,6 @@
 {
     "description": "Function: addBlobSize",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "addBlobSize",
     "expectModificationTime": true,
