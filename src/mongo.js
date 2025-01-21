@@ -166,7 +166,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
         logError(error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Montestgo errored: ${errorMessage}`);
       }
     }
   }
@@ -270,6 +270,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
+
+    debug(`test: ${test}`);
 
     const timeoutTime = moment(modificationTime).add(1, 'm');
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);

@@ -56,7 +56,9 @@ async function callback({
   expectedToThrow = false,
   expectedErrorMessage = '',
   expectedErrorStatus = '',
-  contentStream = false
+  contentStream = false,
+  expectedOpResult = undefined
+
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
@@ -172,7 +174,9 @@ async function callback({
     return;
   }
 
-  // NOT EXPORTED!
+  */
+
+  // only returned for test
   if (functionName === 'checkTimeOut') {
     try {
       debug(`checkTimeOut`);
@@ -180,7 +184,9 @@ async function callback({
       //{correlationId}
       // timeout
       const opResult = await mongoOperator.checkTimeOut(params);
-      debug(`checkTimeOut result: ${JSON.stringify(opResult)}`);
+      debug(`checkTimeOut result: ${JSON.stringify(opResult)} (${JSON.stringify(expectedOpResult)})}`);
+      expect(opResult).to.eql(expectedOpResult ? expectedOpResult : opResult);
+
       await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -188,6 +194,8 @@ async function callback({
     }
     return;
   }
+
+  /*
 
   if (functionName === 'remove') {
     try {
