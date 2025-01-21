@@ -526,7 +526,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
-    return result.ok;
+    return result.ok || result;
     // logger.debug(JSON.stringify(result));
   }
 
@@ -555,7 +555,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
-    return result.ok;
+    return result.ok || result;
     // logger.debug(JSON.stringify(result));
   }
 
