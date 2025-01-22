@@ -260,11 +260,11 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   // Check that if the item has waited too long
   // If the last modification time for the queueItem is older than 1 minute
   // set state to ABORT and return false, otherwise return true
-  // If the state is already ABORT or ERROR return false
+  // If the state is already ABORT or ERROR or DONE return false
 
   async function checkTimeOut({correlationId}) {
-    const {modificationTime, queueitemState: oldState, importJobState} = await operator.findOne({correlationId});
-
+    const {modificationTime, queueItemState: oldState, importJobState} = await operator.findOne({correlationId});
+    //debug(`${modificationTime} - oldState: ${oldState}`);
     // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {
       logger.silly(`${correlationId} has already state: ${oldState}`);

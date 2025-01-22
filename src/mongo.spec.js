@@ -189,7 +189,7 @@ async function callback({
         await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
       }
       const opResult = await mongoOperator.checkTimeOut(params);
-      debug(`checkTimeOut result: ${JSON.stringify(opResult)} (${JSON.stringify(expectedOpResult)})}`);
+      debug(`checkTimeOut result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
 
       // eslint-disable-next-line functional/no-conditional-statements
       if (expectedOpResult !== undefined) {

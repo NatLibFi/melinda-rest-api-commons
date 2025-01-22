@@ -7,8 +7,8 @@
     "prio": true
   },
   "blobSize": 1,
-  "errorMessage": "Timeout in WAITING_FOR_RECORDS",
-  "errorStatus": 408,
+  "errorMessage": "",
+  "errorStatus": "",
   "importJobState": {
     "CREATE": "DONE",
      "FIX": "EMPTY",
@@ -17,7 +17,7 @@
   "operations": [
     "CREATE"
       ],
-   "queueItemState": "ABORT",
+   "queueItemState": "ERROR",
    "records": [],
    "creationTime": "",
    "modificationTime": ""
