@@ -1,6 +1,6 @@
 {
     "description": "Internal Function: checkTimeout - fail and set importJobStates ABORT, if modificationTime is too old",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "checkTimeOut",
     "preFillDb": true,

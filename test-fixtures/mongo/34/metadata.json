@@ -1,0 +1,11 @@
+{
+    "description": "Function getOne: find none by importJobState",
+    "only": false,
+    "skip": false,
+    "functionName": "getOne",
+    "preFillDb": true,
+    "expectedOpResult": null,
+      "params": {
+        "importJobState": {"importJobState.FIX": "ABORT"}
+    }
+}

@@ -362,8 +362,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   }
 
   function getOne({queueItemState, importJobState = undefined}) {
-
+    //params example: "queueItemState": "IMPORTER.IN_QUEUE", "importJobState":{"importJobState.UPDATE": "IN_QUEUE"}
     logger.silly(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
+    //debug(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
     const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
     const options = {projection: {_id: 0}};
 
@@ -372,18 +373,21 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       // Just queueItemState
       if (queueItemState && importJobState === undefined) {
         logger.silly(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
+        //debug(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
         return operator.findOne({...cleanQueueItemState}, options);
       }
 
       // importJobState
       if (importJobState && queueItemState === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
+        //debug(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
         return operator.findOne({...importJobState}, options);
       }
 
       // importJobState and queueItemState
       if (importJobState && queueItemState) {
         logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
+        //debug(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
         return operator.findOne({...cleanQueueItemState, ...importJobState}, options);
       }
 
