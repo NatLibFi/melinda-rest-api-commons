@@ -361,30 +361,30 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     return true;
   }
 
-  // eslint-disable-next-line max-statements
   function getOne({queueItemState, importJobState = undefined}) {
 
     logger.silly(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
     const cleanQueueItemState = queueItemState ? {queueItemState: sanitize(queueItemState)} : undefined;
+    const options = {projection: {_id: 0}};
 
     try {
 
       // Just queueItemState
       if (queueItemState && importJobState === undefined) {
         logger.silly(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
-        return operator.findOne({...cleanQueueItemState});
+        return operator.findOne({...cleanQueueItemState}, options);
       }
 
       // importJobState
       if (importJobState && queueItemState === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
-        return operator.findOne({...importJobState});
+        return operator.findOne({...importJobState}, options);
       }
 
       // importJobState and queueItemState
       if (importJobState && queueItemState) {
         logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
-        return operator.findOne({...cleanQueueItemState, ...importJobState});
+        return operator.findOne({...cleanQueueItemState, ...importJobState}, options);
       }
 
       logger.debug(`getOne not working!`);

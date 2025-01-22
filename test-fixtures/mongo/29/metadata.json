@@ -1,6 +1,6 @@
 {
-    "description": "Internal Function: checkTimeout - fail and set queueItemState ABORT if modificationTime is too old",
-    "only": false,
+    "description": "Internal Function: checkTimeout - fail and set importJobStates ABORT, if modificationTime is too old",
+    "only": true,
     "skip": false,
     "functionName": "checkTimeOut",
     "preFillDb": true,

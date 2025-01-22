@@ -244,11 +244,17 @@ async function callback({
     return;
   }
 
+  */
+
   if (functionName === 'getOne') {
     try {
       debug(`getOne`);
       debug(JSON.stringify(params));
       //{queueItemState, importJobState = undefined}
+      const opResult = await mongoOperator.getOne(params);
+      debug(`getOne result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+
+      expect(opResult).to.eql(expectedOpResult);
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -257,6 +263,7 @@ async function callback({
     return;
   }
 
+  /*
   if (functionName === 'getStream') {
     try {
       debug(`getStream`);
