@@ -57,8 +57,8 @@ async function callback({
   expectedErrorMessage = '',
   expectedErrorStatus = '',
   contentStream = false,
-  expectedOpResult = undefined
-
+  expectedOpResult = undefined,
+  updateStateBeforeTest = undefined
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
@@ -183,10 +183,18 @@ async function callback({
       debug(JSON.stringify(params));
       //{correlationId}
       // timeout
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
       const opResult = await mongoOperator.checkTimeOut(params);
       debug(`checkTimeOut result: ${JSON.stringify(opResult)} (${JSON.stringify(expectedOpResult)})}`);
-      expect(opResult).to.eql(expectedOpResult ? expectedOpResult : opResult);
 
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        expect(opResult).to.eql(expectedOpResult);
+      }
       await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});

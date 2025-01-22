@@ -1,6 +1,6 @@
 {
-    "description": "Internal Function: checkTimeout",
-    "only": true,
+    "description": "Internal Function: checkTimeout - fail timeout if modificationTime is too old",
+    "only": false,
     "skip": false,
     "functionName": "checkTimeOut",
     "preFillDb": true,
