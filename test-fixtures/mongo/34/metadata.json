@@ -1,5 +1,5 @@
 {
-    "description": "Function getOne: find none by importJobState",
+    "description": "Function getOne: find none (null) by importJobState",
     "only": false,
     "skip": false,
     "functionName": "getOne",
