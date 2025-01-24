@@ -132,7 +132,6 @@ async function callback({
     return;
   }
 
-  /*
 
   if (functionName === 'checkAndSetImportJobState') {
     try {
@@ -147,6 +146,9 @@ async function callback({
     }
     return;
   }
+
+  /*
+
 
   if (functionName === 'query') {
     try {
