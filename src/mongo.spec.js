@@ -105,7 +105,6 @@ async function callback({
     return;
   }
 
-  /*
   if (functionName === 'checkAndSetState') {
     try {
       debug(`checkAndSetState`);
@@ -113,11 +112,27 @@ async function callback({
       //{correlationId, state, errorMessage = undefined, errorStatus = undefined})
       // timeout
 
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
+      const opResult = await mongoOperator.checkAndSetState(params);
+      debug(`checkAndSetState result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        expect(opResult).to.eql(expectedOpResult);
+      }
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
     }
     return;
   }
+
+  /*
 
   if (functionName === 'checkAndSetImportJobState') {
     try {

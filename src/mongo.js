@@ -457,6 +457,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     const stateInQueueItemStatesValidator = Object.values(QUEUE_ITEM_STATE.VALIDATOR).indexOf(state) > -1;
     const stateInQueueItemStatesImporter = Object.values(QUEUE_ITEM_STATE.IMPORTER).indexOf(state) > -1;
     if (!stateInQueueItemStates && !stateInQueueItemStatesValidator && !stateInQueueItemStatesImporter) {
+      debug(`Trying to set invalid state ${state}`);
       throw new ApiError(httpStatus.BAD_REQUEST, 'Trying to set invalid state');
     }
 
