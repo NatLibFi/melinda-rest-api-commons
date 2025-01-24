@@ -172,6 +172,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   }
 
   // Check state that the queueItem has not waited too long and set state
+  // Optionally set also queueItems errorStatus & errorMessage
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
     // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
@@ -183,6 +184,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   }
 
   // Check state that the queueItem has not waited too long and set importJobState
+  // Note: checkAndSetImportJobState cannot be used to set queueItems errorStatus & errorMessage (expect in case of a TimeOut)
   async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
     // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
