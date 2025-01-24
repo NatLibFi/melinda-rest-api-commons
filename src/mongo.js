@@ -198,6 +198,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
   async function query(params, showParams = {}) {
     logger.debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
+    debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
 
     const result = await operator.find(rest, {projection: createProjection(showParams)})
@@ -206,6 +207,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       .toArray();
     logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     logger.silly(`${JSON.stringify(result)}`);
+    debug(`${JSON.stringify(result)}`);
     return result;
   }
 
@@ -215,10 +217,21 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
   function createProjection(showParams = {}) {
     logger.silly(`Creating projection for query: ${JSON.stringify(showParams)}`);
+    debug(`Creating projection for query: ${JSON.stringify(showParams)}`);
     const {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+    const combinedShowParams = {
+      showAll,
+      showOperations,
+      showOperationSettings,
+      showRecordLoadParams,
+      showImportJobState
+    };
     logger.debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
+    debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
+    debug(`${JSON.stringify(combinedShowParams)}`);
 
-    if (showAll) {
+    if (showAll === true || showAll === '1' || showAll === 1) {
+      debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
       };
@@ -231,14 +244,18 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       'showImportJobState': 'importJobState'
     };
 
-    const result = Object.keys(showParams)
-      .filter(param => param !== 'showAll' && showParams[param] !== true && showParams[param] !== 1)
+    const result = Object.keys(combinedShowParams)
+      .filter(param => param !== 'showAll' && combinedShowParams[param] !== true && combinedShowParams[param] !== 1 && combinedShowParams[param] !== '1')
       .filter(param => showParamToField[param])
       .map((param) => showParamToField[param]);
     logger.silly(`We want to exclude from projection: ${JSON.stringify(result)}`);
+    debug(`We want to exclude from projection: ${JSON.stringify(result)}`);
+
 
     const excludeObject = Object.fromEntries(result.map(param => [param, 0]));
     logger.silly(`We want to exclude from projection: ${JSON.stringify(excludeObject)}`);
+    debug(`We want to exclude from projection: ${JSON.stringify(excludeObject)}`);
+
 
     return {
       _id: 0,

@@ -160,21 +160,30 @@ async function callback({
     return;
   }
 
-  /*
-
 
   if (functionName === 'query') {
     try {
       debug(`query`);
       debug(JSON.stringify(params));
       //params, showParams = {}
-
+      //params: skip, limit, rest (rest: actual mongo queryParams)
+      //showParams: {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+      debug(`${JSON.stringify(params.params)}`);
+      debug(`${JSON.stringify(params.showParams)}`);
+      const opResult = await mongoOperator.query(params.params, params.showParams);
+      debug(`query result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        expect(opResult).to.eql(expectedOpResult);
+      }
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
+  /*
 
   // NOT EXPORTED
   if (functionName === 'createProjection') {

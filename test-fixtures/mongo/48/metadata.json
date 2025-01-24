@@ -1,0 +1,42 @@
+{
+    "description": "Function: query - parameter limit as string",
+    "only": true,
+    "skip": false,
+    "functionName": "query",
+    "preFillDb": true,
+    "params": {
+        "params": {
+            "queueItemState": "IMPORTING",
+            "limit": "1"
+        },
+        "showParams": {
+            "showAll": 1
+        }
+    },
+    "expectedOpResult": [
+        {
+            "correlationId": "a077b1ca-5358-4e2f-8662-0ce37e90d3d3",
+            "cataloger": "queryTest",
+            "oCatalogerIn": "IMP_TEST",
+            "operation": "CREATE",
+            "operationSettings": {
+                "prio": true
+            },
+            "blobSize": 1,
+            "errorMessage": "",
+            "errorStatus": "",
+            "importJobState": {
+                "CREATE": "DONE",
+                "FIX": "EMPTY",
+                "UPDATE": "PROCESSING"
+            },
+            "operations": [
+                "CREATE"
+            ],
+            "queueItemState": "IMPORTING",
+            "records": [],
+            "creationTime": "2025-01-21T16:34:35.278Z",
+            "modificationTime": "2024-01-21T16:34:35.278Z"
+        }
+    ]
+}
