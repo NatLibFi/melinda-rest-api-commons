@@ -1,6 +1,6 @@
 {
     "description": "Function: query - return results in array, showParam as boolean",
-    "only": true,
+    "only": false,
     "skip": false,
     "functionName": "query",
     "preFillDb": true,
