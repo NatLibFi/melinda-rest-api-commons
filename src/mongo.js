@@ -173,8 +173,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
   // Check state that the queueItem has not waited too long and set state
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
-    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
-    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
+    // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
     const timeOut = await checkTimeOut({correlationId});
     if (timeOut) {
       return setState({correlationId, state, errorMessage, errorStatus});
@@ -182,14 +182,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     return false;
   }
 
-  // Check state that the queueItem has not waited too long and set state
-  async function checkAndSetImportJobState({correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}) {
-    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR
-    // otherwise it sets queueItem to state ABORT (408, 'Timeout')
+  // Check state that the queueItem has not waited too long and set importJobState
+  async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
+    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
+    // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
     logger.debug(`${correlationId}, ${importJobState}, ${operation}`);
     const timeOut = await checkTimeOut({correlationId, operation, importJobState});
     if (timeOut) {
-      return setImportJobState({correlationId, operation, importJobState, errorMessage, errorStatus});
+      return setImportJobState({correlationId, operation, importJobState});
     }
     return false;
   }
@@ -485,14 +485,17 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
     // should this also get importJobState as previously created object? {}
     logger.info(`Setting queue-item importJobState: {${operation}: ${importJobState}} for ${correlationId}`);
+    debug(`Setting queue-item importJobState: {${operation}: ${importJobState}} for ${correlationId}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanImportJobState = sanitize(importJobState);
 
     if (!(operation in OPERATIONS)) {
+      debug(`Error: ${operation} is not in ${JSON.stringify(OPERATIONS)}`);
       throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid operation for import job state');
     }
 
     if (!(cleanImportJobState in IMPORT_JOB_STATE)) {
+      debug(`Error: ${cleanImportJobState} is not in ${JSON.stringify(IMPORT_JOB_STATE)}`);
       throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid import job state');
     }
 

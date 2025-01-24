@@ -40,6 +40,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
+    recurse: false,
     rootPath: [__dirname, '..', 'test-fixtures', 'mongo'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
@@ -139,7 +140,19 @@ async function callback({
       debug(JSON.stringify(params));
       //{correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}
       // timeout
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
+      const opResult = await mongoOperator.checkAndSetImportJobState(params);
+      debug(`checkAndSetImportJobState result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
 
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        expect(opResult).to.eql(expectedOpResult);
+      }
+      await compareToFirstDbEntry({expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;

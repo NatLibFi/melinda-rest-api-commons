@@ -1,5 +1,5 @@
 {
-    "description": "checkAndSetState - do not fail timeout if modificationTime is new enough ",
+    "description": "Function checkAndSetState - set State, do not fail timeout if modificationTime is new enough ",
     "only": false,
     "skip": false,
     "functionName": "checkAndSetState",
