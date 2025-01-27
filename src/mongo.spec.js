@@ -199,13 +199,20 @@ async function callback({
     }
     return;
   }
+*/
 
   if (functionName === 'queryById') {
     try {
       debug(`queryById`);
       debug(JSON.stringify(params));
       //{correlationId, checkModTime = false}
-
+      const opResult = await mongoOperator.queryById(params);
+      debug(`queryById result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        expect(opResult).to.eql(expectedOpResult);
+      }
+      await compareToDbEntry({expectedResult, resultIndex: 3, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -213,7 +220,6 @@ async function callback({
     return;
   }
 
-  */
 
   // only returned for test
   if (functionName === 'checkTimeOut') {
@@ -446,11 +452,17 @@ async function callback({
   throw new Error(`Unknown functionName: ${functionName}`);
 }
 
+
 async function compareToFirstDbEntry({expectedResult, expectModificationTime = false, formatDates = true}) {
+  const result = await compareToDbEntry({expectedResult, resultIndex: 0, expectModificationTime, formatDates});
+  return result;
+}
+
+async function compareToDbEntry({expectedResult, resultIndex = 0, expectModificationTime = false, formatDates = true}) {
   const dump = await mongoFixtures.dump();
   debug(`--- We have ${dump.foobar.length} documents in db`);
   debug(dump.foobar);
-  const [result] = dump.foobar;
+  const result = dump.foobar[resultIndex];
   debug(`db result: ${JSON.stringify(result)}`);
   const dump2 = await mongoFixtures.dump();
   debug(`--- We have ${dump2.foobar.length} documents in db now`);
@@ -464,6 +476,7 @@ async function compareToFirstDbEntry({expectedResult, expectModificationTime = f
   expect(result).to.eql(expectedResult);
   return;
 }
+
 
 function checkModificationTime({result, expectModificationTime}) {
   if (expectModificationTime) {

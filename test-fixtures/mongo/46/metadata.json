@@ -4,7 +4,6 @@
     "skip": false,
     "functionName": "query",
     "preFillDb": true,
-    "expectedOpResult": [{"correlationId":"a077b1ca-5358-4e2f-8662-0ce37e90d3d3","cataloger":"queryTest","oCatalogerIn":"IMP_TEST","operation":"CREATE","operationSettings":{"prio":true},"blobSize":1,"errorMessage":"","errorStatus":"","importJobState":{"CREATE":"DONE","FIX":"EMPTY","UPDATE":"PROCESSING"},"operations":["CREATE"],"queueItemState":"IMPORTING","records":[],"creationTime":"2025-01-21T16:34:35.278Z","modificationTime":"2024-01-21T16:34:35.278Z"},{"correlationId":"e26d0aa6-9a46-4dc9-9eee-916236e6e469","cataloger":"queryTest","oCatalogerIn":"IMP_TEST","operation":"CREATE","operationSettings":{"prio":true},"blobSize":1,"errorMessage":"","errorStatus":"","importJobState":{"CREATE":"DONE","FIX":"EMPTY","UPDATE":"IN_QUEUE"},"operations":["CREATE"],"queueItemState":"IMPORTING","records":[],"creationTime":"2025-01-21T16:34:35.278Z","modificationTime":"2024-01-21T16:34:35.278Z"}],
     "params": {
         "params": {
             "queueItemState": "IMPORTING"
@@ -12,5 +11,55 @@
         "showParams": {
             "showAll": 1
         }
-    }
+    },
+    "expectedOpResult": [
+        {
+            "correlationId": "a077b1ca-5358-4e2f-8662-0ce37e90d3d3",
+            "cataloger": "queryTest",
+            "oCatalogerIn": "IMP_TEST",
+            "operation": "CREATE",
+            "operationSettings": {
+                "prio": true
+            },
+            "blobSize": 1,
+            "errorMessage": "",
+            "errorStatus": "",
+            "importJobState": {
+                "CREATE": "DONE",
+                "FIX": "EMPTY",
+                "UPDATE": "PROCESSING"
+            },
+            "operations": [
+                "CREATE"
+            ],
+            "queueItemState": "IMPORTING",
+            "records": [],
+            "creationTime": "2025-01-21T16:34:35.278Z",
+            "modificationTime": "2024-01-21T16:34:35.278Z"
+        },
+        {
+            "correlationId": "e26d0aa6-9a46-4dc9-9eee-916236e6e469",
+            "cataloger": "queryTest",
+            "oCatalogerIn": "IMP_TEST",
+            "operation": "CREATE",
+            "operationSettings": {
+                "prio": true
+            },
+            "blobSize": 1,
+            "errorMessage": "",
+            "errorStatus": "",
+            "importJobState": {
+                "CREATE": "DONE",
+                "FIX": "EMPTY",
+                "UPDATE": "IN_QUEUE"
+            },
+            "operations": [
+                "CREATE"
+            ],
+            "queueItemState": "IMPORTING",
+            "records": [],
+            "creationTime": "2025-01-21T16:34:35.278Z",
+            "modificationTime": "2024-01-21T16:34:35.278Z"
+        }
+    ]
 }
