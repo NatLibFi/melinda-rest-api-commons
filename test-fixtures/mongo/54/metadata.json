@@ -1,6 +1,6 @@
 {
     "description": "Function: queryById",
-    "only": false,
+    "only": true,
     "skip": false,
     "functionName": "queryById",
     "preFillDb": true,

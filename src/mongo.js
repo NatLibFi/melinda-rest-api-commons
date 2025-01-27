@@ -268,11 +268,16 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   // Is this really used like this?
   // DEVELOP: why do we do both findOne and queryById ???
   async function queryById({correlationId, checkModTime = false}) {
-    const result = await operator.findOne({correlationId});
+    const result = await operator.findOne({correlationId}, {projection: {_id: 0}});
+    debug(`queryById: first result: ${JSON.stringify(result)}`);
+    debug(`queryById checkModTime: ${checkModTime}`);
     if (checkModTime) {
       const timeOut = await checkTimeOut({correlationId});
       if (timeOut) {
-        return queryById({correlationId}, {projection: {_id: 0}});
+        debug(`queryById timeOut result ${timeOut}`);
+        const result2 = await queryById({correlationId});
+        debug(`queryById: second result: ${JSON.stringify(result2)}`);
+        return result2;
       }
       return result;
     }
