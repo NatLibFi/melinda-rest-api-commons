@@ -266,12 +266,13 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   // Note: we return result even if it has timeOuted / is in a final state!
   // Note: our returned queueItem is *before* its state/queueItemState is timeOuted
   // Is this really used like this?
+  // DEVELOP: why do we do both findOne and queryById ???
   async function queryById({correlationId, checkModTime = false}) {
     const result = await operator.findOne({correlationId});
     if (checkModTime) {
       const timeOut = await checkTimeOut({correlationId});
       if (timeOut) {
-        return queryById({correlationId});
+        return queryById({correlationId}, {projection: {_id: 0}});
       }
       return result;
     }
