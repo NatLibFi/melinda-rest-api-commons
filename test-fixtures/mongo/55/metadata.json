@@ -1,5 +1,5 @@
 {
-    "description": "Function: queryById, checkModTime, timeouted modTime - return original queueItem but ABORT queueItem in mongo",
+    "description": "Function: queryById, checkModTime, timeouted modTime - return ABORT queueItem both as opRestult and in mongo",
     "only": false,
     "skip": false,
     "functionName": "queryById",
@@ -19,19 +19,19 @@
                 "prio": true
             },
             "blobSize": 1,
-            "errorMessage": "",
-            "errorStatus": "",
+            "errorMessage": "Timeout in IMPORTING",
+            "errorStatus": 408,
             "importJobState": {
                 "CREATE": "DONE",
                 "FIX": "EMPTY",
-                "UPDATE": "IN_QUEUE"
+                "UPDATE": "ABORT"
             },
             "operations": [
                 "CREATE"
             ],
-            "queueItemState": "IMPORTING",
+            "queueItemState": "ABORT",
             "records": [],
-            "creationTime": "2025-01-21T16:34:35.278Z",
-            "modificationTime": "2024-01-21T16:34:35.278Z"
+            "creationTime": "",
+            "modificationTime": ""
         }
 }

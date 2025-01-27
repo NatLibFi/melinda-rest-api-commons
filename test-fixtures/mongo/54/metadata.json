@@ -1,5 +1,5 @@
 {
-    "description": "Function: queryById",
+    "description": "Function: queryById (no checkModTime)",
     "only": false,
     "skip": false,
     "functionName": "queryById",

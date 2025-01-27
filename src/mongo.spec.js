@@ -66,7 +66,6 @@ async function callback({
   const mongoUri = await mongoFixtures.getUri();
   const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '', true);
   const expectedResult = await getFixture('expectedResult.json');
-  // DEVELOP: we could test also opResults!
   // DEVELOP: we could use sama function for most of tests?
   // debug(typeof mongoUri); // eslint-disable-line
 
