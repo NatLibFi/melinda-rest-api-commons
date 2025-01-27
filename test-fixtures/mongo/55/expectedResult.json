@@ -7,17 +7,17 @@
       "prio": true
   },
   "blobSize": 1,
-  "errorMessage": "",
-  "errorStatus": "",
+  "errorMessage": "Timeout in IMPORTING",
+  "errorStatus": 408,
   "importJobState": {
       "CREATE": "DONE",
       "FIX": "EMPTY",
-      "UPDATE": "IN_QUEUE"
+      "UPDATE": "ABORT"
   },
   "operations": [
       "CREATE"
   ],
-  "queueItemState": "IMPORTING",
+  "queueItemState": "ABORT",
   "records": [],
   "creationTime": "",
   "modificationTime": ""

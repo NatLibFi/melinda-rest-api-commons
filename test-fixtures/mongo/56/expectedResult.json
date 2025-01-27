@@ -17,7 +17,7 @@
   "operations": [
       "CREATE"
   ],
-  "queueItemState": "IMPORTING",
+  "queueItemState": "IN_PROCESS",
   "records": [],
   "creationTime": "",
   "modificationTime": ""

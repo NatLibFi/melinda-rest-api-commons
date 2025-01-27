@@ -59,7 +59,8 @@ async function callback({
   expectedErrorStatus = '',
   contentStream = false,
   expectedOpResult = undefined,
-  updateStateBeforeTest = undefined
+  updateStateBeforeTest = undefined,
+  resultIndex = undefined
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
@@ -206,13 +207,19 @@ async function callback({
       debug(`queryById`);
       debug(JSON.stringify(params));
       //{correlationId, checkModTime = false}
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
       const opResult = await mongoOperator.queryById(params);
       debug(`queryById result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
       // eslint-disable-next-line functional/no-conditional-statements
       if (expectedOpResult !== undefined) {
-        expect(opResult).to.eql(expectedOpResult);
+        expect(formatQueueItem(opResult)).to.eql(formatQueueItem(expectedOpResult));
       }
-      await compareToDbEntry({expectedResult, resultIndex: 3, expectModificationTime, formatDates: true});
+      const compareResultIndex = resultIndex ? resultIndex : 0;
+      await compareToDbEntry({expectedResult, resultIndex: compareResultIndex, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -462,8 +469,8 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
   const dump = await mongoFixtures.dump();
   debug(`--- We have ${dump.foobar.length} documents in db`);
   debug(dump.foobar);
-  const result = dump.foobar[resultIndex];
-  debug(`db result: ${JSON.stringify(result)}`);
+  const result = await dump.foobar[resultIndex];
+  debug(`db result (document ${resultIndex}): ${JSON.stringify(result)}`);
   const dump2 = await mongoFixtures.dump();
   debug(`--- We have ${dump2.foobar.length} documents in db now`);
 
@@ -479,6 +486,7 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
 
 
 function checkModificationTime({result, expectModificationTime}) {
+  debug('Check if modificationTime was edited');
   if (expectModificationTime) {
     expect(result.modificationTime).to.not.eql('');
     debug(`OK. We have modified modificationTime`);
