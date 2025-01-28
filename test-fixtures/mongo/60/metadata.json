@@ -1,0 +1,25 @@
+{
+    "description": "Function: getStream - error if there's no content",
+    "only": false,
+    "skip": false,
+    "functionName": "getStream",
+    "preFillDb": false,
+    "contentStream": true,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "FileNotFound: file foobar was not found",
+    "expectedErrorStatus": "",
+    "createBulkParams": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "getStreamTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {
+            "noStream": false
+        }
+    },
+    "params": {
+        "correlationId": "foobar"
+    }
+}

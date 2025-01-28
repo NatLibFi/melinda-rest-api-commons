@@ -343,12 +343,32 @@ async function callback({
     return;
   }
 
-  /*
   if (functionName === 'getStream') {
     try {
       debug(`getStream`);
       debug(JSON.stringify(params));
       //correlationId
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      }
+      const {correlationId} = params;
+
+      const opResult = mongoOperator.getStream(correlationId);
+      const opResultString = await streamToString(opResult);
+
+      if (contentStream) {
+        const contentStreamString = await getFixture({components: ['contentStream'], reader: READERS.TEXT});
+        //debug(contentStreamString);
+        expect(opResultString).to.eql(contentStreamString);
+        return;
+      }
+
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -357,7 +377,6 @@ async function callback({
     return;
   }
 
-  */
 
   if (functionName === 'pushIds') {
     try {
@@ -539,6 +558,7 @@ function handleError({error, expectedToThrow, expectedErrorMessage, expectedErro
   if (expectedToThrow) {
     debug('OK. Expected to throw');
     debug(JSON.stringify(error));
+    // eslint-disable-next-line max-lines
     if (expectedErrorMessage !== '' || expectedErrorStatus !== '') {
       const errorMessage = error.message || error.payload.message || error.payload || '';
       debug(errorMessage);
