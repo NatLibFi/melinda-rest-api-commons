@@ -1,0 +1,24 @@
+{
+    "description": "Function: readContent - error for noStreamBulk",
+    "only": false,
+    "skip": false,
+    "functionName": "readContent",
+    "preFillDb": false,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Content is only available for streamBulk jobs. f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d is not a streamBulk job.",
+    "expectedErrorStatus": 400,
+    "createBulkParams": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "readContentTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {
+            "noStream": true
+        }
+    },
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d"
+    }
+}

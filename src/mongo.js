@@ -133,6 +133,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
     // eslint-disable-next-line functional/no-conditional-statements
     if (stream) {
+      debug(`Creating streamBulk`);
       try {
         await new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
@@ -145,6 +146,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
             }));
         });
         logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
+        debug(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
         return operator.insertOne(newQueueItem);
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
@@ -154,12 +156,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     }
 
     logger.debug(`No stream`);
+    debug(`Creating noStreamBulk`);
     // eslint-disable-next-line functional/no-conditional-statements
     if (!stream) {
       try {
         const result = await operator.insertOne(newQueueItem);
         if (result.acknowledged) {
           logger.info(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
+          debug(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
           return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -346,9 +350,13 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
 
   async function readContent(correlationId) {
     logger.info(`Reading content from mongo for id: ${correlationId} in ${collection}`);
-    const clean = sanitize(correlationId);
-    const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
+    debug(`Reading content from mongo for id: ${correlationId} in ${collection}`);
 
+    const clean = sanitize(correlationId);
+    debug(clean);
+
+    const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
+    debug(result);
     if (result) {
       const {operationSettings} = result;
       if (operationSettings.prio === false && operationSettings.noStream === false) {
@@ -358,6 +366,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
         };
       }
       logger.debug(`OperationSettings for ${correlationId}: ${JSON.stringify(operationSettings)}`);
+      debug(`OperationSettings for ${correlationId}: ${JSON.stringify(operationSettings)}`);
+      debug(`Content is only available for streamBulk jobs. ${correlationId} is not a streamBulk job.`);
       throw new ApiError(httpStatus.BAD_REQUEST, {message: `Content is only available for streamBulk jobs. ${correlationId} is not a streamBulk job.`});
     }
 

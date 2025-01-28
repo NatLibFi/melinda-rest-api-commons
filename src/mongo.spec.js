@@ -60,7 +60,8 @@ async function callback({
   contentStream = false,
   expectedOpResult = undefined,
   updateStateBeforeTest = undefined,
-  resultIndex = undefined
+  resultIndex = undefined,
+  createBulkParams = undefined
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
@@ -269,11 +270,37 @@ async function callback({
     return;
   }
 
+  */
   if (functionName === 'readContent') {
     try {
       debug(`readContent`);
       debug(JSON.stringify(params));
       //correlationId
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      }
+      const {correlationId} = params;
+      // eslint-disable-next-line no-unused-vars
+      const opResult = await mongoOperator.readContent(correlationId);
+      const opResultString = await streamToString(opResult.readStream);
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (createBulkParams && createBulkParams.contentType) {
+        expect(opResult.contentType).to.eql(createBulkParams.contentType);
+      }
+
+      if (contentStream) {
+        const contentStreamString = await getFixture({components: ['contentStream'], reader: READERS.TEXT});
+        //debug(contentStreamString);
+        expect(opResultString).to.eql(contentStreamString);
+        return;
+      }
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -281,6 +308,8 @@ async function callback({
     }
     return;
   }
+
+  /*
 
   if (functionName === 'removeContent') {
     try {
@@ -509,8 +538,10 @@ function handleError({error, expectedToThrow, expectedErrorMessage, expectedErro
   debug(error);
   if (expectedToThrow) {
     debug('OK. Expected to throw');
+    debug(JSON.stringify(error));
     if (expectedErrorMessage !== '' || expectedErrorStatus !== '') {
-      const errorMessage = error.message || error.payload || '';
+      const errorMessage = error.message || error.payload.message || error.payload || '';
+      debug(errorMessage);
       expect(errorMessage).to.eql(expectedErrorMessage);
       const errorStatus = error.status || '';
       expect(errorStatus).to.eql(expectedErrorStatus);
@@ -520,4 +551,14 @@ function handleError({error, expectedToThrow, expectedErrorMessage, expectedErro
   }
   debug('NOT OK. Not expexted to throw');
   throw error;
+}
+
+function streamToString(stream) {
+  const chunks = [];
+  return new Promise((resolve, reject) => {
+    // eslint-disable-next-line functional/immutable-data
+    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('error', (err) => reject(err));
+    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+  });
 }
