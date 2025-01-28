@@ -19,7 +19,5 @@
             "noStream": false
         }
     },
-    "params": {
-        "correlationId": "foobar"
-    }
+    "params": "foobar"
 }

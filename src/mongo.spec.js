@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /* eslint-disable no-console */
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
@@ -285,9 +286,8 @@ async function callback({
         const createBulkResult = await mongoOperator.createBulk(params2);
         debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
       }
-      const {correlationId} = params;
-      // eslint-disable-next-line no-unused-vars
-      const opResult = await mongoOperator.readContent(correlationId);
+
+      const opResult = await mongoOperator.readContent(params);
       const opResultString = await streamToString(opResult.readStream);
 
       // eslint-disable-next-line functional/no-conditional-statements
@@ -357,9 +357,9 @@ async function callback({
         const createBulkResult = await mongoOperator.createBulk(params2);
         debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
       }
-      const {correlationId} = params;
+      //const {correlationId} = params;
 
-      const opResult = mongoOperator.getStream(correlationId);
+      const opResult = mongoOperator.getStream(params);
       const opResultString = await streamToString(opResult);
 
       if (contentStream) {
