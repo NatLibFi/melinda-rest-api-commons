@@ -1,6 +1,5 @@
 /* eslint-disable max-lines */
 
-
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
