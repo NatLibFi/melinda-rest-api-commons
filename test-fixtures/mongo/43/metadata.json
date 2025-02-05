@@ -1,0 +1,14 @@
+{
+    "description": "Function checkAndSetImportJobState - fail if state is ERROR, even if modificationTime is new enough ",
+    "only": false,
+    "skip": false,
+    "functionName": "checkAndSetImportJobState",
+    "preFillDb": true,
+    "expectedOpResult": false,
+    "updateStateBeforeTest": "ERROR",
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "operation": "FIX",
+        "importJobState": "DONE"
+    }
+}

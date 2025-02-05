@@ -1,0 +1,14 @@
+{
+    "description": "Function checkAndSetState, set state and add errorStatus + errorMessge",
+    "only": false,
+    "skip": false,
+    "functionName": "checkAndSetState",
+    "preFillDb": true,
+    "updateStateBeforeTest": "PENDING_VALIDATION",
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "state": "ERROR",
+        "errorMessage": "Foobar",
+        "errorStatus": 500
+    }
+}

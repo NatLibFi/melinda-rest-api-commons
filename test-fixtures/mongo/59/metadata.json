@@ -1,0 +1,20 @@
+{
+    "description": "Function: getStream",
+    "only": false,
+    "skip": false,
+    "functionName": "getStream",
+    "preFillDb": false,
+    "contentStream": true,
+    "createBulkParams": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "getStreamTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {
+            "noStream": false
+        }
+    },
+    "params": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d"
+}

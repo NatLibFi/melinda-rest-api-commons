@@ -58,7 +58,6 @@ async function callback({
   if (functionName === 'addLogItem') {
     await mongoLogOperator.addLogItem(params);
     const dump = await mongoFixtures.dump();
-
     return expect(dump.logs[0]['0']).to.eql(expectedResult);
   }
 
