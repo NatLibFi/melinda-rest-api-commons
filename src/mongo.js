@@ -93,8 +93,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
         logger.info(`New PRIO queue item for ${operation} ${correlationId} has been made in ${collection}`);
         return;
       }
+      // TEST-COVERAGE: this error is not (currently) tested
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
     } catch (error) {
+      // TEST-COVERAGE: this error is not (currently) tested
       const errorMessage = error.payload || error.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -165,11 +167,13 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
           debug(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
           return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
+        // TEST-COVERAGE: this error is not (currently) tested
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
       } catch (error) {
+        // TEST-COVERAGE: this error is not (currently) tested
         const errorMessage = error.payload || error.message || '';
         logError(error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Montestgo errored: ${errorMessage}`);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
       }
     }
   }
@@ -319,24 +323,34 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     return true;
   }
 
+  // eslint-disable-next-line max-statements
   async function remove(params) {
     logger.silly(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
+    debug(`${JSON.stringify(params)}`);
+    debug(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
     const clean = sanitize(params.correlationId);
     logger.silly(`mongo/remove: clean: ${JSON.stringify(clean)}`);
+    debug(`mongo/remove: clean: ${JSON.stringify(clean)}`);
+
 
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
-      const noContent = await removeContent(params);
+      const noContent = await removeContent(params.correlationId);
+      debug(`noContent (removeContent result): ${JSON.stringify(noContent)}`);
       if (noContent) {
-        await operator.deleteOne({correlationId: clean});
+        const deleteResult = await operator.deleteOne({correlationId: clean});
+        debug(`deleteResult: ${JSON.stringify(deleteResult)}`);
         return true;
       }
     } catch (err) {
+      // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
+        debug();
         if (err.message.indexOf('File not found for id') !== -1) {
           logger.silly(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
+          debug(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
           await operator.deleteOne({correlationId: clean});
           return true;
         }
@@ -381,6 +395,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
     logger.silly(`mongo/removeContent: result ${JSON.stringify(result)}`);
 
     if (result) {
+      // TEST-COVERAGE: next two lines are not (currently) tested
       await gridFSBucket.delete(clean);
       return true;
     }
@@ -435,6 +450,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(clean);
     } catch (error) {
+      // TEST-COVERAGE: this error is not (currently) tested
       const errorMessage = error.payload || error.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -539,6 +555,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       if (operation === OPERATIONS.FIX) {
         return {'importJobState.FIX': cleanImportJobState};
       }
+      // istanbul ignore next
+      // Ignoring for coverage - we error this already
       throw new ApiError('400', 'Invalid operation for import job state');
     }
 

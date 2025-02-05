@@ -256,13 +256,27 @@ async function callback({
     return;
   }
 
-  /*
 
   if (functionName === 'remove') {
+
     try {
-      debug(`checkTimeOut`);
+      debug(`remove`);
       debug(JSON.stringify(params));
-      //params
+      //params: {correlationId}
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      }
+
+      const opResult = await mongoOperator.remove(params);
+      debug(`remove result: ${JSON.stringify(opResult)}`);
+
+      await compareToFirstDbEntry({expectedResult: undefined, expectModificationTime, formatDates: false});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -271,7 +285,6 @@ async function callback({
     return;
   }
 
-  */
   if (functionName === 'readContent') {
     try {
       debug(`readContent`);
@@ -522,6 +535,7 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
   debug(`--- We have ${dump2.foobar.length} documents in db now`);
 
   checkModificationTime({result, expectModificationTime});
+
   if (formatDates) {
     const formattedResult = formatQueueItem(result);
     expect(formattedResult).to.eql(expectedResult);
@@ -533,8 +547,8 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
 
 
 function checkModificationTime({result, expectModificationTime}) {
-  debug('Check if modificationTime was edited');
   if (expectModificationTime) {
+    debug('Check if modificationTime was edited');
     expect(result.modificationTime).to.not.eql('');
     debug(`OK. We have modified modificationTime`);
     return;
