@@ -1,0 +1,22 @@
+{
+    "description": "Function: readContent - ERROR 404 for non existing correlationId",
+    "only": false,
+    "skip": false,
+    "functionName": "readContent",
+    "preFillDb": false,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Job 5e9b4ef0-b5f5-4f85-bb7e-1cf803bcd4b0 not found.",
+    "expectedErrorStatus": 404,
+    "createBulkParams": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "readContentTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {
+            "noStream": true
+        }
+    },
+    "params": "5e9b4ef0-b5f5-4f85-bb7e-1cf803bcd4b0"
+}

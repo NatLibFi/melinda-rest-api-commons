@@ -1,0 +1,13 @@
+{
+    "description": "getOne by queueItemState: ERROR (500) no queueItemState / importJobState parameter",
+    "only": false,
+    "skip": false,
+    "functionName": "getOne",
+    "preFillDb": true,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Mongo errored: Missing parameters, cannot get queueItem",
+    "expectedErrorStatus": 500,
+    "params": {
+        "foobar": "baz"
+    }
+}

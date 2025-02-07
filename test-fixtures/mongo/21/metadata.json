@@ -1,0 +1,14 @@
+{
+    "description": "Function: pushMessages to existing message: ERROR string message",
+    "only": false,
+    "skip": false,
+    "functionName": "pushMessages",
+    "preFillDb": true,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "The argument to $each in $push must be an array but it was of type: string",
+    "expectedErrorStatus": "",
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "messages": "foo"
+    }
+}

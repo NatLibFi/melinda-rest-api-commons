@@ -1,0 +1,15 @@
+{
+    "description": "Function: pushMessages with defined messageField",
+    "only": false,
+    "skip": false,
+    "functionName": "pushMessages",
+    "expectModificationTime": true,
+    "preFillDb": true,
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "messages": [
+            "foo", "bar", "baz"
+        ],
+        "messageField": "notes"
+    }
+}

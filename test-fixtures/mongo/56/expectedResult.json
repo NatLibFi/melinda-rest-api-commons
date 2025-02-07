@@ -1,0 +1,24 @@
+{
+  "correlationId": "e26d0aa6-9a46-4dc9-9eee-916236e6e469",
+  "cataloger": "queryByIdTest",
+  "oCatalogerIn": "IMP_TEST",
+  "operation": "CREATE",
+  "operationSettings": {
+      "prio": true
+  },
+  "blobSize": 1,
+  "errorMessage": "",
+  "errorStatus": "",
+  "importJobState": {
+      "CREATE": "DONE",
+      "FIX": "EMPTY",
+      "UPDATE": "IN_QUEUE"
+  },
+  "operations": [
+      "CREATE"
+  ],
+  "queueItemState": "IN_PROCESS",
+  "records": [],
+  "creationTime": "",
+  "modificationTime": ""
+}

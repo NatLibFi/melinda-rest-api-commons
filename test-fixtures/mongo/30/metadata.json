@@ -1,0 +1,11 @@
+{
+    "description": "getOne by queueItemState",
+    "only": false,
+    "skip": false,
+    "functionName": "getOne",
+    "preFillDb": true,
+    "expectedOpResult": {"correlationId":"f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d","cataloger":"getOneTest","oCatalogerIn":"IMP_TEST","operation":"CREATE","operationSettings":{"prio":true},"blobSize":1,"errorMessage":"","errorStatus":"","importJobState":{"CREATE":"DONE","FIX":"EMPTY","UPDATE":"EMPTY"},"operations":["CREATE"],"queueItemState":"DONE","records":[],"creationTime":"2025-01-21T16:34:35.278Z","modificationTime":"2024-01-21T16:34:35.278Z"},
+    "params": {
+        "queueItemState": "DONE"
+    }
+}

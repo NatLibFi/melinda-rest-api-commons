@@ -1,0 +1,14 @@
+{
+    "description": "Function: query - return empty array if nothing is found",
+    "only": false,
+    "skip": false,
+    "functionName": "query",
+    "preFillDb": true,
+    "expectedOpResult": [],
+    "params": {
+        "params": {
+            "foobar": true
+        },
+        "showParams": {}
+    }
+}

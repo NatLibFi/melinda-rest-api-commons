@@ -1,0 +1,14 @@
+{
+    "description": "Function: setImportState: ERROR BAD_REQUEST (400) Trying to set invalid state",
+    "only": false,
+    "skip": false,
+    "functionName": "setState",
+    "preFillDb": true,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Trying to set invalid state",
+    "expectedErrorStatus": 400,
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "state": "FOOBAR"
+    }
+}
