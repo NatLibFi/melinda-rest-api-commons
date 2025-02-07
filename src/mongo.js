@@ -2,7 +2,7 @@
 
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants';
 import {logError} from './utils.js';
 import moment from 'moment';
@@ -233,7 +233,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
     debug(`${JSON.stringify(combinedShowParams)}`);
 
-    if (showAll === true || showAll === '1' || showAll === 1) {
+    // NOTE: parseBoolean parses any non-empty, non-"false" string as true!
+    if (parseBoolean(showAll)) {
+    //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
@@ -248,7 +250,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     };
 
     const result = Object.keys(combinedShowParams)
-      .filter(param => param !== 'showAll' && combinedShowParams[param] !== true && combinedShowParams[param] !== 1 && combinedShowParams[param] !== '1')
+      //.filter(param => param !== 'showAll' && combinedShowParams[param] !== true && combinedShowParams[param] !== 1 && combinedShowParams[param] !== '1')
+      .filter(param => param !== 'showAll' && !parseBoolean(combinedShowParams[param]))
       .filter(param => showParamToField[param])
       .map((param) => showParamToField[param]);
     logger.silly(`We want to exclude from projection: ${JSON.stringify(result)}`);
