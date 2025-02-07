@@ -41,7 +41,7 @@ import createDebugLogger from 'debug';
 }
 */
 
-export default async function (MONGO_URI, collection, db = 'rest-api', test = false) {
+export default async function (MONGO_URI, collection, db = 'rest-api') {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
@@ -51,13 +51,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
   const dbConnection = client.db(db);
   const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
   const operator = dbConnection.collection(collection);
-  debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}, test: ${test}`);
+  debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
-  if (test) {
-    // return also internal functions if testing
-    return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
-  }
-  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
+  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
     debugDev('createPrio');
@@ -295,8 +291,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api', test = fa
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
-
-    debug(`test: ${test}`);
 
     const timeoutTime = moment(modificationTime).add(1, 'm');
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
