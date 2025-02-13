@@ -386,10 +386,13 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
   async function removeContent(params) {
     logger.info(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
+    debug(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
     const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
     logger.silly(`mongo/removeContent: result ${JSON.stringify(result)}`);
+    debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
+
 
     if (result) {
       // TEST-COVERAGE: next two lines are not (currently) tested

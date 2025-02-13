@@ -1,6 +1,6 @@
 {
     "description": "Function: remove",
-    "only": false,
+    "only": true,
     "skip": false,
     "functionName": "remove",
     "preFillDb": false,
