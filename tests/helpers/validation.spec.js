@@ -1,7 +1,7 @@
 import {expect} from 'chai';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import createValidator from './validation';
+import createValidator from '../../src/helpers/validation';
 
 describe('services/validate', () => {
   const FIXTURES_PATH = [

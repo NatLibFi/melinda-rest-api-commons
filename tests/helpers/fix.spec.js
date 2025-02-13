@@ -2,8 +2,8 @@ import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
-import {fixRecord} from './fix';
-import * as fixSettings from './fix-constants';
+import {fixRecord} from '../../src/helpers/fix';
+import * as fixSettings from '../../src/helpers/fix-constants';
 import createDebugLogger from 'debug';
 // import inspect from 'util';
 

@@ -1,6 +1,6 @@
 //import {expect} from 'chai';
 import createDebugLogger from 'debug';
-import {amqpFactory} from './index';
+import {amqpFactory} from '../src/index';
 
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp:test');

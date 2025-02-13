@@ -4,8 +4,8 @@ import {expect} from 'chai';
 import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
-import createConversionService from './conversion';
-import {CONVERSION_FORMATS} from '../constants';
+import createConversionService from '../../src/helpers/conversion';
+import {CONVERSION_FORMATS} from '../../src/constants';
 
 describe('services/conversion', () => {
   const {getFixture} = fixtureFactory({root: [

@@ -1,6 +1,6 @@
 
 
-import mongoFactory from './mongo';
+import mongoFactory from '../src/mongo';
 import mongoLogFactory from './mongoLog';
 import amqpFactory from './amqp';
 import conversions from './helpers/conversion';

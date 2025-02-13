@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import createDebugLogger from 'debug';
 import generateTests from '@natlibfi/fixugen';
-import {amqpFactory} from './index';
+import {amqpFactory} from '../src/index';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {promisify} from 'util';
 
