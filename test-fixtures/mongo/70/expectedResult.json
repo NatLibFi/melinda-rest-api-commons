@@ -1,0 +1,27 @@
+{
+    "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+    "cataloger": "removeTest",
+    "oCatalogerIn": "IMP_TEST",
+    "operation": "CREATE",
+    "operations": [
+        "CREATE"
+    ],
+    "operationSettings": {
+        "prio": false,
+        "noStream": false
+    },
+    "contentType": "foobar",
+    "recordLoadParams": "",
+    "queueItemState": "UPLOADING",
+    "blobSize": 0,
+    "importJobState": {
+        "CREATE": "EMPTY",
+        "UPDATE": "EMPTY",
+        "FIX": "EMPTY"
+    },
+    "records": [],
+    "errorMessage": "",
+    "errorStatus": "",
+    "creationTime": "",
+    "modificationTime": ""
+}

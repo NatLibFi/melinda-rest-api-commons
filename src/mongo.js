@@ -334,7 +334,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
-      const noContent = await removeContent(params.correlationId);
+      const noContent = await removeContent({correlationId: params.correlationId});
       debug(`noContent (removeContent result): ${JSON.stringify(noContent)}`);
       if (noContent) {
         const deleteResult = await operator.deleteOne({correlationId: clean});
@@ -344,7 +344,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     } catch (err) {
       // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
-        debug();
+        debug(err);
         if (err.message.indexOf('File not found for id') !== -1) {
           logger.silly(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
           debug(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
@@ -389,17 +389,20 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     debug(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
     const clean = sanitize(params.correlationId);
 
-    const result = await operator.findOne({correlationId: clean}); // njsscan-ignore: node_nosqli_injection
-    logger.silly(`mongo/removeContent: result ${JSON.stringify(result)}`);
-    debug(`mongo/removeContent: result ${JSON.stringify(result)}`);
+    const result = await gridFSBucket.find({filename: clean}).toArray();
+    debug(`mongo/removeContent: find bucket result ${JSON.stringify(result)}`);
 
 
-    if (result) {
-      // TEST-COVERAGE: next two lines are not (currently) tested
-      await gridFSBucket.delete(clean);
+    if (result.length > 0) {
+      // Note: we assume and handle just one file for filename!
+      const [firstBucketResult] = result;
+      const fileId = firstBucketResult._id;
+
+      await gridFSBucket.delete(fileId);
       return true;
     }
 
+    logger.debug(`No files for ${params.correlationId} to delete`);
     return true;
   }
 

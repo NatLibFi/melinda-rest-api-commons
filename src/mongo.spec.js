@@ -62,7 +62,9 @@ async function callback({
   expectedOpResult = undefined,
   updateStateBeforeTest = undefined,
   resultIndex = undefined,
-  createBulkParams = undefined
+  createBulkParams = undefined,
+  expectedFileCount = undefined,
+  expectUndefined = undefined
 }) {
 
   const mongoUri = await mongoFixtures.getUri();
@@ -100,7 +102,7 @@ async function callback({
       const params2 = {...params, stream};
       const opResult = await mongoOperator.createBulk(params2);
       debug(`createBulkResult: ${JSON.stringify(opResult)}`);
-      await compareToFirstDbEntry({expectedResult, formatDates: true});
+      await compareToFirstDbEntry({expectedResult, formatDates: true, expectedFileCount});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -275,8 +277,9 @@ async function callback({
 
       const opResult = await mongoOperator.remove(params);
       debug(`remove result: ${JSON.stringify(opResult)}`);
+      debug(`expectUndefined: ${expectUndefined}`);
 
-      await compareToFirstDbEntry({expectedResult: undefined, expectModificationTime, formatDates: false});
+      await compareToFirstDbEntry({expectedResult: expectUndefined ? undefined : expectedResult, expectModificationTime, formatDates: true, expectedFileCount});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -520,12 +523,12 @@ async function callback({
 }
 
 
-async function compareToFirstDbEntry({expectedResult, expectModificationTime = false, formatDates = true}) {
-  const result = await compareToDbEntry({expectedResult, resultIndex: 0, expectModificationTime, formatDates});
+async function compareToFirstDbEntry({expectedResult, expectModificationTime = false, formatDates = true, expectedFileCount = undefined}) {
+  const result = await compareToDbEntry({expectedResult, resultIndex: 0, expectModificationTime, formatDates, expectedFileCount});
   return result;
 }
 
-async function compareToDbEntry({expectedResult, resultIndex = 0, expectModificationTime = false, formatDates = true}) {
+async function compareToDbEntry({expectedResult, resultIndex = 0, expectModificationTime = false, formatDates = true, expectedFileCount = undefined}) {
   const dump = await mongoFixtures.dump();
   debug(`--- We have ${dump.foobar.length} documents in db`);
   debug(dump.foobar);
@@ -534,9 +537,11 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
   const dump2 = await mongoFixtures.dump();
   debug(`--- We have ${dump2.foobar.length} documents in db now`);
 
+  checkFileCount({dump, expectedFileCount});
+
   checkModificationTime({result, expectModificationTime});
 
-  if (formatDates) {
+  if (formatDates && expectedResult !== undefined) {
     const formattedResult = formatQueueItem(result);
     expect(formattedResult).to.eql(expectedResult);
     return;
@@ -545,6 +550,16 @@ async function compareToDbEntry({expectedResult, resultIndex = 0, expectModifica
   return;
 }
 
+function checkFileCount({dump, expectedFileCount}) {
+  if (expectedFileCount !== undefined) {
+    const fileCount = dump['foobar.files']?.length;
+    debug(`--- We have ${fileCount} files in db`);
+    expect(fileCount).to.eql(expectedFileCount);
+    return;
+  }
+  return;
+
+}
 
 function checkModificationTime({result, expectModificationTime}) {
   if (expectModificationTime) {

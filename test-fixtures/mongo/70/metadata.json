@@ -1,19 +1,23 @@
 {
-    "description": "Function: createBulk, stream",
+    "description": "Function: remove - do nothing for non existing correlationId",
     "only": false,
     "skip": false,
-    "functionName": "createBulk",
+    "functionName": "remove",
     "preFillDb": false,
     "contentStream": true,
     "expectedFileCount": 1,
-    "params": {
+    "createBulkParams": {
         "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
-        "cataloger": "createBulkTest",
+        "cataloger": "removeTest",
         "oCatalogerIn": "IMP_TEST",
         "operation": "CREATE",
-        "contentType": "",
+        "contentType": "foobar",
         "recordLoadParams": "",
         "operationSettings": {
+            "noStream": false
         }
+    },
+    "params": {
+        "correlationId": "a077b1ca-5358-4e2f-8662-0ce37e90d3d3"
     }
 }
