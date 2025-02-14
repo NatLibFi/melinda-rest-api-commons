@@ -1,10 +1,9 @@
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import createMongoOperator from '../src/mongo';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {handleError, compareToFirstDbEntry} from './testUtils';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test:create-bulk');
@@ -52,32 +51,26 @@ async function callback({
   getFixture,
   functionName,
   params,
-  //expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
   expectedErrorStatus = '',
   contentStream = false,
-  //expectedOpResult = undefined,
-  //updateStateBeforeTest = undefined,
-  //resultIndex = undefined,
-  //createBulkParams = undefined,
   expectedFileCount = undefined
-  //expectUndefined = undefined
 }) {
 
-  const mongoUri = await mongoFixtures.getUri();
-  const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
+  const mongoOperator = await getMongoOperator(mongoFixtures);
   const expectedResult = await getFixture('expectedResult.json');
-  // DEVELOP: we could use sama function for most of tests?
-  // debug(typeof mongoUri); // eslint-disable-line
 
-  if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
-    await mongoFixtures.populate(getFixture('dbContents.json'));
+  await doPreFillDb(preFillDb);
+
+  async function doPreFillDb(preFillDb) {
+    if (preFillDb) {
+      await mongoFixtures.populate(getFixture('dbContents.json'));
+      return;
+    }
+    return;
   }
-
-  //return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, queryById, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
-
 
   if (functionName === 'createBulk') {
     try {

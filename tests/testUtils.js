@@ -1,8 +1,16 @@
 
 import {expect} from 'chai';
 import createDebugLogger from 'debug';
+import createMongoOperator from '../src/mongo';
+
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
+
+export async function getMongoOperator(mongoFixtures) {
+  const mongoUri = await mongoFixtures.getUri();
+  const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
+  return mongoOperator;
+}
 
 export async function compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime = false, formatDates = true, expectedFileCount = undefined}) {
   const result = await compareToDbEntry({mongoFixtures, expectedResult, resultIndex: 0, expectModificationTime, formatDates, expectedFileCount});

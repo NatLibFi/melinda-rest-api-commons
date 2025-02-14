@@ -2,10 +2,9 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import createMongoOperator from '../src/mongo';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {handleError, compareToFirstDbEntry} from './testUtils';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:check-and-set-import-job-state-test');
@@ -58,20 +57,12 @@ async function callback({
   expectedToThrow = false,
   expectedErrorMessage = '',
   expectedErrorStatus = '',
-  //contentStream = false,
   expectedOpResult = undefined,
   updateStateBeforeTest = undefined
-  //resultIndex = undefined,
-  //createBulkParams = undefined,
-  //expectedFileCount = undefined,
-  //expectUndefined = undefined
 }) {
 
-  const mongoUri = await mongoFixtures.getUri();
-  const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
+  const mongoOperator = await getMongoOperator(mongoFixtures);
   const expectedResult = await getFixture('expectedResult.json');
-  // DEVELOP: we could use sama function for most of tests?
-  // debug(typeof mongoUri); // eslint-disable-line
 
   await doPreFillDb(preFillDb);
 
@@ -89,6 +80,7 @@ async function callback({
       debug(JSON.stringify(params));
       //{correlationId, operation, importJobState, errorMessage = '', errorStatus = ''}
       // timeout
+
       // eslint-disable-next-line functional/no-conditional-statements
       if (updateStateBeforeTest && params.correlationId) {
         debug(`setState to reset modificationTime`);
