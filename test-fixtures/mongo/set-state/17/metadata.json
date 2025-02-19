@@ -1,0 +1,14 @@
+{
+    "description": "Function: setState: ERROR + errorStatus + errorMessage",
+    "only": false,
+    "skip": false,
+    "functionName": "setState",
+    "expectModificationTime": true,
+    "preFillDb": true,
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "state": "ERROR",
+        "errorMessage": "Error: foobar",
+        "errorStatus": 500
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "description": "Function: remove",
+    "only": false,
+    "skip": false,
+    "functionName": "remove",
+    "preFillDb": false,
+    "contentStream": true,
+    "expectedFileCount": 0,
+    "expectUndefined": true,
+    "createBulkParams": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
+        "cataloger": "removeTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {
+            "noStream": false
+        }
+    },
+    "params": {
+        "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d"
+    }
+}

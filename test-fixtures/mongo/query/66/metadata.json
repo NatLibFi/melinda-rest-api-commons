@@ -1,0 +1,43 @@
+{
+    "description": "Function: query - return results in array, showParam as empty string === false",
+    "only": false,
+    "skip": false,
+    "functionName": "query",
+    "preFillDb": true,
+    "params": {
+        "params": {
+            "queueItemState": "IMPORTING"
+        },
+        "showParams": {
+            "showAll": ""
+        }
+    },
+    "expectedOpResult": [
+        {
+            "correlationId": "a077b1ca-5358-4e2f-8662-0ce37e90d3d3",
+            "cataloger": "queryTest",
+            "oCatalogerIn": "IMP_TEST",
+            "operation": "CREATE",
+            "blobSize": 1,
+            "errorMessage": "",
+            "errorStatus": "",
+            "queueItemState": "IMPORTING",
+            "records": [],
+            "creationTime": "2025-01-21T16:34:35.278Z",
+            "modificationTime": "2024-01-21T16:34:35.278Z"
+        },
+        {
+            "correlationId": "e26d0aa6-9a46-4dc9-9eee-916236e6e469",
+            "cataloger": "queryTest",
+            "oCatalogerIn": "IMP_TEST",
+            "operation": "CREATE",
+            "blobSize": 1,
+            "errorMessage": "",
+            "errorStatus": "",
+            "queueItemState": "IMPORTING",
+            "records": [],
+            "creationTime": "2025-01-21T16:34:35.278Z",
+            "modificationTime": "2024-01-21T16:34:35.278Z"
+        }
+    ]
+}

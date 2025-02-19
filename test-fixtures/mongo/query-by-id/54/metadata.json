@@ -1,0 +1,36 @@
+{
+    "description": "Function: queryById (no checkModTime)",
+    "only": false,
+    "skip": false,
+    "functionName": "queryById",
+    "preFillDb": true,
+    "expectModificationTime": false,
+    "params": {
+        "correlationId": "e26d0aa6-9a46-4dc9-9eee-916236e6e469"
+    },
+    "resultIndex": 2,
+    "expectedOpResult": {
+        "correlationId": "e26d0aa6-9a46-4dc9-9eee-916236e6e469",
+        "cataloger": "queryByIdTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "operationSettings": {
+            "prio": true
+        },
+        "blobSize": 1,
+        "errorMessage": "",
+        "errorStatus": "",
+        "importJobState": {
+            "CREATE": "DONE",
+            "FIX": "EMPTY",
+            "UPDATE": "IN_QUEUE"
+        },
+        "operations": [
+            "CREATE"
+        ],
+        "queueItemState": "IMPORTING",
+        "records": [],
+        "creationTime": "2025-01-21T16:34:35.278Z",
+        "modificationTime": "2024-01-21T16:34:35.278Z"
+    }
+}
