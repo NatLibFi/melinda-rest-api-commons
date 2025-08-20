@@ -1,14 +1,14 @@
 /* eslint-disable max-lines */
 
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants';
-import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import createDebugLogger from 'debug';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
+import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
+import {logError} from './utils.js';
 
 //import isDeepStrictEqual from 'util';
 
@@ -128,7 +128,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       modificationTime: time
     };
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (stream) {
       debug(`Creating streamBulk`);
       try {
@@ -154,7 +153,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     logger.debug(`No stream`);
     debug(`Creating noStreamBulk`);
-    // eslint-disable-next-line functional/no-conditional-statements
     if (!stream) {
       try {
         const result = await operator.insertOne(newQueueItem);
@@ -235,7 +233,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     // NOTE: parseBoolean parses any non-empty, non-"false" string as true!
     if (parseBoolean(showAll)) {
-    //if (showAll === true || showAll === '1' || showAll === 1) {
+      //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
@@ -516,7 +514,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     };
 
     // Do not update value that are undefined
-    // eslint-disable-next-line functional/immutable-data
     Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
 
     return operator

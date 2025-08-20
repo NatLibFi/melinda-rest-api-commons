@@ -1,25 +1,24 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, streamToString} from './testUtils';
-
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:read-content:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'read-content'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -42,13 +41,12 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'read-content'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
 }
 
-// eslint-disable-next-line max-statements
 async function callback({
   getFixture,
   functionName,
@@ -57,8 +55,7 @@ async function callback({
   expectedToThrow = false,
   expectedErrorMessage = '',
   expectedErrorStatus = '',
-  contentStream = false,
-  createBulkParams = undefined
+  expectedOpResult = undefined
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -75,41 +72,27 @@ async function callback({
   }
 
 
-  if (functionName === 'readContent') {
+  if (functionName === 'query') {
     try {
-      debug(`readContent`);
+      debug(`query`);
       debug(JSON.stringify(params));
-      //correlationId
-
+      //params, showParams = {}
+      //params: skip, limit, rest (rest: actual mongo queryParams)
+      //showParams: {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+      debug(`${JSON.stringify(params.params)}`);
+      debug(`${JSON.stringify(params.showParams)}`);
+      const opResult = await mongoOperator.query(params.params, params.showParams);
+      debug(`query result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
       // eslint-disable-next-line functional/no-conditional-statements
-      if (createBulkParams) {
-        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
-        //debug(stream);
-        const params2 = {...createBulkParams, stream};
-        const createBulkResult = await mongoOperator.createBulk(params2);
-        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      if (expectedOpResult !== undefined) {
+        assert.deepStrictEqual(opResult, expectedOpResult);
       }
-
-      const opResult = await mongoOperator.readContent(params);
-      const opResultString = await streamToString(opResult.readStream);
-
-      // eslint-disable-next-line functional/no-conditional-statements
-      if (createBulkParams && createBulkParams.contentType) {
-        expect(opResult.contentType).to.eql(createBulkParams.contentType);
-      }
-
-      if (contentStream) {
-        const contentStreamString = await getFixture({components: ['contentStream'], reader: READERS.TEXT});
-        //debug(contentStreamString);
-        expect(opResultString).to.eql(contentStreamString);
-        return;
-      }
-
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }

@@ -1,24 +1,24 @@
-//import {expect} from 'chai';
+//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-blob-size:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-operation:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'set-blob-size'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -41,7 +41,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'set-blob-size'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -71,19 +71,22 @@ async function callback({
     return;
   }
 
-  if (functionName === 'setBlobSize') {
+  if (functionName === 'setOperation') {
     try {
-      debug(`setBlobSize`);
+      debug(`setOperation`);
       debug(JSON.stringify(params));
-      //{correlationId,  blobSize}
-      const opResult = await mongoOperator.setBlobSize(params);
-      debug(`setBlobSize result: ${JSON.stringify(opResult)}`);
+      //{correlationId, operation}
+      const opResult = await mongoOperator.setOperation(params);
+      debug(`setOperation result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }
+

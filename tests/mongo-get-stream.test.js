@@ -1,25 +1,24 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToDbEntry, formatQueueItem} from './testUtils';
-
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, streamToString} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:query-by-id:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:get-stream:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'query-by-id'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-stream'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -42,7 +41,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'query-by-id'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-stream'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -53,18 +52,16 @@ async function callback({
   getFixture,
   functionName,
   params,
-  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
   expectedErrorStatus = '',
-  expectedOpResult = undefined,
-  updateStateBeforeTest = undefined,
-  resultIndex = undefined
+  contentStream = false,
+  createBulkParams = undefined
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
-  const expectedResult = await getFixture('expectedResult.json');
+  //const expectedResult = await getFixture('expectedResult.json');
 
   await doPreFillDb(preFillDb);
 
@@ -77,30 +74,39 @@ async function callback({
   }
 
 
-  if (functionName === 'queryById') {
+  if (functionName === 'getStream') {
     try {
-      debug(`queryById`);
+      debug(`getStream`);
       debug(JSON.stringify(params));
-      //{correlationId, checkModTime = false}
+      //correlationId
+
       // eslint-disable-next-line functional/no-conditional-statements
-      if (updateStateBeforeTest && params.correlationId) {
-        debug(`setState to reset modificationTime`);
-        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
       }
-      const opResult = await mongoOperator.queryById(params);
-      debug(`queryById result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
-      // eslint-disable-next-line functional/no-conditional-statements
-      if (expectedOpResult !== undefined) {
-        expect(formatQueueItem(opResult)).to.eql(formatQueueItem(expectedOpResult));
+      //const {correlationId} = params;
+
+      const opResult = mongoOperator.getStream(params);
+      const opResultString = await streamToString(opResult);
+
+      if (contentStream) {
+        const contentStreamString = await getFixture({components: ['contentStream'], reader: READERS.TEXT});
+        //debug(contentStreamString);
+        assert.equal(opResultString, contentStreamString);
+        return;
       }
-      const compareResultIndex = resultIndex ? resultIndex : 0;
-      await compareToDbEntry({mongoFixtures, expectedResult, resultIndex: compareResultIndex, expectModificationTime, formatDates: true});
+
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
-
   throw new Error(`Unknown functionName: ${functionName}`);
 }
+

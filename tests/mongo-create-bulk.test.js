@@ -1,24 +1,23 @@
-//import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-operation:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test:create-bulk');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-bulk'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -41,21 +40,23 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-bulk'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
 }
 
+// eslint-disable-next-line max-statements, complexity
 async function callback({
   getFixture,
   functionName,
   params,
-  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = ''
+  expectedErrorStatus = '',
+  contentStream = false,
+  expectedFileCount = undefined
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -71,15 +72,16 @@ async function callback({
     return;
   }
 
-  if (functionName === 'setOperation') {
+  if (functionName === 'createBulk') {
     try {
-      debug(`setOperation`);
+      debug(`CreateBulk`);
       debug(JSON.stringify(params));
-      //{correlationId, operation}
-      const opResult = await mongoOperator.setOperation(params);
-      debug(`setOperation result: ${JSON.stringify(opResult)}`);
-      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
-
+      //{correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}
+      const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : params.stream;
+      const params2 = {...params, stream};
+      const opResult = await mongoOperator.createBulk(params2);
+      debug(`createBulkResult: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, formatDates: true, expectedFileCount});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
@@ -89,4 +91,3 @@ async function callback({
 
   throw new Error(`Unknown functionName: ${functionName}`);
 }
-

@@ -1,22 +1,21 @@
-// import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
-import {expect} from 'chai';
-import createMongoLogOperator from '../src/mongoLog';
+import createMongoLogOperator from '../src/mongoLog.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongoLog'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -30,7 +29,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongoLog'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
     format: {
@@ -51,34 +50,34 @@ async function callback({
   const expectedResult = await getFixture('expectedResult.json');
   // console.log(typeof mongoUri); // eslint-disable-line
 
-  if (preFillDb) { // eslint-disable-line functional/no-conditional-statements
+  if (preFillDb) {
     await mongoFixtures.populate(getFixture('dbContents.json'));
   }
 
   if (functionName === 'addLogItem') {
     await mongoLogOperator.addLogItem(params);
     const dump = await mongoFixtures.dump();
-    return expect(dump.logs[0]['0']).to.eql(expectedResult);
+    return assert.deepStrictEqual(dump.logs[0]['0'], expectedResult);
   }
 
   if (functionName === 'getListOfCatalogers') {
     const result = await mongoLogOperator.getListOfCatalogers();
     // console.log(result); // eslint-disable-line
 
-    return expect(result).to.eql(expectedResult);
+    return assert.deepEqual(result, expectedResult);
   }
 
   if (functionName === 'getExpandedListOfLogs') {
     const result = await mongoLogOperator.getExpandedListOfLogs(params);
     // console.log(result); // eslint-disable-line
 
-    return expect(result).to.eql(expectedResult);
+    return assert.deepEqual(result, expectedResult);
   }
 
   if (functionName === 'getListOfLogs') {
     const result = await mongoLogOperator.getListOfLogs(params);
     // console.log(result); // eslint-disable-line
-    return expect(result).to.eql(expectedResult);
+    return assert.deepEqual(result, expectedResult);
   }
   throw new Error(`Unknown functionName: ${functionName}`);
 }

@@ -1,20 +1,23 @@
 
 
-import {expect} from 'chai';
+import assert from 'node:assert';
+import {describe, it} from 'node:test';
 import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
-import createConversionService from '../../src/helpers/conversion';
-import {CONVERSION_FORMATS} from '../../src/constants';
+import createConversionService from '../../src/helpers/conversion.js';
+import {CONVERSION_FORMATS} from '../../src/constants.js';
 
 describe('services/conversion', () => {
-  const {getFixture} = fixtureFactory({root: [
-    __dirname,
-    '..',
-    '..',
-    'test-fixtures',
-    'conversion'
-  ]});
+  const {getFixture} = fixtureFactory({
+    root: [
+      import.meta.dirname,
+      '..',
+      '..',
+      'test-fixtures',
+      'conversion'
+    ]
+  });
   const conversionService = createConversionService();
 
   const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']})), {subfieldValues: false});
@@ -27,69 +30,79 @@ describe('services/conversion', () => {
   describe('factory', () => {
     it('Should create the expected object', () => {
       const service = createConversionService();
-      expect(service).to.be.an('object').and
-        .respondTo('serialize')
-        .respondTo('unserialize');
+      assert.equal(typeof service, 'object');
+      assert.equal(Object.hasOwn(service, 'serialize'), true);
+      assert.equal(Object.hasOwn(service, 'unserialize'), true);
     });
   });
 
   describe('#serialize', () => {
     it('Should throw because of unsupported format', () => {
-      expect(conversionService.serialize).to.throw();
+      try {
+        conversionService.serialize();
+      } catch (error) {
+        assert(error instanceof ConversionError);
+      }
     });
 
     it('Should serialize to MARCXML', () => {
       const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.MARCXML);
-      expect(data).to.equal(marcXml);
+      assert.equal(data, marcXml);
     });
 
     it('Should serialize to ISO2709', () => {
       const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.ISO2709);
-      expect(data).to.equal(iso2709);
+      assert.equal(data, iso2709);
     });
 
     it('Should serialize to JSON', () => {
       const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.JSON);
-      expect(data).to.equal(json);
+      assert.equal(data, json);
     });
 
     it('Should serialize to aleph sequential', () => {
       const data = conversionService.serialize(marcRecord, CONVERSION_FORMATS.ALEPHSEQ);
-      expect(data).to.equal(alephSeq);
+      assert.equal(data, alephSeq);
     });
 
   });
 
   describe('#unserialize', () => {
     it('Should throw because of unsupported format', () => {
-      expect(conversionService.unserialize).to.throw();
+      try {
+        conversionService.unserialize();
+      } catch (error) {
+        assert(error instanceof ConversionError);
+      }
     });
 
     it('Should unserialize from MARCXML', async () => {
       const record = await conversionService.unserialize(marcXml, CONVERSION_FORMATS.MARCXML);
-      expect(record.equalsTo(marcRecord)).to.equal(true);
+      assert.equal(record.equalsTo(marcRecord), true);
     });
 
     it('Should unserialize from ISO2709', () => {
       const record = conversionService.unserialize(iso2709, CONVERSION_FORMATS.ISO2709);
-      expect(record.equalsTo(marcRecord)).to.equal(true);
+      assert.equal(record.equalsTo(marcRecord), true);
     });
 
     it('Should unserialize from JSON', () => {
       const record = conversionService.unserialize(json, CONVERSION_FORMATS.JSON);
-      expect(record.equalsTo(marcRecord)).to.equal(true);
+      assert.equal(record.equalsTo(marcRecord), true);
     });
 
     it('Should unserialize from Aleph sequential', () => {
       const record = conversionService.unserialize(alephSeq, CONVERSION_FORMATS.ALEPHSEQ);
-      expect(record.equalsTo(marcRecord)).to.equal(true);
+      assert.equal(record.equalsTo(marcRecord), true);
     });
 
 
     it('Should throw because the record could not be unserialized', () => {
-      expect(() => {
+      try {
         conversionService.unserialize('', CONVERSION_FORMATS.JSON);
-      }).to.throw(ConversionError);
+      } catch (error) {
+        assert(error instanceof ConversionError);
+      }
     });
   });
 });

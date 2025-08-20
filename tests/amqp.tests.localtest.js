@@ -1,10 +1,10 @@
-import {expect} from 'chai';
-import {READERS} from '@natlibfi/fixura';
+import assert from 'node:assert';
 import createDebugLogger from 'debug';
-import generateTests from '@natlibfi/fixugen';
-import {amqpFactory} from '../src/index';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {promisify} from 'util';
+import {READERS} from '@natlibfi/fixura';
+import generateTests from '@natlibfi/fixugen';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {amqpFactory} from '../src/index.js';
 
 const setTimeoutPromise = promisify(setTimeout);
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp:test');
@@ -23,14 +23,14 @@ let amqpOperator;
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'amqp'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'amqp'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       debug(`Connecting to ${amqpUrl}, with healthCheck running`);
       amqpOperator = await amqpFactory(amqpUrl, true);
@@ -76,13 +76,13 @@ async function callback({
 
     const messageCount = await amqpOperator.checkQueue({queue, style: 'messages'});
     debug(`MessageCount: ${messageCount}`);
-    expect(messageCount).to.eql(expectedMessageCount);
+    assert.equal(messageCount, expectedMessageCount);
 
     if (checkNextMessage) {
       const {headers, records} = await queueCheckNextMessage();
       const nextMessage = {headers, records};
       const expectedNextMessage = getFixture('expectedMessage.json');
-      expect(nextMessage).to.eql(expectedNextMessage);
+      assert.equal(nextMessage, expectedNextMessage);
       return;
     }
 
@@ -90,25 +90,25 @@ async function callback({
     if (!expectToFail) {
       throw error;
     }
-    expect(expectToFail, 'This is expected to fail').to.equal(true);
+    assert.equal(expectToFail, true, 'This is expected to fail');
     testErrors(error);
   }
 
   function testErrors(error) {
-
+    const isApiError = error instanceof ApiError;
     if (expectApiError) {
-      expect(error).to.be.instanceOf(ApiError);
+      assert.equal(isApiError, true);
       debug(`We expected and got an ApiError`);
-      expect(error.status).to.equal(expectedErrorStatus);
+      assert.equal(error.status, expectedErrorStatus);
 
       if (expectedErrorMessage) {
-        expect(error.payload).to.eql(expectedErrorMessage);
+        assert.equal(error.payload, expectedErrorMessage);
         return;
       }
 
       return;
     }
-    expect(error).not.to.be.instanceOf(ApiError);
+    assert.equal(isApiError, false);
     debug(`We expected and got an non-ApiError`);
     debug(`Error is a ${error.constructor.name}`);
   }
@@ -141,11 +141,11 @@ async function callback({
         return;
       }
 
-      expect(result).to.have.property('headers');
-      expect(result).to.have.property('records');
-      expect(result).to.have.property('messages');
-      expect(result.records.length).to.eql(1);
-      expect(result.messages.length).to.eql(1);
+      assert.equal(Object.hasOwn(result, 'headers'), true);
+      assert.equal(Object.hasOwn(result, 'records'), true);
+      assert.equal(Object.hasOwn(result, 'messages'), true);
+      assert.equal(result.records.length, 1);
+      assert.equal(result.messages.length, 1);
 
       return;
     }
@@ -159,15 +159,15 @@ async function callback({
         return;
       }
 
-      expect(fields).to.have.property('deliveryTag');
-      expect(fields).to.have.property('exchange');
-      expect(fields).to.have.property('messageCount');
-      expect(fields).to.have.property('redelivered');
-      expect(fields).to.have.property('routingKey');
-      expect(typeof fields.deliveryTag).to.be.eql('number');
-      expect(typeof fields.messageCount).to.be.eql('number');
-      expect(typeof fields.redelivered).to.be.eql('boolean');
-      expect(typeof fields.routingKey).to.be.eql('string');
+      assert.equal(Object.hasOwn(result, 'deliveryTag'), true);
+      assert.equal(Object.hasOwn(result, 'exchange'), true);
+      assert.equal(Object.hasOwn(result, 'messageCount'), true);
+      assert.equal(Object.hasOwn(result, 'redelivered'), true);
+      assert.equal(Object.hasOwn(result, 'routingKey'), true);
+      assert.equal(typeof fields.deliveryTag, 'number');
+      assert.equal(typeof fields.messageCount, 'number');
+      assert.equal(typeof fields.redelivered, 'boolean');
+      assert.equal(typeof fields.routingKey, 'string');
 
       return;
     }
@@ -180,13 +180,13 @@ async function callback({
         return;
       }
 
-      expect(result).to.have.property('headers');
-      expect(result).to.have.property('records');
-      expect(result).to.have.property('messages');
-      expect(result.records.length).to.eql(3);
-      expect(result.messages.length).to.eql(3);
+      assert.equal(Object.hasOwn(result, 'headers'), true);
+      assert.equal(Object.hasOwn(result, 'records'), true);
+      assert.equal(Object.hasOwn(result, 'messages'), true);
+      assert.equal(result.records.length, 3);
+      assert.equal(result.messages.length, 3);
       const expectedResult = getFixture('expectedResult.json');
-      expect(result.records).to.eql(expectedResult);
+      assert.deepStrictEqual(result.records, expectedResult);
 
       return;
     }
@@ -199,22 +199,22 @@ async function callback({
         return;
       }
 
-      expect(result).to.have.property('headers');
-      expect(result).to.have.property('messages');
-      expect(result.messages.length).to.eql(3);
+      assert.equal(Object.hasOwn(result, 'headers'), true);
+      assert.equal(Object.hasOwn(result, 'messages'), true);
+      assert.equal(result.messages.length, 3);
 
       const [{fields}] = result.messages;
 
-      expect(fields).to.have.property('deliveryTag');
-      expect(fields).to.have.property('exchange');
-      expect(fields).to.have.property('messageCount');
-      expect(fields).to.have.property('redelivered');
-      expect(fields).to.have.property('routingKey');
+      assert.equal(Object.hasOwn(result, 'deliveryTag'), true);
+      assert.equal(Object.hasOwn(result, 'exchange'), true);
+      assert.equal(Object.hasOwn(result, 'messageCount'), true);
+      assert.equal(Object.hasOwn(result, 'redelivered'), true);
+      assert.equal(Object.hasOwn(result, 'routingKey'), true);
 
-      expect(typeof fields.deliveryTag).to.be.eql('number');
-      expect(typeof fields.messageCount).to.be.eql('number');
-      expect(typeof fields.redelivered).to.be.eql('boolean');
-      expect(typeof fields.routingKey).to.be.eql('string');
+      assert.equal(typeof fields.deliveryTag, 'number');
+      assert.equal(typeof fields.messageCount, 'number');
+      assert.equal(typeof fields.redelivered, 'boolean');
+      assert.equal(typeof fields.routingKey, 'string');
 
       return;
     }

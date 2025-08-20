@@ -1,24 +1,25 @@
-//import {expect} from 'chai';
+//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
-// import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:create-prio-test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-import-job-state:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'create-prio'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-import-job-state'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -41,7 +42,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'create-prio'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-import-job-state'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -51,6 +52,7 @@ async function callback({
   getFixture,
   functionName,
   params,
+  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
@@ -70,20 +72,21 @@ async function callback({
     return;
   }
 
-  if (functionName === 'createPrio') {
+
+  if (functionName === 'setImportJobState') {
     try {
-      debug(`CreatePrio`);
+      debug(`setImportJobState`);
       debug(JSON.stringify(params));
-      const opResult = await mongoOperator.createPrio(params);
-      debug(`createPrio result: ${JSON.stringify(opResult)}`);
-      await compareToFirstDbEntry({mongoFixtures, expectedResult, formatDates: true});
+      //{correlationId, operation, importJobState}
+      const opResult = await mongoOperator.setImportJobState(params);
+      debug(`setImportJobState result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
-
   throw new Error(`Unknown functionName: ${functionName}`);
 }
 

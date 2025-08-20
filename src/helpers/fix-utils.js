@@ -1,5 +1,3 @@
-
-
 export function removeSubfield(field, code) {
 
   // Handle non-numeric fields, and fields with a numeric tag of 010 and greater

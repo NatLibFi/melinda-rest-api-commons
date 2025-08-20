@@ -1,13 +1,13 @@
+import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import createDebugLogger from 'debug';
-
-import {handleTempUrns} from './fix-handle-tempurns';
-import {stripF884s} from './fix-strip-f884s';
 
 import {FieldExclusion, SubfieldExclusion} from '@natlibfi/marc-record-validators-melinda';
 
-export * from './fix-constants';
+import {handleTempUrns} from './fix-handle-tempurns.js';
+import {stripF884s} from './fix-strip-f884s.js';
+
+export * from './fix-constants.js';
 
 const logger = createLogger();
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord');
@@ -75,7 +75,7 @@ function replacePrefix(record, options) {
       field.subfields
         .filter(({code}) => prefixReplaceCodes.includes(code))
         .forEach(subfield => {
-          subfield.value = subfield.value.replace(pattern, replacement); // eslint-disable-line functional/immutable-data
+          subfield.value = subfield.value.replace(pattern, replacement);
         });
     });
   return record;
@@ -100,7 +100,7 @@ function generateMissingSIDs(record, options) {
 
   const sidsToBeAdded = genNewSids(fSIDs.length === 0
     ? f035s
-  // test that SIDs are not there yet
+    // test that SIDs are not there yet
     : f035s.filter(f035SidInfo => !fSIDs.some(fSIDInfo => f035SidInfo.SID === fSIDInfo.SID && f035SidInfo.value === fSIDInfo.value)));
 
   debugData(`Adding (${sidsToBeAdded.length}) SIDs: ${JSON.stringify(sidsToBeAdded)}`);

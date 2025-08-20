@@ -1,24 +1,25 @@
+//import assert from 'node:assert';
+import createDebugLogger from 'debug';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:push-ids:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-state:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -41,7 +42,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -72,13 +73,13 @@ async function callback({
   }
 
 
-  if (functionName === 'pushIds') {
+  if (functionName === 'setState') {
     try {
-      debug(`pushIds`);
+      debug(`setState`);
       debug(JSON.stringify(params));
-      //{correlationId, handledIds, rejectedIds}
-      const opResult = await mongoOperator.pushIds(params);
-      debug(`pushIds result: ${JSON.stringify(opResult)}`);
+      //{correlationId, state, errorMessage = undefined, errorStatus = undefined}
+      const opResult = await mongoOperator.setState(params);
+      debug(`setState result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
 
     } catch (error) {
