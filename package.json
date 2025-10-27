@@ -36,26 +36,26 @@
     "dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test npm run watch:test"
   },
   "dependencies": {
-    "@natlibfi/marc-record": "next",
-    "@natlibfi/marc-record-serializers": "next",
-    "@natlibfi/marc-record-validate": "next",
-    "@natlibfi/marc-record-validators-melinda": "next",
-    "@natlibfi/melinda-backend-commons": "next",
-    "@natlibfi/melinda-commons": "next",
+    "@natlibfi/marc-record": "^10.0.0-alpha.3",
+    "@natlibfi/marc-record-serializers": "^11.0.0-alpha.3",
+    "@natlibfi/marc-record-validate": "^9.0.0-alpha.2",
+    "@natlibfi/marc-record-validators-melinda": "^12.0.0-alpha.6",
+    "@natlibfi/melinda-backend-commons": "^3.0.0-alpha.11",
+    "@natlibfi/melinda-commons": "^14.0.0-alpha.5",
     "amqplib": "^0.10.9",
-    "debug": "^4.4.1",
+    "debug": "^4.4.3",
     "http-status": "^2.1.0",
     "moment": "^2.30.1",
     "mongo-sanitize": "^1.1.0",
-    "mongodb": "^6.19.0"
+    "mongodb": "^6.20.0"
   },
   "devDependencies": {
-    "@natlibfi/fixugen": "next",
-    "@natlibfi/fixura": "next",
-    "@natlibfi/fixura-mongo": "next",
-    "cross-env": "^10.0.0",
-    "esbuild": "^0.25.9",
-    "eslint": "^9.34.0"
+    "@natlibfi/fixugen": "^3.0.0-alpha.7",
+    "@natlibfi/fixura": "^4.0.0-alpha.17",
+    "@natlibfi/fixura-mongo": "^3.0.0-alpha.6",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.25.11",
+    "eslint": "^9.38.0"
   },
   "overrides": {
     "nanoid": "^3.3.8"
