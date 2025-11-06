@@ -99,7 +99,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     }
   }
 
-  // eslint-disable-next-line max-statements
   async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
     const time = moment().toDate();
     const newQueueItem = {
@@ -298,15 +297,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     if (timeoutTime.isBefore()) {
       const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
-      if (!finalImportJobStates.includes(importJobState.CREATE)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.CREATE)) {
         await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
-      if (!finalImportJobStates.includes(importJobState.UPDATE)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.UPDATE)) {
         await setImportJobState({correlationId, operation: 'UPDATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
-      if (!finalImportJobStates.includes(importJobState.FIX)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.FIX)) {
         await setImportJobState({correlationId, operation: 'FIX', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
@@ -318,7 +317,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     return true;
   }
 
-  // eslint-disable-next-line max-statements
   async function remove(params) {
     logger.silly(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);

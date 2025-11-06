@@ -169,7 +169,6 @@ function stripF984s(record, stripF984sSettings) {
   }
 
   debug(`Removing f984 fields with subfield $a consisting values ${F984A_PATTERN.toString()}`);
-  // eslint-disable-next-line new-cap
   const validator = FieldExclusion(config);
   validator.fix(record);
   return record;
@@ -199,7 +198,6 @@ function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
 
   debug(`Running stripMelindaTempSubfields`);
 
-  // eslint-disable-next-line new-cap
   const validator = SubfieldExclusion(config);
   validator.fix(record);
   return record;

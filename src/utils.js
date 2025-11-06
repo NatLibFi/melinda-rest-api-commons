@@ -48,7 +48,6 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
   return recordResponseItem;
 }
 
-// eslint-disable-next-line max-statements
 function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);

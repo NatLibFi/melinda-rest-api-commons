@@ -56,7 +56,6 @@ export default async function (AMQP_URL, runHealthCheck = false) {
     }
   }
 
-  // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
     debug(`checkQueue: ${queue}, Style: ${style}, toRecord: ${toRecord}, Purge: ${purge}`);
 
@@ -187,7 +186,6 @@ export default async function (AMQP_URL, runHealthCheck = false) {
 
   async function sendToQueue({queue, correlationId, headers, data}) {
     debug(`sendToQueue`);
-    // eslint-disable-next-line no-useless-catch
     try {
       debug(`Queue ${queue}`);
       debug(`CorrelationId ${correlationId}`);

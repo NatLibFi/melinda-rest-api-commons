@@ -106,7 +106,6 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
     checkLogItemType(logItemType, true, true);
     //logger.debug(logItemType);
-    // eslint-disable-next-line no-console
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
       .distinct('correlationId', {logItemType: `${logItemType}`});
@@ -152,7 +151,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
+    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter})));
     //checkLogItemType(logItemType, false, false);
     //logger.debug(`Getting expanded list of logs`);
     const pipeline = [

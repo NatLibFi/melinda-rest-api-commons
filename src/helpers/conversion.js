@@ -44,7 +44,6 @@ export default function () {
     }
   }
 
-  // eslint-disable-next-line max-statements
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
