@@ -4,8 +4,8 @@ import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json, AlephSequential} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
-import {CONVERSION_FORMATS} from '../constants';
-import {logError} from '../utils';
+import {CONVERSION_FORMATS} from '../constants.js';
+import {logError} from '../utils.js';
 
 export default function () {
   const logger = createLogger();
@@ -37,14 +37,13 @@ export default function () {
       logError(err);
       const message = err.message || err.payload?.message || err.payload;
       logger.debug(`${message}`);
-      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statements
+      if (err instanceof ConversionError) {
         throw err;
       }
       throw new ConversionError(httpStatus.BAD_REQUEST, `Error while serializing record. ${message}`);
     }
   }
 
-  // eslint-disable-next-line max-statements
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
@@ -76,7 +75,7 @@ export default function () {
       logError(err);
       const message = err.message || err.payload?.message || err.payload;
       logger.debug(`${message}`);
-      if (err instanceof ConversionError) { // eslint-disable-line functional/no-conditional-statements
+      if (err instanceof ConversionError) {
         throw err;
       }
       throw new ConversionError(httpStatus.BAD_REQUEST, `Error while unserializing record. ${message}`);

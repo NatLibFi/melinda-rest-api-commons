@@ -1,7 +1,7 @@
 
-import {expect} from 'chai';
+import assert from 'node:assert';
 import createDebugLogger from 'debug';
-import createMongoOperator from '../src/mongo';
+import createMongoOperator from '../src/mongo.js';
 
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
@@ -32,10 +32,10 @@ export async function compareToDbEntry({mongoFixtures, expectedResult, resultInd
 
   if (formatDates && expectedResult !== undefined) {
     const formattedResult = formatQueueItem(result);
-    expect(formattedResult).to.eql(expectedResult);
+    assert.deepStrictEqual(formattedResult, expectedResult);
     return;
   }
-  expect(result).to.eql(expectedResult);
+  assert.deepStrictEqual(result, expectedResult);
   return;
 }
 
@@ -43,7 +43,7 @@ function checkFileCount({dump, expectedFileCount}) {
   if (expectedFileCount !== undefined) {
     const fileCount = dump['foobar.files']?.length;
     debug(`--- We have ${fileCount} files in db`);
-    expect(fileCount).to.eql(expectedFileCount);
+    assert.equal(fileCount, expectedFileCount);
     return;
   }
   return;
@@ -53,7 +53,8 @@ function checkFileCount({dump, expectedFileCount}) {
 function checkModificationTime({result, expectModificationTime}) {
   if (expectModificationTime) {
     debug('Check if modificationTime was edited');
-    expect(result.modificationTime).to.not.eql('');
+    const isNotEmpty = result.modificationTime !== '';
+    assert.equal(isNotEmpty, true);
     debug(`OK. We have modified modificationTime`);
     return;
   }
@@ -80,9 +81,9 @@ export function handleError({error, expectedToThrow, expectedErrorMessage, expec
     if (expectedErrorMessage !== '' || expectedErrorStatus !== '') {
       const errorMessage = error.message || error.payload.message || error.payload || '';
       debug(errorMessage);
-      expect(errorMessage).to.eql(expectedErrorMessage);
+      assert.equal(errorMessage, expectedErrorMessage);
       const errorStatus = error.status || '';
-      expect(errorStatus).to.eql(expectedErrorStatus);
+      assert.equal(errorStatus, expectedErrorStatus);
       return;
     }
     return;

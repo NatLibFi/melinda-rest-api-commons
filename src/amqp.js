@@ -1,12 +1,12 @@
 import amqplib from 'amqplib';
+import createDebugLogger from 'debug';
+import {promisify, inspect} from 'util';
+import httpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import createDebugLogger from 'debug';
-import {CHUNK_SIZE} from './constants';
-import {promisify, inspect} from 'util';
-import httpStatus from 'http-status';
-import {logError} from './utils';
+import {CHUNK_SIZE} from './constants.js';
+import {logError} from './utils.js';
 
 export default async function (AMQP_URL, runHealthCheck = false) {
   const logger = createLogger();
@@ -56,7 +56,6 @@ export default async function (AMQP_URL, runHealthCheck = false) {
     }
   }
 
-  // eslint-disable-next-line max-statements
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
     debug(`checkQueue: ${queue}, Style: ${style}, toRecord: ${toRecord}, Purge: ${purge}`);
 
@@ -187,7 +186,6 @@ export default async function (AMQP_URL, runHealthCheck = false) {
 
   async function sendToQueue({queue, correlationId, headers, data}) {
     debug(`sendToQueue`);
-    // eslint-disable-next-line no-useless-catch
     try {
       debug(`Queue ${queue}`);
       debug(`CorrelationId ${correlationId}`);

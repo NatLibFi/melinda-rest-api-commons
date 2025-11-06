@@ -1,7 +1,7 @@
+import httpStatus from 'http-status';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {IMPORT_JOB_STATE, OPERATIONS} from './constants';
-import httpStatus from 'http-status';
+import {IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
 
 const logger = createLogger();
 
@@ -48,7 +48,6 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
   return recordResponseItem;
 }
 
-// eslint-disable-next-line max-statements
 function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);

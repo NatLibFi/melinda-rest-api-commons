@@ -1,13 +1,11 @@
-
-
 import {MongoClient} from 'mongodb';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
-import {LOG_ITEM_TYPE} from './constants';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {logError} from './utils.js';
+import {LOG_ITEM_TYPE} from './constants.js';
 
 /**
  * Create log operator
@@ -66,7 +64,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.debug(`Query params: ${JSON.stringify(rest)}`);
     logger.debug(`Limit and skip params: ${limit} | ${skip}`);
     checkLogItemType(rest.logItemType, false, false);
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+    const result = await db.collection(collection)
       .find(rest)
       .sort({creationTime: 1})
       .skip(parseInt(skip, 10))
@@ -88,7 +86,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function queryById(correlationId, logItemType = LOG_ITEM_TYPE.MERGE_LOG, skip = 0, limit = 1) {
     logger.debug(`QueryById: ${correlationId}, logItemType: ${logItemType}, skip: ${skip}, limit: ${limit}`);
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+    const result = await db.collection(collection)
       .find({correlationId, logItemType})
       .sort({blobSequence: 1})
       .skip(parseInt(skip, 10))
@@ -108,7 +106,6 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
     checkLogItemType(logItemType, true, true);
     //logger.debug(logItemType);
-    // eslint-disable-next-line no-console
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
       .distinct('correlationId', {logItemType: `${logItemType}`});
@@ -123,7 +120,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function getListOfCatalogers() {
     logger.debug(`Getting list of Catalogers`);
 
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+    const result = await db.collection(collection)
       .distinct('cataloger');
 
     return result;
@@ -136,7 +133,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function getListOfCorrelationIds() {
     logger.debug(`Getting list of CorrelationIds`);
 
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+    const result = await db.collection(collection)
       .distinct('correlationId');
 
     return result;
@@ -154,7 +151,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
     logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}))); // eslint-disable-line
+    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter})));
     //checkLogItemType(logItemType, false, false);
     //logger.debug(`Getting expanded list of logs`);
     const pipeline = [
@@ -179,7 +176,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
       }
     ];
 
-    const result = await db.collection(collection) // eslint-disable-line functional/immutable-data
+    const result = await db.collection(collection)
       .aggregate(pipeline)
       .toArray();
 

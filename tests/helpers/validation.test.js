@@ -1,11 +1,12 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
+import {describe, it} from 'node:test';
 import fixtureFactory, {READERS} from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import createValidator from '../../src/helpers/validation';
+import createValidator from '../../src/helpers/validation.js';
 
 describe('services/validate', () => {
   const FIXTURES_PATH = [
-    __dirname,
+    import.meta.dirname,
     '..',
     '..',
     'test-fixtures',
@@ -23,14 +24,15 @@ describe('services/validate', () => {
         ]
       }));
       const result = await validator(record.toObject());
-      const expected = getFixture({
+      const {record: expectedRecord, ...rest} = getFixture({
         components: [
           'out',
           'f003-fi-melinda.json'
         ]
       });
-      expect(result).to.eql(expected);
-      expect(result.failed).to.equal(false);
+      const {_validationOptions, ...expectedRecordData} = expectedRecord;
+      assert.deepStrictEqual(result, {...rest, record: new MarcRecord(expectedRecordData, _validationOptions)});
+      assert.equal(result.failed, false);
     });
   });
 
@@ -44,14 +46,15 @@ describe('services/validate', () => {
         ]
       }));
       const result = await validator(record.toObject());
-      const expected = getFixture({
+      const {record: expectedRecord, ...rest} = getFixture({
         components: [
           'out',
           'f003-not-fi-melinda.json'
         ]
       });
-      expect(result).to.eql(expected);
-      expect(result.failed).to.equal(true);
+      const {_validationOptions, ...expectedRecordData} = expectedRecord;
+      assert.deepStrictEqual(result, {...rest, record: new MarcRecord(expectedRecordData, _validationOptions)});
+      assert.equal(result.failed, true);
     });
   });
 });

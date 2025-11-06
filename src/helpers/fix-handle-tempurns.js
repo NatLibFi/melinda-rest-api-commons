@@ -6,7 +6,6 @@ import createDebugLogger from 'debug';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:handleTempUrns');
 const debugData = debug.extend('data');
 
-// eslint-disable-next-line max-statements
 export function handleTempUrns(newRecord, options) {
 
   if (options !== true) {

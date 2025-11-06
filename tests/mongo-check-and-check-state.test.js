@@ -1,25 +1,25 @@
-//import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-import-job-state:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'set-import-job-state'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-and-set-state'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -42,7 +42,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'set-import-job-state'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-and-set-state'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -56,7 +56,9 @@ async function callback({
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = ''
+  expectedErrorStatus = '',
+  expectedOpResult = undefined,
+  updateStateBeforeTest = undefined
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -72,21 +74,32 @@ async function callback({
     return;
   }
 
-
-  if (functionName === 'setImportJobState') {
+  if (functionName === 'checkAndSetState') {
     try {
-      debug(`setImportJobState`);
+      debug(`checkAndSetState`);
       debug(JSON.stringify(params));
-      //{correlationId, operation, importJobState}
-      const opResult = await mongoOperator.setImportJobState(params);
-      debug(`setImportJobState result: ${JSON.stringify(opResult)}`);
+      //{correlationId, state, errorMessage = undefined, errorStatus = undefined})
+      // timeout
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
+      const opResult = await mongoOperator.checkAndSetState(params);
+      debug(`checkAndSetState result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedOpResult !== undefined) {
+        assert.deepStrictEqual(opResult, expectedOpResult);
+      }
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
-      return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }
-

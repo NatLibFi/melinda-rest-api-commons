@@ -1,14 +1,14 @@
 /* eslint-disable max-lines */
 
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants';
-import {logError} from './utils.js';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import createDebugLogger from 'debug';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
+import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
+import {logError} from './utils.js';
 
 //import isDeepStrictEqual from 'util';
 
@@ -99,7 +99,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     }
   }
 
-  // eslint-disable-next-line max-statements
   async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
     const time = moment().toDate();
     const newQueueItem = {
@@ -128,7 +127,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
       modificationTime: time
     };
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (stream) {
       debug(`Creating streamBulk`);
       try {
@@ -154,7 +152,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     logger.debug(`No stream`);
     debug(`Creating noStreamBulk`);
-    // eslint-disable-next-line functional/no-conditional-statements
     if (!stream) {
       try {
         const result = await operator.insertOne(newQueueItem);
@@ -235,7 +232,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     // NOTE: parseBoolean parses any non-empty, non-"false" string as true!
     if (parseBoolean(showAll)) {
-    //if (showAll === true || showAll === '1' || showAll === 1) {
+      //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
@@ -300,15 +297,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
 
     if (timeoutTime.isBefore()) {
       const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
-      if (!finalImportJobStates.includes(importJobState.CREATE)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.CREATE)) {
         await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
-      if (!finalImportJobStates.includes(importJobState.UPDATE)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.UPDATE)) {
         await setImportJobState({correlationId, operation: 'UPDATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
-      if (!finalImportJobStates.includes(importJobState.FIX)) { // eslint-disable-line
+      if (!finalImportJobStates.includes(importJobState.FIX)) {
         await setImportJobState({correlationId, operation: 'FIX', importJobState: IMPORT_JOB_STATE.ABORT});
       }
 
@@ -320,7 +317,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     return true;
   }
 
-  // eslint-disable-next-line max-statements
   async function remove(params) {
     logger.silly(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
@@ -516,7 +512,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
     };
 
     // Do not update value that are undefined
-    // eslint-disable-next-line functional/immutable-data
     Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
 
     return operator

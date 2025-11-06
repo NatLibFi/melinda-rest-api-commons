@@ -1,7 +1,7 @@
-import {MarcRecord} from '@natlibfi/marc-record';
 import createDebugLogger from 'debug';
 //import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
 import {inspect} from 'util';
+import {MarcRecord} from '@natlibfi/marc-record';
 
 export function stripF884s(newRecord, options) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:stripF884s');
@@ -145,8 +145,8 @@ export function stripF884s(newRecord, options) {
 
   function uniqFields(fields) {
     return fields.reduce((uniq, field) => {
-      if (!uniq.some(f => MarcRecord.isEqual(f, field))) { // eslint-disable-line functional/no-conditional-statements
-        uniq.push(field); // eslint-disable-line functional/immutable-data
+      if (!uniq.some(f => MarcRecord.isEqual(f, field))) {
+        uniq.push(field);
       }
 
       return uniq;

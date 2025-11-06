@@ -1,25 +1,24 @@
-//import {expect} from 'chai';
+//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
-
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+// import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:remove:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:create-prio-test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'remove'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-prio'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -42,26 +41,20 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'remove'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-prio'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
 }
 
-// eslint-disable-next-line max-statements
 async function callback({
   getFixture,
   functionName,
   params,
-  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = '',
-  contentStream = false,
-  createBulkParams = undefined,
-  expectedFileCount = undefined,
-  expectUndefined = undefined
+  expectedErrorStatus = ''
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -77,34 +70,20 @@ async function callback({
     return;
   }
 
-
-  if (functionName === 'remove') {
-
+  if (functionName === 'createPrio') {
     try {
-      debug(`remove`);
+      debug(`CreatePrio`);
       debug(JSON.stringify(params));
-      //params: {correlationId}
-
-      // eslint-disable-next-line functional/no-conditional-statements
-      if (createBulkParams) {
-        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
-        //debug(stream);
-        const params2 = {...createBulkParams, stream};
-        const createBulkResult = await mongoOperator.createBulk(params2);
-        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
-      }
-
-      const opResult = await mongoOperator.remove(params);
-      debug(`remove result: ${JSON.stringify(opResult)}`);
-      debug(`expectUndefined: ${expectUndefined}`);
-
-      await compareToFirstDbEntry({mongoFixtures, expectedResult: expectUndefined ? undefined : expectedResult, expectModificationTime, formatDates: true, expectedFileCount});
-
+      const opResult = await mongoOperator.createPrio(params);
+      debug(`createPrio result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }
+

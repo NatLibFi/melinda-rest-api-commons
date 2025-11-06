@@ -1,25 +1,24 @@
-import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:get-one:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:push-ids:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'get-one'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -42,7 +41,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'get-one'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -52,15 +51,15 @@ async function callback({
   getFixture,
   functionName,
   params,
+  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = '',
-  expectedOpResult = undefined
+  expectedErrorStatus = ''
 }) {
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
-  //const expectedResult = await getFixture('expectedResult.json');
+  const expectedResult = await getFixture('expectedResult.json');
 
   await doPreFillDb(preFillDb);
 
@@ -73,15 +72,14 @@ async function callback({
   }
 
 
-  if (functionName === 'getOne') {
+  if (functionName === 'pushIds') {
     try {
-      debug(`getOne`);
+      debug(`pushIds`);
       debug(JSON.stringify(params));
-      //{queueItemState, importJobState = undefined}
-      const opResult = await mongoOperator.getOne(params);
-      debug(`getOne result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
-
-      expect(opResult).to.eql(expectedOpResult);
+      //{correlationId, handledIds, rejectedIds}
+      const opResult = await mongoOperator.pushIds(params);
+      debug(`pushIds result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});

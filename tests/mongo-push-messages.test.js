@@ -1,24 +1,24 @@
-//import {expect} from 'chai';
+//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
-//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-operations:test');
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:push-messages:test');
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'mongo', 'set-operations'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-messages'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       //debug(`<< Before`);
       await initMongofixtures();
@@ -41,7 +41,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     recurse: false,
-    rootPath: [__dirname, '..', 'test-fixtures', 'mongo', 'set-operations'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-messages'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
   });
@@ -71,14 +71,13 @@ async function callback({
     return;
   }
 
-
-  if (functionName === 'setOperations') {
+  if (functionName === 'pushMessages') {
     try {
-      debug(`setOperations`);
+      debug(`pushMessages`);
       debug(JSON.stringify(params));
-      //{correlationId, addOperation, removeOperation = undefined}
-      const opResult = await mongoOperator.setOperations(params);
-      debug(`setOperations result: ${JSON.stringify(opResult)}`);
+      //{correlationId, messages, messageField = 'messages'}
+      const opResult = await mongoOperator.pushMessages(params);
+      debug(`pushMessages result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
@@ -88,4 +87,3 @@ async function callback({
   }
   throw new Error(`Unknown functionName: ${functionName}`);
 }
-
