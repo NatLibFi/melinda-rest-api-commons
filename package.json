@@ -24,14 +24,14 @@
   },
   "scripts": {
     "prepare": "npm run build",
-    "build": "esbuild ./src/*.js ./src/**/*.js --sourcemap --platform=node --main-fields=main --outdir=dist --allow-overwrite --analyze",
+    "build": "esbuild ./src/**/*.js --sourcemap --platform=node --main-fields=main --outdir=dist --allow-overwrite --analyze",
     "lint": "eslint ./src",
     "lint:dev": "eslint --fix ./src",
     "test": "npm run lint && npm run test:base",
     "test:base": "node --test --test-force-exit --experimental-test-coverage --test-reporter=spec './tests/**/*.test.js'",
     "test:local": "cross-env NODE_ENV=test node --test --test-force-exit --experimental-test-coverage --test-reporter=spec './tests/amqp.*.localtest.js'",
     "test:healthcheck": "cross-env NODE_ENV=test node --test --test-force-exit --experimental-test-coverage --test-reporter=spec './tests/amqp.healthtest.js'",
-    "watch:test": "cross-env DEBUG=@natlibfi/* NODE_ENV=test node --watch --test --experimental-test-coverage --test-reporter=spec './src/*.test.js' './src/**/*.test.js'",
+    "watch:test": "cross-env DEBUG=@natlibfi/* NODE_ENV=test node --watch --test --experimental-test-coverage --test-reporter=spec './tests/**/*.test.js'",
     "dev": "npm run watch:test",
     "dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test npm run watch:test"
   },
