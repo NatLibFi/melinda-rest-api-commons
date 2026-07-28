@@ -54,7 +54,7 @@
     "@natlibfi/fixura": "^4.0.1",
     "@natlibfi/fixura-mongo": "^3.0.3",
     "cross-env": "^10.1.0",
-    "esbuild": "^0.27.7",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.4"
   },
   "overrides": {
