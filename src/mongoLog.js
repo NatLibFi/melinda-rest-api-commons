@@ -320,13 +320,22 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     const clean = sanitize(correlationId);
     // blobSequences are integers that start from 1
     // we accept also strings that are convertilble to integers greated than 0
-    const cleanSequences = sequences.filter(sequence => Number.isInteger(Number(sequence)) && sequence > 0);
+    // B-20 (and B-21): validate consistently via Number() and store the
+    // converted numbers, since blobSequence is stored as a number in Mongo
+    const cleanSequences = sequences
+      .map(sequence => Number(sequence))
+      .filter(sequence => Number.isInteger(sequence) && sequence > 0);
 
     if (sequences.length !== cleanSequences.length) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Invalid sequences in removeBySequences. Sequences should be positive integers`);
     }
 
-    const filter = force ? {correlationId: clean, blobSequence: {$in: cleanSequences}} : {correlationId: clean, blobSequence: {$in: sequences}, protected: {$ne: true}};
+    // B-20: use the numeric cleanSequences in BOTH branches (the non-forced
+    // branch used to pass raw `sequences`, so string inputs like '1' would
+    // never match the stored numeric blobSequence)
+    const filter = force
+      ? {correlationId: clean, blobSequence: {$in: cleanSequences}}
+      : {correlationId: clean, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
