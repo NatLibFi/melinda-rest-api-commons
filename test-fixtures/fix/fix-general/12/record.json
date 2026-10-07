@@ -1,0 +1,28 @@
+{
+  "leader": "03085cam a22006858i 4500",
+  "fields": [
+    {
+      "tag": "001",
+      "value": "000000001"
+    },
+    {
+      "tag": "003",
+      "value": "FI-MELINDA"
+    },
+    {
+      "tag": "005",
+      "value": "20220818041047.0"
+    },
+    {
+      "tag": "035",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "(FI-BTJ)abc123"
+        }
+      ]
+    }
+  ]
+}

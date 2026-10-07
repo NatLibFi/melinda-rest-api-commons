@@ -1,0 +1,28 @@
+{
+  "leader": "03085cam a22006858i 4500",
+  "fields": [
+    {
+      "tag": "001",
+      "value": "000000001"
+    },
+    {
+      "tag": "003",
+      "value": "FI-MELINDA"
+    },
+    {
+      "tag": "005",
+      "value": "20220818041047.0"
+    },
+    {
+      "tag": "984",
+      "ind1": "4",
+      "ind2": "1",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ALWAYS-PREFER-IN-MERGE"
+        }
+      ]
+    }
+  ]
+}

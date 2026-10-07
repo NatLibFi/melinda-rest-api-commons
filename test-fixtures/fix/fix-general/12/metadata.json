@@ -1,0 +1,11 @@
+{
+    "description": "skip-branch: f035Filters and fSIDFilters have mismatched lengths, so generateMissingSIDs silently does nothing and the record (with its 035 field) is returned unchanged",
+    "settings": {
+        "generateMissingSIDs": {
+            "f035Filters": ["^\\(FI-BTJ\\)", "^\\(FI-TATI\\)"],
+            "fSIDFilters": ["FI-BTJ"]
+        }
+    },
+    "skip": false,
+    "only": false
+}

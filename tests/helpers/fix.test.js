@@ -22,10 +22,28 @@ generateTests({
 });
 
 function callback({getFixture, settings = undefined}) {
-  if (settings !== undefined && fixSettings[settings] === undefined) {
+  if (
+    settings !== undefined
+    && typeof settings !== 'object'
+    && fixSettings[settings] === undefined
+  ) {
     throw new Error(`There are no settings ${settings} defined!`);
   }
-  const runSettings = fixSettings[settings] || settings;
+  let runSettings = fixSettings[settings] || settings;
+  // metadata.json is plain JSON, so f035Filters may contain string
+  // patterns which fix.js cannot use as-is; convert them to RegExp
+  if (runSettings && runSettings.generateMissingSIDs) {
+    runSettings = {
+      ...runSettings,
+      generateMissingSIDs: {
+        ...runSettings.generateMissingSIDs,
+        f035Filters: (runSettings.generateMissingSIDs.f035Filters || []).map(
+          filter => (typeof filter === 'string' ? new RegExp(filter) : filter)
+        ),
+        fSIDFilters: runSettings.generateMissingSIDs.fSIDFilters
+      }
+    };
+  }
 
   const record = new MarcRecord(getFixture('record.json'), {subfieldValues: false});
   const expectedRecord = getFixture('expectedRecord.json');
