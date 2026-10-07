@@ -142,8 +142,20 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         await new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
 
+          // B-9: an upload stream error used to hang the promise forever
+          // (no error handler on outputStream) -> wire it to reject
+          outputStream.on('error', (error) => {
+            outputStream.destroy();
+            reject(error);
+          });
+
           stream
-            .on('error', reject)
+            .on('error', (error) => {
+              // B-9: input failed mid-upload -> abort, do not leave the
+              // partial GridFS upload stream running
+              outputStream.destroy();
+              reject(error);
+            })
             .on('data', chunk => outputStream.write(chunk))
             .on('end', () => outputStream.end(undefined, undefined, () => {
               resolve(correlationId);
@@ -155,7 +167,21 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
         logError(error);
+        // B-9: best-effort cleanup of a partial GridFS file
+        await removePartialContent(correlationId);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+      }
+    }
+
+    async function removePartialContent(correlationId) {
+      try {
+        const files = await gridFSBucket.find({filename: correlationId}).toArray();
+        for (const file of files) {
+          await gridFSBucket.delete(file._id);
+          logger.debug(`mongo/createBulk: removed partial GridFS file for ${correlationId}`);
+        }
+      } catch (cleanupError) {
+        logger.debug(`mongo/createBulk: partial GridFS cleanup failed for ${correlationId}: ${cleanupError.message}`);
       }
     }
 

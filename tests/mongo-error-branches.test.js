@@ -1,6 +1,7 @@
 
 import assert from 'node:assert';
 import {test} from 'node:test';
+import {Readable, PassThrough} from 'node:stream';
 import httpStatus from 'http-status';
 import {MongoDriverError} from 'mongodb';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
@@ -140,6 +141,81 @@ test('getStream: openDownloadStreamByName throwing synchronously throws ApiError
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
       assert.ok(error.payload.includes('Mongo errored'));
+      return true;
+    }
+  );
+});
+
+// B-9: createBulk stream path used to have no error handling on the GridFS
+// upload stream (hangs forever) and never aborted it on input errors
+// (orphan partial chunks). Both are now wired to reject + cleanup.
+
+test('B-9: createBulk rejects with ApiError 500 when input stream errors mid-upload, and cleans up the partial file', async () => {
+  const deletedFiles = [];
+  // errors itself once flowing mode starts
+  const input = new Readable({
+    read() {
+      setImmediate(() => this.emit('error', new Error('input stream boom')));
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator(),
+    gridFSBucket: makeGridFSBucket({
+      openUploadStream: () => new PassThrough(),
+      find: () => ({toArray: async () => [{_id: 'partial-1', filename: 'FOO'}]}),
+      delete: async (id) => {
+        // eslint-disable-next-line functional/immutable-data
+        deletedFiles.push(id);
+        return true;
+      }
+    })
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('input stream boom'));
+      return true;
+    }
+  );
+  assert.deepStrictEqual(deletedFiles, ['partial-1']);
+});
+
+test('B-9: createBulk rejects with ApiError 500 when the GridFS output stream errors (used to hang forever)', async () => {
+  const input = new Readable({read() {}});
+  const mongo = await makeMongo({
+    operator: makeOperator(),
+    gridFSBucket: makeGridFSBucket({
+      openUploadStream: () => {
+        const output = new PassThrough();
+        setImmediate(() => output.emit('error', new Error('disk on fire')));
+        return output;
+      }
+    })
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('disk on fire'));
       return true;
     }
   );
