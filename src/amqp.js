@@ -292,8 +292,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
         correlationId: message.properties.correlationId,
         deliveryTag: message.fields.deliveryTag
       };
-      // Filter not unique messages
-      if (identifiers.includes(identifier)) {
+      // B-1: filter not unique messages (compare by key, not by object reference)
+      const isDuplicate = identifiers.some(
+        i => i.correlationId === identifier.correlationId && i.deliveryTag === identifier.deliveryTag
+      );
+      if (isDuplicate) {
         return pump(count - 1, results, identifiers);
       }
 

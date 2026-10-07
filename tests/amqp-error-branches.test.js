@@ -67,6 +67,33 @@ test('B-2 (fixed): consumeChunk returns partial chunk when queue drains after fi
 });
 
 
+test('B-1 (fixed): consumeChunk deduplicates messages with same correlationId + deliveryTag', async () => {
+  // See zoo/bug-report.md B-1 (src/amqp.js, getData/pump):
+  // FIXED: dedup now compares correlationId + deliveryTag field-by-field,
+  // so duplicate messages are filtered out. (Previously the includes()
+  // check compared object references and never triggered.)
+  const duplicate = makeMessage('c1', 1);
+  const amqpOperator = await makeOperator({
+    checkQueue: async () => ({messageCount: 2}),
+    get: async () => duplicate
+  });
+  const {records, messages} = await amqpOperator.consumeChunk(QUEUE, true);
+  assert.equal(messages.length, 1);
+  assert.equal(records.length, 1);
+});
+
+test('B-1 (fixed): same deliveryTag with different correlationIds is NOT deduplicated', async () => {
+  // Dedup key is correlationId + deliveryTag; a redelivery of a message
+  // with a new correlationId must still come through.
+  const messages = [makeMessage('c1', 1), makeMessage('c2', 1)];
+  const amqpOperator = await makeOperator({
+    checkQueue: async () => ({messageCount: 2}),
+    get: async () => messages.shift()
+  });
+  const {messages: got} = await amqpOperator.consumeChunk(QUEUE, true);
+  assert.equal(got.length, 2);
+});
+
 test('happy path: consumeChunk returns two distinct messages', async () => {
   const messages = [
     makeMessage('c1', 1),
