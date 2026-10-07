@@ -20,6 +20,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   const connection = deps.connection ?? await amqplib.connect(AMQP_URL);
   const channel = deps.channel ?? await connection.createChannel();
 
+  // B-3: the recursive healthCheck loop is never awaited and kept firing
+  // ~every 200 ms even after the connection was closed. This flag is cleared
+  // by closeChannel/closeConnection so the loop short-circuits on graceful
+  // shutdown instead of running until the closed channel throws.
+  let healthCheckRunning = runHealthCheck;
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
   debug(`Connection: ${connection}`);
@@ -29,18 +34,28 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
   async function closeChannel() {
+    // B-3: stop the health check loop before closing so it does not keep
+    // firing on a closed channel during graceful shutdown
+    healthCheckRunning = false;
     debug(`Closing channel`);
     await channel.close();
     debug(`Channel: ${channel}`);
   }
 
   async function closeConnection() {
+    // B-3: stop the health check loop before closing
+    healthCheckRunning = false;
     debug(`Closing connection`);
     await connection.close();
     debug(`Connection: ${connection}`);
   }
 
   async function healthCheck(wait = false) {
+    // B-3: cancellable - closeChannel/closeConnection set this to false
+    if (!healthCheckRunning) {
+      debugHC(`HealthCheck cancelled, not running`);
+      return false;
+    }
     if (wait) {
       await setTimeoutPromise(wait);
       return healthCheck(false);
@@ -53,6 +68,12 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       return healthCheck(200);
     } catch (error) {
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
+      // B-3: if we were asked to stop, do not rethrow - a closed channel
+      // throwing during shutdown would keep the process alive / crash it
+      if (!healthCheckRunning) {
+        debugHC(`HealthCheck cancelled while erroring, not throwing`);
+        return false;
+      }
       handleAmqpErrors(error);
     }
   }
@@ -232,17 +253,19 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     // deleteQueue borks the channel if the queue does not exist
     // -> use throwaway tempChannel to avoid killing actual channel in use
     // this might be doable also with assertQueue before deleteQueue
-    const tempChannel = await connection.createChannel();
-    logger.verbose(`Removing queue ${queue}.`);
-    debug(`Removing queue ${queue}.`);
-    await tempChannel.deleteQueue(queue);
-
-    if (tempChannel) {
-      await tempChannel.close();
-      return;
+    let tempChannel;
+    try {
+      tempChannel = await connection.createChannel();
+      logger.verbose(`Removing queue ${queue}.`);
+      debug(`Removing queue ${queue}.`);
+      await tempChannel.deleteQueue(queue);
+    } finally {
+      // B-4: if deleteQueue throws (e.g. the queue does not exist) the
+      // throwaway channel used to leak -> always close it
+      if (tempChannel) {
+        await tempChannel.close();
+      }
     }
-
-    return;
   }
 
   // ----------------

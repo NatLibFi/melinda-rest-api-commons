@@ -89,9 +89,11 @@ async function callback({
       const opResult = await mongoOperator.checkAndSetState(params);
       debug(`checkAndSetState result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
 
+      // B-36: checkAndSetState now returns a discriminated result
+      // {status: 'updated' | 'timeout' | 'unchanged', queueItem} - compare status
       // eslint-disable-next-line functional/no-conditional-statements
       if (expectedOpResult !== undefined) {
-        assert.deepStrictEqual(opResult, expectedOpResult);
+        assert.deepStrictEqual(opResult.status, expectedOpResult);
       }
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
 

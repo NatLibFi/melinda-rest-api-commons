@@ -1,13 +1,13 @@
 {
-    "description": "Function: getStream - error if there's no content",
+    "description": "Function: getStream - B-38 (fixed): missing content now throws ApiError 404 synchronously (pre-check) instead of returning a stream that emits an unhandled 'error' event",
     "only": false,
     "skip": false,
     "functionName": "getStream",
     "preFillDb": false,
     "contentStream": true,
     "expectedToThrow": true,
-    "expectedErrorMessage": "FileNotFound: file foobar was not found",
-    "expectedErrorStatus": "",
+    "expectedErrorMessage": "File foobar not found in foobar",
+    "expectedErrorStatus": 404,
     "createBulkParams": {
         "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",
         "cataloger": "getStreamTest",

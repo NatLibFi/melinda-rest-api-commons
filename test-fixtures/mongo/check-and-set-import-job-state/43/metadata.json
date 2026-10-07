@@ -1,10 +1,10 @@
 {
-    "description": "Function checkAndSetImportJobState - fail if state is ERROR, even if modificationTime is new enough ",
+    "description": "Function checkAndSetImportJobState - fail if state is ERROR, even if modificationTime is new enough. B-36 (fixed): returns discriminated {status, queueItem}",
     "only": false,
     "skip": false,
     "functionName": "checkAndSetImportJobState",
     "preFillDb": true,
-    "expectedOpResult": false,
+    "expectedOpResult": "unchanged",
     "updateStateBeforeTest": "ERROR",
     "params": {
         "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d",

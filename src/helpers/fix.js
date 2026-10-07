@@ -131,11 +131,16 @@ function generateMissingSIDs(record, options) {
 
   function f035ToSidInfo(f035s) {
     return f035s.flatMap(({subfields}) => {
-      const [wantedSub] = subfields.filter(sub => sub.code === 'a' && f035Filters.some(regexp => regexp.test(sub.value)));
+      // B-30: single pass over the filters - the subfield AND the SID are
+      // both chosen by the SAME first matching filter index (previously the
+      // subfield matched any filter but the SID lookup re-scanned with
+      // findIndex, which was order-sensitive and O(n^2) per field)
+      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(sub.value)) > -1);
 
       if (wantedSub) {
+        const filterIndex = f035Filters.findIndex(regexp => regexp.test(wantedSub.value));
         return {
-          SID: fSIDFilters[f035Filters.findIndex(regexp => regexp.test(wantedSub.value))],
+          SID: fSIDFilters[filterIndex],
           value: wantedSub.value.slice(wantedSub.value.indexOf(')') + 1)
         };
       }

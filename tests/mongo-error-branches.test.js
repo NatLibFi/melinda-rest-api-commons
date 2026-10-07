@@ -125,17 +125,39 @@ test('remove: MongoDriverError with other message throws ApiError 500', async ()
   );
 });
 
-test('getStream: openDownloadStreamByName throwing synchronously throws ApiError 500', async () => {
+// B-38: getStream is now async - it pre-checks file existence (throws 404
+// for a missing file) and wraps bucket errors into ApiError 500 rejections.
+// (Previously it was synchronous and a missing file surfaced as an unhandled
+// 'error' event on the returned stream.)
+
+test('B-38: getStream rejects with ApiError 404 when the GridFS file does not exist', async () => {
   const mongo = await makeMongo({
     operator: makeOperator(),
     gridFSBucket: makeGridFSBucket({
+      find: () => ({toArray: async () => []})
+    })
+  });
+  await assert.rejects(
+    () => mongo.getStream('FOO'),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.NOT_FOUND);
+      return true;
+    }
+  );
+});
+
+test('B-38: getStream rejects with ApiError 500 when openDownloadStreamByName throws', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator(),
+    gridFSBucket: makeGridFSBucket({
+      find: () => ({toArray: async () => [{_id: '1', filename: 'FOO'}]}),
       openDownloadStreamByName: () => {
         throw new Error('sync bucket failure');
       }
     })
   });
-  // getStream is not async: a synchronous throw must be caught with assert.throws
-  assert.throws(
+  await assert.rejects(
     () => mongo.getStream('FOO'),
     (error) => {
       assert.ok(error instanceof ApiError);
@@ -144,6 +166,104 @@ test('getStream: openDownloadStreamByName throwing synchronously throws ApiError
       return true;
     }
   );
+});
+
+test('B-37: checkTimeOut returns false (no crash) when the queueItem does not exist', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => null}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkTimeOut({correlationId: 'NOPE'});
+  assert.equal(result, false);
+});
+
+test('B-11: setOperation rejects with ApiError 404 for a non-matching correlationId', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => null}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.setOperation({correlationId: 'NOPE', operation: 'UPDATE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.NOT_FOUND);
+      return true;
+    }
+  );
+});
+
+test('B-11: setOperations rejects with ApiError 404 for a non-matching correlationId', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => null}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.setOperations({correlationId: 'NOPE', addOperation: 'UPDATE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.NOT_FOUND);
+      return true;
+    }
+  );
+});
+
+test('B-11: setOperation returns the resulting document (v6 driver shape, no {ok, value})', async () => {
+  const doc = {correlationId: 'FOO', operation: 'UPDATE'};
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => ({correlationId: 'FOO', operation: 'CREATE'}),
+      findOneAndUpdate: async () => doc
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.setOperation({correlationId: 'FOO', operation: 'UPDATE'});
+  assert.deepStrictEqual(result, doc);
+});
+
+test('B-8: createBulk (stream) returns the normalized {correlationId, acknowledged, queueItemState} shape', async () => {
+  const input = new Readable({
+    read() {
+      this.push(Buffer.from('chunk'));
+      this.push(null);
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator({insertOne: async () => ({acknowledged: true, insertedId: 1})}),
+    gridFSBucket: makeGridFSBucket({openUploadStream: () => new PassThrough()})
+  });
+  const result = await mongo.createBulk({
+    correlationId: 'FOO',
+    cataloger: 'xxx',
+    oCatalogerIn: 'xxx',
+    operation: 'CREATE',
+    contentType: 'application/json',
+    recordLoadParams: {},
+    stream: input
+  });
+  assert.deepStrictEqual(result, {
+    correlationId: 'FOO',
+    acknowledged: true,
+    queueItemState: 'UPLOADING'
+  });
+});
+
+test('B-12: checkTimeOut honours MONGO_TIMEOUT_MINUTES (older item than the window is aborted)', async () => {
+  process.env.MONGO_TIMEOUT_MINUTES = '5';
+  const oldDate = new Date(Date.now() - 4 * 60 * 1000); // 4 min old: fine at 5m, not at 1m
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => ({
+        correlationId: 'FOO',
+        queueItemState: 'VALIDATING',
+        modificationTime: oldDate,
+        importJobState: {CREATE: 'DONE', UPDATE: 'DONE', FIX: 'DONE'}
+      })
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkTimeOut({correlationId: 'FOO'});
+  delete process.env.MONGO_TIMEOUT_MINUTES;
+  assert.equal(result, true);
 });
 
 // B-9: createBulk stream path used to have no error handling on the GridFS

@@ -1,5 +1,5 @@
 {
-    "description": "B-30: two f035Filters both match the same 035 $a value and are mapped to different SIDs; the SID is chosen by the FIRST matching filter index (order-dependent selection, documents current behaviour)",
+    "description": "B-30 (fixed): two f035Filters both match the same 035 $a value and are mapped to different SIDs; subfield and SID are now chosen by the SAME first matching filter index in a single pass (order-dependent but consistent)",
     "settings": {
         "generateMissingSIDs": {
             "f035Filters": ["^\\(FI-\\w+\\)", "^\\(FI-BTJ\\)"],
