@@ -128,6 +128,13 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       // getData: next chunk (100) messages
       const messages = await getData(queue);
 
+      // B-2: queue can drain before/during the pump -> nothing to return,
+      // matches the `false` contract checkQueue uses for an empty queue
+      if (messages.length === 0) {
+        debug(`consumeChunk: queue ${queue} drained, returning false`);
+        return false;
+      }
+
       // Note: headers are from the first message of the chunk
       const headers = getHeaderInfo(messages[0]);
       debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
@@ -275,6 +282,12 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       }
 
       const message = await channel.get(queue);
+      // B-2: queue can drain between the messageCount read and channel.get
+      // (race, purge, other consumer) -> channel.get returns null
+      if (!message) {
+        return results;
+      }
+
       const identifier = {
         correlationId: message.properties.correlationId,
         deliveryTag: message.fields.deliveryTag

@@ -34,40 +34,38 @@ async function makeOperator(channelOverrides) {
   return createAmqp(DUMMY_URL, false, {connection, channel});
 }
 
-test('B-2: consumeChunk rejects with TypeError when channel.get returns null (queue drained)', async () => {
+test('B-2 (fixed): consumeChunk returns false when queue drains mid-pump', async () => {
   // See zoo/bug-report.md B-2 (src/amqp.js, getData/pump):
-  // pump does `message.properties.correlationId` without a null check,
-  // so a drained queue (channel.get -> null) crashes with a TypeError.
-  // This test documents the CURRENT (broken) behaviour.
+  // FIXED: pump now bails out (returns results) when channel.get -> null,
+  // and consumeChunk maps an empty pump result to false, matching the
+  // empty-queue contract of checkQueue. Previously this crashed with
+  // TypeError: Cannot read properties of null (reading 'properties').
   const amqpOperator = await makeOperator({
     checkQueue: async () => ({messageCount: 1}),
     get: async () => null
   });
-  await assert.rejects(
-    () => amqpOperator.consumeChunk(QUEUE, false),
-    (error) => {
-      assert.ok(error instanceof TypeError);
-      assert.match(error.message, /null/);
-      return true;
-    }
-  );
+  const result = await amqpOperator.consumeChunk(QUEUE, false);
+  assert.strictEqual(result, false);
 });
 
-test('B-1: consumeChunk returns both duplicate messages (dedup is dead)', async () => {
-  // See zoo/bug-report.md B-1 (src/amqp.js, getData/pump):
-  // `identifiers.includes(identifier)` compares objects by reference,
-  // so the dedup branch NEVER triggers. Duplicate messages with the
-  // same correlationId + deliveryTag are all returned.
-  // This test documents the CURRENT (broken) behaviour.
-  const duplicate = makeMessage('c1', 1);
+test('B-2 (fixed): consumeChunk returns partial chunk when queue drains after first message', async () => {
+  // Drains after one of two messages: pump must stop gracefully and
+  // consumeChunk must return the one message it got.
+  const first = makeMessage('c1', 1);
+  let drained = false;
   const amqpOperator = await makeOperator({
     checkQueue: async () => ({messageCount: 2}),
-    get: async () => duplicate
+    get: async () => {
+      if (drained) return null;
+      drained = true;
+      return first;
+    }
   });
   const {records, messages} = await amqpOperator.consumeChunk(QUEUE, true);
-  assert.equal(messages.length, 2);
-  assert.equal(records.length, 2);
+  assert.equal(messages.length, 1);
+  assert.equal(records.length, 1);
 });
+
 
 test('happy path: consumeChunk returns two distinct messages', async () => {
   const messages = [
