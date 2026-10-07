@@ -1,0 +1,10 @@
+{
+  "description": "Function: queryById, params [non-existing correlationId] returns empty array",
+  "only": false,
+  "skip": false,
+  "functionName": "queryById",
+  "preFillDb": true,
+  "params": [
+    "99999999-9999-4999-8999-999999999999"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "description": "Function: removeBySequences, B-20: sequences passed as STRINGS [\"1\", \"2\"] - non-forced branch uses raw strings in $in, so NO numeric blobSequence matches and nothing is deleted (documents current behaviour)",
+  "only": false,
+  "skip": false,
+  "functionName": "removeBySequences",
+  "preFillDb": true,
+  "params": [
+    "11111111-1111-4111-8111-111111111111",
+    ["1", "2"]
+  ]
+}
