@@ -41,16 +41,25 @@ import {logError} from './utils.js';
 }
 */
 
-export default async function (MONGO_URI, collection, db = 'rest-api') {
+export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
 
-  // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI);
-  const dbConnection = client.db(db);
-  const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
-  const operator = dbConnection.collection(collection);
+  // Connect to mongo (MONGO), unless operator and gridFSBucket are both
+  // injected via deps (used by unit tests to avoid a real connection)
+  const stubbed = Boolean(deps.operator) && Boolean(deps.gridFSBucket);
+  const dbConnection = stubbed
+    ? {collection: () => deps.operator, db: () => dbConnection}
+    : null;
+  let gridFSBucket = deps.gridFSBucket;
+  let operator = deps.operator;
+  if (!stubbed) {
+    const client = await MongoClient.connect(MONGO_URI);
+    const realDb = client.db(db);
+    gridFSBucket = gridFSBucket ?? new GridFSBucket(realDb, {bucketName: collection});
+    operator = operator ?? realDb.collection(collection);
+  }
   debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
   return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
