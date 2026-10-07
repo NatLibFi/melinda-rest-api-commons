@@ -144,19 +144,22 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * Get filtered list of logs with extra info. Give params in Object
    * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
    * @param {[String]} catalogers: String array of wanted catalogers. Defaults []
-   * @param {String} dateBefore: String date schema 'YYYY-MM-DD'. Defaults new Date()
-   * @param {String} dateAfter: String date schema 'YYYY-MM-DD'. Defaults '2000-01-01'
-   * @param {Boolean} test: Boolean is this test run. Defaults false
+   * @param {String|Date} dateBefore: upper bound, the day itself is EXCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults new Date()
+   * @param {String|Date} dateAfter: lower bound, the day itself is INCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults '1970-01-01' (no lower bound)
+   * @param {Boolean} test: kept for backwards compatibility only; no longer changes the match (B-19)
    * @returns Parsed Object {'correlationId', 'logItemType', 'creationTime', 'cataloger', 'logCount'}
    */
-  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
+  // B-19: test no longer changes the match behaviour (kept in the
+  // signature for backwards compatibility only)
+  // eslint-disable-next-line no-unused-vars
+  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '1970-01-01', test = false}) {
     logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter})));
     //checkLogItemType(logItemType, false, false);
     //logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test}),
+      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -170,9 +173,11 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logCount': {'$sum': 1}
         }
       },
+      // B-18: after $group the output has no top-level correlationId /
+      // logItemType, so the sort must address them via _id
       {
         '$sort':
-          {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
+          {'_id.correlationId': 1, '_id.logItemType': 1, 'creationTime': 1}
       }
     ];
 
@@ -196,25 +201,58 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
      * Generate match object for aggregation pipeline
      * @param {[String]} logItemTypes: String array of logItemTypes.
      * @param {[String]} catalogers: String array of wanted catalogers
-     * @param {String} dateBefore: String date schema 'YYYY-MM-DD'
-     * @param {String} dateAfter: String date schema 'YYYY-MM-DD'
-     * @param {Boolean} test: Boolean is this test run. Defaults false
+     * @param {String|Date} dateBefore: upper bound. Date strings are anchored at UTC midnight of the day after; Date instances are used as-is
+     * @param {String|Date} dateAfter: lower bound. Date strings are anchored at UTC midnight of that day (inclusive); Date instances are used as-is
      * @returns Match Object
      */
-    function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test = false}) {
-      const matchOptions = {
-        '$match': {
-          'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
-          'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
-          'creationTime': {
-            '$gte': test ? new Date(dateAfter).toISOString() : new Date(dateAfter),
-            '$lte': test ? new Date(dateBefore).toISOString() : new Date(dateBefore)
-          }
-        }
-      };
+      function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}) {
+       const matchOptions = {
+         '$match': {
+           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
+           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
+           // B-19: creationTime is stored as a Date, so the bounds must be
+           // Dates too (the old test=true branch compared against ISO strings
+           // and never matched; the old non-test branch relied on
+           // local-timezone parsing of new Date('YYYY-MM-DD')). Date strings
+           // are anchored at UTC midnight so the result is deterministic
+           // regardless of the server timezone.
+           'creationTime': {
+             '$gte': dateToUtcStartOfDay(dateAfter),
+             '$lt': dateToUtcExclusiveUpperBound(dateBefore)
+           }
+         }
+       };
 
-      return matchOptions;
-    }
+       return matchOptions;
+
+       // Date string 'YYYY-MM-DD' -> UTC midnight of that day (inclusive
+       // lower bound). Date instance or any other string format -> parsed
+       // with Date (a timestamp, not a day).
+       function dateToUtcStartOfDay(value) {
+         if (value instanceof Date) {
+           return value;
+         }
+         const parts = String(value).slice(0, 10).split('-');
+         if (parts.length === 3) {
+           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').toDate();
+         }
+         return new Date(value);
+       }
+
+       // Date string 'YYYY-MM-DD' -> UTC midnight of the NEXT day (exclusive
+       // upper bound). Date instance or any other string format -> parsed
+       // with Date (a timestamp, not a day).
+       function dateToUtcExclusiveUpperBound(value) {
+         if (value instanceof Date) {
+           return value;
+         }
+         const parts = String(value).slice(0, 10).split('-');
+         if (parts.length === 3) {
+           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').add(1, 'day').toDate();
+         }
+         return new Date(value);
+       }
+     }
   }
 
   /**

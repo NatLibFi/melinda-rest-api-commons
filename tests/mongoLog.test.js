@@ -33,9 +33,16 @@ async function initMongofixtures() {
     rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
+    // B-19: fixura-mongo format is keyed by COLLECTION name, so the old
+    // {creationTime, modificationTime} form never applied and the fixtures
+    // stored creationTime as an ISO string (production addLogItem stores a
+    // Date). Format under the 'logs' collection so tests see the real
+    // production shape.
     format: {
-      creationTime: v => new Date(v),
-      modificationTime: v => new Date(v)
+      logs: {
+        creationTime: v => new Date(v),
+        modificationTime: v => new Date(v)
+      }
     }
   });
 }
@@ -73,7 +80,7 @@ async function callback({
     const result = await mongoLogOperator.getExpandedListOfLogs(params);
     // console.log(result); // eslint-disable-line
 
-    return assert.deepEqual(result, expectedResult);
+    return assert.deepEqual(normalizeDates(result), expectedResult);
   }
 
   if (functionName === 'getListOfLogs') {
