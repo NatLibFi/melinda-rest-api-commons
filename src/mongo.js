@@ -377,7 +377,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(result);
     if (result) {
       const {operationSettings} = result;
-      if (operationSettings.prio === false && operationSettings.noStream === false) {
+      // B-10: createBulk never sets operationSettings.noStream (phantom flag,
+      // always undefined). Derive the condition from the GridFS file instead:
+      // bulk content is available only when a file was actually uploaded.
+      let hasContent = false;
+      if (operationSettings.prio === false) {
+        const files = await gridFSBucket.find({filename: clean}).toArray();
+        hasContent = files.length > 0;
+      }
+      if (hasContent) {
         return {
           contentType: result.contentType,
           readStream: gridFSBucket.openDownloadStreamByName(clean)

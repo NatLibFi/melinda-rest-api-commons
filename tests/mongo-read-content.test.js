@@ -69,6 +69,16 @@ async function callback({
   async function doPreFillDb(preFillDb) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
+      // optional gridFSFiles.json uploads GridFS files (filename -> content)
+      let gridFSFiles = undefined;
+      try {
+        gridFSFiles = getFixture('gridFSFiles.json');
+      } catch {
+        // no GridFS files for this fixture
+      }
+      if (gridFSFiles) {
+        await mongoFixtures.populateFiles(gridFSFiles);
+      }
       return;
     }
     return;
