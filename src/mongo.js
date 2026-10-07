@@ -284,7 +284,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
   // If the state is already ABORT or ERROR or DONE return false
 
   async function checkTimeOut({correlationId}) {
-    const {modificationTime, queueItemState: oldState, importJobState} = await operator.findOne({correlationId});
+    // B-7: coalesce a missing importJobState (legacy rows written before the
+    // importJobState shape existed) to all-EMPTY so .CREATE/.UPDATE/.FIX never
+    // read off undefined and crash the pipeline.
+    const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = await operator.findOne({correlationId});
     //debug(`${modificationTime} - oldState: ${oldState}`);
     // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {

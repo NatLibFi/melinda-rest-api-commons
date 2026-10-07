@@ -1,12 +1,10 @@
 {
-    "description": "Function: checkTimeOut - B-7: legacy doc WITHOUT importJobState crashes with TypeError (documents current behaviour)",
+    "description": "Function: checkTimeOut - B-7 (fixed): legacy doc WITHOUT importJobState is coalesced to all-EMPTY and times out normally -> ABORT (no crash)",
     "only": false,
     "skip": false,
     "functionName": "checkTimeOut",
     "preFillDb": true,
-    "expectedToThrow": true,
-    "expectedErrorMessage": "Cannot read properties of undefined (reading 'CREATE')",
-    "expectedErrorStatus": "",
+    "expectedOpResult": false,
     "params": {
         "correlationId": "f27d3e01-fded-4bde-8f8d-0a0eb54e5a5d"
     }

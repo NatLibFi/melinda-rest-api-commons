@@ -7,12 +7,12 @@
     "prio": true
   },
   "blobSize": 1,
-  "errorMessage": "",
-  "errorStatus": "",
+  "errorMessage": "Timeout in WAITING_FOR_RECORDS",
+  "errorStatus": 408,
   "operations": [
     "CREATE"
   ],
-  "queueItemState": "WAITING_FOR_RECORDS",
+  "queueItemState": "ABORT",
   "records": [],
   "creationTime": "",
   "modificationTime": ""
