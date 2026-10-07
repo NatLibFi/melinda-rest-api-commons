@@ -174,7 +174,8 @@ export function stripF884s(newRecord, options) {
 
   function findSource(f884) {
     const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
-    const source = sfK.replace(/:.*$/u, '');
+    // B-31: a Melinda f884 may have no $k subfield -> sfK is undefined
+    const source = (sfK ?? '').replace(/:.*$/u, '');
     if (source && source.length !== 64) {
       debugData(`Source: "${source}"`);
       return source;
@@ -186,7 +187,8 @@ export function stripF884s(newRecord, options) {
 
   function findHash(f884) {
     const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
-    const hash = sfK.replace(/^.*:/u, '');
+    // B-31: a Melinda f884 may have no $k subfield -> sfK is undefined
+    const hash = (sfK ?? '').replace(/^.*:/u, '');
     if (hash && hash.length === 64) {
       debugData(`Hash: "${hash}"`);
       return hash;
