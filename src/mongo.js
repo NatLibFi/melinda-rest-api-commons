@@ -274,6 +274,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
 
+    // rest is an internal, trusted query object built by the calling service:
+    // callers must not splice raw user input into it. Its keys may legitimately
+    // use dot notation and $-operators, which is why rest is not
+    // field-sanitized here.
     const result = await operator.find(rest, {projection: createProjection(showParams)})
       .limit(parseInt(limit, 10))
       .skip(parseInt(skip, 10))
@@ -303,7 +307,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
     debug(`${JSON.stringify(combinedShowParams)}`);
 
-    // NOTE: parseBoolean parses any non-empty, non-"false" string as true!
+    // NOTE: the show-* params are parsed with the shared parseBoolean, whose
+    // semantics are: undefined -> false, numeric strings via Boolean(Number(v))
+    // ('0' -> false, '1' -> true), other non-empty non-'false' strings -> true.
     if (parseBoolean(showAll)) {
       //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
@@ -415,13 +421,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
-      const noContent = await removeContent({correlationId: params.correlationId});
-      debug(`noContent (removeContent result): ${JSON.stringify(noContent)}`);
-      if (noContent) {
-        const deleteResult = await operator.deleteOne({correlationId: clean});
-        debug(`deleteResult: ${JSON.stringify(deleteResult)}`);
-        return true;
-      }
+      // true only when a GridFS file was actually deleted, false when there
+      // was no content to delete
+      const removedContent = await removeContent({correlationId: params.correlationId});
+      debug(`removedContent (removeContent result): ${JSON.stringify(removedContent)}`);
+      const deleteResult = await operator.deleteOne({correlationId: clean});
+      debug(`deleteResult: ${JSON.stringify(deleteResult)}`);
+      // callers need to tell "nothing was there" apart from "a queueItem was
+      // deleted" (the old bare `true` said both)
+      return {removed: deleteResult.deletedCount > 0, deletedContent: removedContent};
     } catch (err) {
       // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
@@ -429,8 +437,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         if (err.message.indexOf('File not found for id') !== -1) {
           logger.silly(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
           debug(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
-          await operator.deleteOne({correlationId: clean});
-          return true;
+          const deleteResult = await operator.deleteOne({correlationId: clean});
+          return {removed: deleteResult.deletedCount > 0, deletedContent: false};
         }
         logger.error(err.message);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
@@ -496,7 +504,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
 
     logger.debug(`No files for ${params.correlationId} to delete`);
-    return true;
+    // false: there was no content to delete (the old `true` here made callers
+    // unable to tell "file deleted" apart from "no file existed")
+    return false;
   }
 
   function getOne({queueItemState, importJobState = undefined}) {
@@ -645,6 +655,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       errorStatus
     };
 
+    // errorMessage/errorStatus are sticky: transitions that do not set them
+    // (undefined) drop the keys from the $set instead of clearing the fields,
+    // so a later state change intentionally keeps the previous values and the
+    // last error stays visible on the queueItem.
     // Do not update value that are undefined
     Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
 

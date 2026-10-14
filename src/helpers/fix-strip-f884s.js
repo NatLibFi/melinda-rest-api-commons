@@ -63,6 +63,9 @@ export function stripF884s(newRecord, options) {
     debug(`Update result for ${convSource}`);
     debugData(`- Current result: ${JSON.stringify(currResult)}`);
 
+    // '00000000' is the deliberate no-date sentinel for a missing $g (see
+    // findDates): it must never win a date comparison, and both sides must
+    // agree on this sentinel
     const updatedResult = {
       ...currResult,
       firstDate: currResult.firstDate > firstDate && firstDate !== '00000000' ? firstDate : currResult.firstDate,
@@ -206,6 +209,9 @@ export function stripF884s(newRecord, options) {
       debugData(`FirstDate: "${firstDate}", LastDate: "${lastDate}"`);
       return {firstDate, lastDate};
     }
+    // '00000000' is the deliberate no-date sentinel for a missing $g; the
+    // consumer side (updatedResult / editFields above) must keep agreeing on
+    // this exact sentinel
     const firstDate = sfG ? sfG.padStart(8, '0') : '00000000';
     const lastDate = sfG ? sfG.padStart(8, '0') : '00000000';
 

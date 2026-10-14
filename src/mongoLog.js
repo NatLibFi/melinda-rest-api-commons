@@ -20,7 +20,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const client = await MongoClient.connect(MONGO_URI);
   const db = client.db(dbName);
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
 
   /**
    * Add log item to collection
@@ -64,6 +64,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.debug(`Query params: ${JSON.stringify(rest)}`);
     logger.debug(`Limit and skip params: ${limit} | ${skip}`);
     checkLogItemType(rest.logItemType, false, false);
+    // rest is an internal, trusted query object built by the calling service:
+    // callers must not splice raw user input into it. Its keys may legitimately
+    // use dot notation and $-operators, which is why rest is not
+    // field-sanitized here.
     const result = await db.collection(collection)
       .find(rest)
       .sort({creationTime: 1})
@@ -142,7 +146,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   /**
    * Get filtered list of logs with extra info. Give params in Object
-   * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
+   * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]. When provided, must be an array and every element is validated (unknown types throw)
    * @param {[String]} catalogers: String array of wanted catalogers. Defaults []
    * @param {String|Date} dateBefore: upper bound, the day itself is EXCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults new Date()
    * @param {String|Date} dateAfter: lower bound, the day itself is INCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults '1970-01-01' (no lower bound)
@@ -152,14 +156,30 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   // B-19: test no longer changes the match behaviour (kept in the
   // signature for backwards compatibility only)
   // eslint-disable-next-line no-unused-vars
-  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '1970-01-01', test = false}) {
-    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter})));
-    //checkLogItemType(logItemType, false, false);
+  async function getExpandedListOfLogs({logItemTypes, catalogers = [], dateBefore = new Date(), dateAfter = '1970-01-01', test = false}) {
+    // An explicitly provided logItemTypes is validated per element (unknown
+    // types throw); when it is omitted, the trusted default pair is used so
+    // legacy callers that never pass it keep working unchanged
+    const wantedLogItemTypes = logItemTypes === undefined
+      ? [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
+      : logItemTypes;
+    if (!Array.isArray(wantedLogItemTypes)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `logItemTypes must be an array: ${logItemTypes}`);
+    }
+    if (logItemTypes !== undefined) {
+      logItemTypes.forEach(logItemType => {
+        if (Object.values(LOG_ITEM_TYPE).includes(logItemType)) {
+          return;
+        }
+        throw new ApiError(httpStatus.BAD_REQUEST, `Unknown logItemType: ${logItemType}`);
+      });
+    }
+    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.silly(JSON.stringify(generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter})));
     //logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}),
+      generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter}),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -256,7 +276,9 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   }
 
   /**
-   * Protect logs from cleaning. Forced cleaning defaults 30days
+   * Protect logs from cleaning. Idempotent: always sets protected to true
+   * (a second call leaves the logs protected, unlike the old toggle).
+   * Forced cleaning defaults 30days
    * @param {String} correlationId
    * @param {Integer} blobSequence
    * @returns result
@@ -274,7 +296,41 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           {
             $set: {
               modificationTime: moment().toDate(),
-              protected: {$not: '$protected'}
+              // plain true, not a $not toggle: protect must be idempotent
+              protected: true
+            }
+          }
+        ]
+      );
+      return result;
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Unprotect logs so regular (non-forced) cleaning can remove them.
+   * Same signature and behavior as protect, but sets protected to false.
+   * @param {String} correlationId
+   * @param {Integer} blobSequence
+   * @returns result
+   */
+  async function unprotect(correlationId, blobSequence) {
+    logger.info(`Unprotecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanBlobSequence = sanitize(blobSequence);
+    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+
+    try {
+      const result = await db.collection(collection).updateMany(
+        filter,
+        [
+          {
+            $set: {
+              modificationTime: moment().toDate(),
+              protected: false
             }
           }
         ]
@@ -318,6 +374,9 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function removeBySequences(correlationId, sequences = [], force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
     const clean = sanitize(correlationId);
+    // NOTE: this matches only single-sequence items (blobSequence), NOT bulk
+    // range items (blobSequenceStart/blobSequenceEnd); a requested sequence
+    // inside a bulk range will not match and its logs are kept
     // blobSequences are integers that start from 1
     // we accept also strings that are convertilble to integers greated than 0
     // B-20 (and B-21): validate consistently via Number() and store the

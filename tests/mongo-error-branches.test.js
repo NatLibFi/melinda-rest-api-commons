@@ -87,7 +87,7 @@ test('createBulk (no stream): insertOne with acknowledged=false throws ApiError 
   );
 });
 
-test('remove: MongoDriverError "File not found" deletes queueItem and returns true', async () => {
+test('remove: MongoDriverError "File not found" deletes queueItem and reports what was removed', async () => {
   const deleteOne = async () => ({acknowledged: true, deletedCount: 1});
   const mongo = await makeMongo({
     operator: makeOperator({deleteOne}),
@@ -100,7 +100,34 @@ test('remove: MongoDriverError "File not found" deletes queueItem and returns tr
     })
   });
   const result = await mongo.remove({correlationId: 'FOO'});
-  assert.equal(result, true);
+  assert.deepStrictEqual(result, {removed: true, deletedContent: false});
+});
+
+test('remove: returns {removed: true, deletedContent: true} when the queueItem and its GridFS file both exist', async () => {
+  const deletedFiles = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({deleteOne: async () => ({acknowledged: true, deletedCount: 1})}),
+    gridFSBucket: makeGridFSBucket({
+      find: () => ({toArray: async () => [{_id: 'file-1', filename: 'FOO'}]}),
+      delete: async (id) => {
+        // eslint-disable-next-line functional/immutable-data
+        deletedFiles.push(id);
+        return true;
+      }
+    })
+  });
+  const result = await mongo.remove({correlationId: 'FOO'});
+  assert.deepStrictEqual(result, {removed: true, deletedContent: true});
+  assert.deepStrictEqual(deletedFiles, ['file-1']);
+});
+
+test('remove: returns removed: false when the queueItem no longer exists in the collection', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({deleteOne: async () => ({acknowledged: true, deletedCount: 0})}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.remove({correlationId: 'FOO'});
+  assert.deepStrictEqual(result, {removed: false, deletedContent: false});
 });
 
 test('remove: MongoDriverError with other message throws ApiError 500', async () => {

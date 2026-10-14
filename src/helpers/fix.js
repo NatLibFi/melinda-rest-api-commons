@@ -189,8 +189,10 @@ function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
     return record;
   }
   // NOTE: we remove $9 MELINDA<TEMP> subfields only from f856
-  const tagPattern = /856/u;
-  const subfieldCodePattern = /9/u;
+  // Anchored so e.g. tag '8560'-ish values or multi-char subfield codes can
+  // never over-match (SubfieldExclusion tests these RegExps, not replaces)
+  const tagPattern = /^856$/u;
+  const subfieldCodePattern = /^9$/u;
   const subfieldValuePattern = /^MELINDA<TEMP>$/u;
   const config = [
     {
