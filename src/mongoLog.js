@@ -108,7 +108,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     //logger.debug(logItemType);
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
-      .distinct('correlationId', {logItemType: `${logItemType}`});
+      .distinct('correlationId', {logItemType: logItemType});
     logger.debug(`Query result for getListOfLogs: ${result.length > 0 ? `Found ${result.length} correlationIds for ${logItemType}!` : 'Not found!'}`);
     return result;
   }

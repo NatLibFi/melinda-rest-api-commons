@@ -161,7 +161,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 
       if (toRecord) {
-        const records = await messagesToRecords(messages);
+        const records = messagesToRecords(messages);
         return {headers, records, messages};
       }
 
@@ -226,6 +226,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       debug(`Asserting queue: ${queue}`);
       await channel.assertQueue(queue, {durable: true});
 
+      // `correlationId` is deliberately delivered ONLY via AMQP message
+      // properties (headers) — it is NOT included in the message body
+      // (which is just `JSON.stringify({data})`). Consumers MUST read it from
+      // `message.properties.correlationId`, not from the body. Do not add it
+      // to the body without changing the message contract.
       debug(`Actually sendToQueue: ${queue}`);
       await channel.sendToQueue(
         queue,

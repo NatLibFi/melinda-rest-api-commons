@@ -87,8 +87,12 @@ function generateMissingSIDs(record, options) {
   const f035Filters = options && options.f035Filters ? options.f035Filters : [];
   const fSIDFilters = options && options.fSIDFilters ? options.fSIDFilters : [];
 
-  if (f035Filters.length !== fSIDFilters.length || f035Filters.length < 1 || fSIDFilters.length < 1) {
-    debug(`NOT running generateMissingsSIDs, no options`);
+  if (f035Filters.length !== fSIDFilters.length) {
+    debug(`NOT running generateMissingSIDs: f035Filters (${f035Filters.length}) and fSIDFilters (${fSIDFilters.length}) lengths differ`);
+    return record;
+  }
+  if (f035Filters.length < 1) {
+    debug(`NOT running generateMissingSIDs, no options`);
     return record;
   }
 
@@ -165,7 +169,6 @@ function stripF984s(record, stripF984sSettings) {
     }
   ];
 
-  debug(`Running removeF984AFields`);
   debugData(`removeF984AFieldsSettings: ${JSON.stringify(stripF984sSettings)}`);
 
   if (!stripF984sSettings || !F984A_PATTERN || record.get('984').length < 1) {
