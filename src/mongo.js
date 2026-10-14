@@ -569,38 +569,60 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   }
 
   async function pushIds({correlationId, handledIds, rejectedIds}) {
+    // validate array inputs before dereferencing .length (guard is
+    // outside the try so the 400 is not re-wrapped as a 500)
+    if (!Array.isArray(handledIds) || !Array.isArray(rejectedIds)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'pushIds: handledIds and rejectedIds must be arrays');
+    }
     logger.verbose(`Push ids (${handledIds.length}) and rejectedIds (${rejectedIds.length}) ${correlationId} to ${collection}`);
     logger.debug(`ids (${handledIds.length}): ${JSON.stringify(handledIds)}, rejectedIds ${rejectedIds.length}: ${JSON.stringify(rejectedIds)}`);
     const clean = sanitize(correlationId);
-    await operator.updateOne({
-      correlationId: clean
-    }, {
-      $set: {
-        modificationTime: moment().toDate()
-      },
-      $push: {
-        handledIds: {$each: handledIds},
-        rejectedIds: {$each: rejectedIds}
-      }
-    });
+    try {
+      await operator.updateOne({
+        correlationId: clean
+      }, {
+        $set: {
+          modificationTime: moment().toDate()
+        },
+        $push: {
+          handledIds: {$each: handledIds},
+          rejectedIds: {$each: rejectedIds}
+        }
+      });
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
   }
 
   async function pushMessages({correlationId, messages, messageField = 'messages'}) {
+    // validate array input before dereferencing .length (guard is
+    // outside the try so the 400 is not re-wrapped as a 500)
+    if (!Array.isArray(messages)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'pushMessages: messages must be an array');
+    }
     logger.verbose(`Push messages (${messages.length}) to ${messageField} ${correlationId} to ${collection}`);
-    logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}}`);
+    logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}`);
     const clean = sanitize(correlationId);
     const cleanMessageField = sanitize(messageField);
     debug(`${messageField} -> ${cleanMessageField}`);
-    await operator.updateOne({
-      correlationId: clean
-    }, {
-      $set: {
-        modificationTime: moment().toDate()
-      },
-      $push: {
-        [cleanMessageField]: {$each: messages}
-      }
-    });
+    try {
+      await operator.updateOne({
+        correlationId: clean
+      }, {
+        $set: {
+          modificationTime: moment().toDate()
+        },
+        $push: {
+          [cleanMessageField]: {$each: messages}
+        }
+      });
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
   }
 
   function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {

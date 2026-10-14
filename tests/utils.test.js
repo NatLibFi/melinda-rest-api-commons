@@ -171,10 +171,10 @@ test('createRecordResponseItem should throw with undefined responsePayload (B-28
   }, TypeError);
 });
 
-// B-29: documents current behaviour — for CONFLICT with an empty ids array and
-// a truthy id, the condition `ids[0] !== id` is true (undefined !== id), so
-// the empty ids array is attached to the response item.
-test('createRecordResponseItem should attach empty ids array on CONFLICT (B-29)', () => {
+// for CONFLICT with an empty ids array, no `ids` field is
+// attached to the response item (previously the empty array was attached
+// because `ids[0] !== id` was true for an empty array).
+test('createRecordResponseItem should omit ids on CONFLICT when ids is empty', () => {
   const result = createRecordResponseItem({
     responsePayload: {
       message: 'conflict',
@@ -185,8 +185,7 @@ test('createRecordResponseItem should attach empty ids array on CONFLICT (B-29)'
   });
   assert.equal(result.recordStatus, 'ERROR');
   assert.equal(result.detailedRecordStatus, 'CONFLICT');
-  assert.equal(Object.hasOwn(result, 'ids'), true);
-  assert.deepStrictEqual(result.ids, []);
+  assert.equal(Object.hasOwn(result, 'ids'), false);
 });
 
 test('createRecordResponseItem should map UNPROCESSABLE_ENTITY to INVALID', () => {
@@ -279,6 +278,22 @@ test('addRecordResponseItem should push the recordResponseItem via mongoOperator
     messages: [recordResponseItem],
     messageField: 'records'
   });
+});
+
+test('addRecordResponseItem should throw for non-object input', async () => {
+  const mongoOperator = {
+    pushMessages: async () => {}
+  };
+  for (const badInput of [undefined, null, 'not-an-object', 42, [{databaseId: '1'}]]) {
+    await assert.rejects(
+      addRecordResponseItem({
+        recordResponseItem: badInput,
+        correlationId: 'corr-42',
+        mongoOperator
+      }),
+      new Error('RecordResponseItem is not an object!')
+    );
+  }
 });
 
 test('addRecordResponseItems should push all items in one call', async () => {

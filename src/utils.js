@@ -86,14 +86,16 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
     }
 
     // Use ids only if there are more than one id or the id in payload does not match databaseId
-    if (ids.length > 1 || ids[0] !== id) {
+    // only compare ids[0] when there is at least one id
+    if (ids.length > 1 || (ids.length > 0 && ids[0] !== id)) {
       return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message, ids};
     }
     return {recordStatus: 'ERROR', detailedRecordStatus: 'CONFLICT', message};
   }
 
   if ([httpStatus.UNPROCESSABLE_ENTITY, 'UNPROCESSABLE_ENTITY'].includes(responseStatus)) {
-    if (ids.length > 1 || ids[0] !== id) {
+    // only compare ids[0] when there is at least one id
+    if (ids.length > 1 || (ids.length > 0 && ids[0] !== id)) {
       return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message, ids};
     }
     return {recordStatus: 'INVALID', detailedRecordStatus: 'UNPROCESSABLE_ENTITY', message};
@@ -124,6 +126,11 @@ function getMessageFromResponsePayload(responsePayload) {
 }
 
 export async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator}) {
+  // symmetric with addRecordResponseItems — reject non-object input
+  // (including arrays) before it gets pushed into the records field
+  if (!recordResponseItem || typeof recordResponseItem !== 'object' || Array.isArray(recordResponseItem)) {
+    throw new Error('RecordResponseItem is not an object!');
+  }
   await mongoOperator.pushMessages({correlationId, messages: [recordResponseItem], messageField: 'records'});
   return true;
 }

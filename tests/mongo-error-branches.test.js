@@ -340,3 +340,80 @@ test('B-9: createBulk rejects with ApiError 500 when the GridFS output stream er
     }
   );
 });
+
+// pushIds / pushMessages validate their array inputs (400, outside the
+// try so the 400 is not re-wrapped) and wrap driver errors in ApiError 500.
+
+test('pushIds rejects with ApiError 400 when handledIds is not an array', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.pushIds({correlationId: 'FOO', handledIds: 'nope', rejectedIds: []}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('pushIds rejects with ApiError 400 when rejectedIds is not an array', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.pushIds({correlationId: 'FOO', handledIds: [], rejectedIds: undefined}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('pushIds rejects with ApiError 500 "Mongo errored" when updateOne throws', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({updateOne: async () => {
+      throw new Error('pushIds boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.pushIds({correlationId: 'FOO', handledIds: ['1'], rejectedIds: []}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('Mongo errored'));
+      assert.ok(error.payload.includes('pushIds boom'));
+      return true;
+    }
+  );
+});
+
+test('pushMessages rejects with ApiError 400 when messages is not an array', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.pushMessages({correlationId: 'FOO', messages: 'nope'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne throws', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({updateOne: async () => {
+      throw new Error('pushMessages boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.pushMessages({correlationId: 'FOO', messages: ['m1']}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('Mongo errored'));
+      assert.ok(error.payload.includes('pushMessages boom'));
+      return true;
+    }
+  );
+});
