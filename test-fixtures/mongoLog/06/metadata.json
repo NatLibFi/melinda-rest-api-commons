@@ -1,5 +1,5 @@
 {
-  "description": "Function: getExpandedListOfLogs - B-19 (fixed): with test: true the date range must compare Dates to Dates (creationTime is a Date field); the old ISO-string comparison matched nothing. params {catalogers: [IMP_TEST1], test: true} -> 1",
+  "description": "Function: getExpandedListOfLogs - with test: true the date range must compare Dates to Dates (creationTime is a Date field); the old ISO-string comparison matched nothing. params {catalogers: [IMP_TEST1], test: true} -> 1",
   "only": false,
   "skip": false,
   "functionName": "getExpandedListOfLogs",

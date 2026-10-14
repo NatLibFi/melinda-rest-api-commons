@@ -1,5 +1,5 @@
 {
-    "description": "Function checkAndSetState - fail and set queueItemState ABORT (and error 408) if modificationTime is too old. B-36 (fixed): returns discriminated {status, queueItem}",
+    "description": "Function checkAndSetState - fail and set queueItemState ABORT (and error 408) if modificationTime is too old. Returns discriminated {status, queueItem}",
     "only": false,
     "skip": false,
     "functionName": "checkAndSetState",

@@ -43,7 +43,7 @@ import {logError} from './utils.js';
 
 export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}) {
   const logger = createLogger();
-  // B-12: the checkTimeOut "no progress" window used to be a hardcoded
+  // the checkTimeOut "no progress" window used to be a hardcoded
   // 1 minute, which is too short for large bulk imports (README benchmark:
   // ~9248 records can take ~10 minutes). Now configurable via the
   // MONGO_TIMEOUT_MINUTES env var (default: 1 minute). Each importer chunk
@@ -148,12 +148,12 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     if (stream) {
       debug(`Creating streamBulk`);
       try {
-        // NOTE (B-8): on success this returns the SAME normalized shape as
+        // NOTE: on success this returns the SAME normalized shape as
         // the no-stream path below: {correlationId, acknowledged, queueItemState}
         await new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
 
-          // B-9: an upload stream error used to hang the promise forever
+          // an upload stream error used to hang the promise forever
           // (no error handler on outputStream) -> wire it to reject
           outputStream.on('error', (error) => {
             outputStream.destroy();
@@ -162,7 +162,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
           stream
             .on('error', (error) => {
-              // B-9: input failed mid-upload -> abort, do not leave the
+              // input failed mid-upload -> abort, do not leave the
               // partial GridFS upload stream running
               outputStream.destroy();
               reject(error);
@@ -179,13 +179,13 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
           // TEST-COVERAGE: this error is not (currently) tested
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
         }
-        // B-8: normalize the return shape to the same one the no-stream
+        // normalize the return shape to the same one the no-stream
         // path returns - do not leak the driver InsertOneResult
         return {correlationId, acknowledged: result.acknowledged, queueItemState: newQueueItem.queueItemState};
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
         logError(error);
-        // B-9: best-effort cleanup of a partial GridFS file
+        // best-effort cleanup of a partial GridFS file
         await removePartialContent(correlationId);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
       }
@@ -211,7 +211,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         if (result.acknowledged) {
           logger.info(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
           debug(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
-          // B-8: same normalized shape as the stream path above
+          // same normalized shape as the stream path above
           return {correlationId, acknowledged: result.acknowledged, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
         // TEST-COVERAGE: this error is not (currently) tested
@@ -228,7 +228,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // Check state that the queueItem has not waited too long and set state
   // Optionally set also queueItems errorStatus & errorMessage
   //
-  // B-36: returns a discriminated result instead of a bare boolean so
+  // returns a discriminated result instead of a bare boolean so
   // callers can tell the three outcomes apart:
   //   {status: 'updated',   queueItem}  - state was set
   //   {status: 'timeout',   queueItem}  - item was aborted by checkTimeOut
@@ -236,7 +236,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   //                                       or the item no longer exists
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
     // checkTimeOut returns true, if queueItem is fresher than the configured
-    // timeout window (B-12) and it's state is not ABORT/ERROR/DONE
+    // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
     const timeOut = await checkTimeOut({correlationId});
     if (timeOut) {
@@ -253,10 +253,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // Check state that the queueItem has not waited too long and set importJobState
   // Note: checkAndSetImportJobState cannot be used to set queueItems errorStatus & errorMessage (expect in case of a TimeOut)
   //
-  // B-36: returns a discriminated result, see checkAndSetState
+  // returns a discriminated result, see checkAndSetState
   async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
     // checkTimeOut returns true, if queueItem is fresher than the configured
-    // timeout window (B-12) and it's state is not ABORT/ERROR/DONE
+    // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
     logger.debug(`${correlationId}, ${importJobState}, ${operation}`);
     const timeOut = await checkTimeOut({correlationId, operation, importJobState});
@@ -359,10 +359,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   // Check that if the item has waited too long
   // If the last modification time for the queueItem is older than the
-  // configured window (B-12: MONGO_TIMEOUT_MINUTES, default 1 minute)
+  // configured window (MONGO_TIMEOUT_MINUTES, default 1 minute)
   // set state to ABORT and return false, otherwise return true
   // If the state is already ABORT or ERROR or DONE return false
-  // B-37: if the item does not exist (deleted concurrently) return false
+  // if the item does not exist (deleted concurrently) return false
   // instead of crashing on destructuring of null
 
   async function checkTimeOut({correlationId}) {
@@ -371,7 +371,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       logger.silly(`${correlationId} not found in ${collection} - not a timeout`);
       return false;
     }
-    // B-7: coalesce a missing importJobState (legacy rows written before the
+    // coalesce a missing importJobState (legacy rows written before the
     // importJobState shape existed) to all-EMPTY so .CREATE/.UPDATE/.FIX never
     // read off undefined and crash the pipeline.
     const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = queueItem;
@@ -382,7 +382,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       return false;
     }
 
-    // B-12: configurable "no progress" window (default 1 minute)
+    // configurable "no progress" window (default 1 minute)
     const timeoutTime = moment(modificationTime).add(timeoutMinutes, 'm');
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
@@ -458,7 +458,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(result);
     if (result) {
       const {operationSettings} = result;
-      // B-10: createBulk never sets operationSettings.noStream (phantom flag,
+      // createBulk never sets operationSettings.noStream (phantom flag,
       // always undefined). Derive the condition from the GridFS file instead:
       // bulk content is available only when a file was actually uploaded.
       let files = [];
@@ -469,7 +469,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       if (hasContent) {
         return {
           contentType: result.contentType,
-          // B-38: the file existence was verified by the find() above; a
+          // the file existence was verified by the find() above; a
           // 'error' event on the returned stream (e.g. file deleted
           // concurrently) is an unhandled event for the caller -> the
           // contract is: the caller MUST attach an 'error' handler.
@@ -549,7 +549,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
   }
 
-  // B-38: a missing GridFS file is reported by openDownloadStreamByName as an
+  // a missing GridFS file is reported by openDownloadStreamByName as an
   // async 'error' event, which would be an unhandled error event (a process
   // crash) if the caller never attaches a handler. Pre-check the file
   // existence here and throw NOT_FOUND synchronously instead. Note: this
@@ -716,7 +716,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {projection: {_id: 0}, returnDocument: 'after'});
   }
 
-  // B-11: `findOneAndUpdate` (mongodb v6) returns the resulting document
+  // `findOneAndUpdate` (mongodb v6) returns the resulting document
   // directly, or `null` when nothing matched. The old `result.ok || result`
   // was v3 debris: a non-matching correlationId came back as a silent `null`
   // and callers could not tell "no match" from success. Now a `null` result

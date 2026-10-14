@@ -33,7 +33,7 @@ async function initMongofixtures() {
     rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
-    // B-19: fixura-mongo format is keyed by COLLECTION name, so the old
+    // fixura-mongo format is keyed by COLLECTION name, so the old
     // {creationTime, modificationTime} form never applied and the fixtures
     // stored creationTime as an ISO string (production addLogItem stores a
     // Date). Format under the 'logs' collection so tests see the real

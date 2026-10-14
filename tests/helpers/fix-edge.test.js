@@ -1,4 +1,4 @@
-// Edge-case tests for the MARC fix helpers. See zoo/bug-report.md.
+// Edge-case tests for the MARC fix helpers.
 
 import assert from 'node:assert';
 import {test} from 'node:test';
@@ -6,12 +6,12 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {fixRecord} from '../../src/helpers/fix.js';
 import {BIB_STRIP_F884S_SETTINGS} from '../../src/helpers/fix-constants.js';
 
-// B-31 (fixed): a Melinda f884 (tag 884, $5 MELINDA, $a + $g present) that
+// a Melinda f884 (tag 884, $5 MELINDA, $a + $g present) that
 // has NO $k subfield. findSource/findHash used to call `sfK.replace(...)` on
 // undefined and crash the whole fixRecord call. Now a missing $k is treated
 // as an empty string: the field gets NO_SOURCE (source) and the all-zero
 // sentinel (hash), and the merged date range is applied to its $g.
-test('B-31 (fixed): fixRecord handles Melinda f884 without $k subfield without crashing', () => {
+test('fixRecord handles Melinda f884 without $k subfield without crashing', () => {
   const record = new MarcRecord({
     leader: '03085cam a22006858i 4500',
     fields: [

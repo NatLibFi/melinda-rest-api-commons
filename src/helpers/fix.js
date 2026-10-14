@@ -135,7 +135,7 @@ function generateMissingSIDs(record, options) {
 
   function f035ToSidInfo(f035s) {
     return f035s.flatMap(({subfields}) => {
-      // B-30: single pass over the filters - the subfield AND the SID are
+      // single pass over the filters - the subfield AND the SID are
       // both chosen by the SAME first matching filter index (previously the
       // subfield matched any filter but the SID lookup re-scanned with
       // findIndex, which was order-sensitive and O(n^2) per field)

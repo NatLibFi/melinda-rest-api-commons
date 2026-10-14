@@ -90,7 +90,7 @@ async function callback({
       }
       //const {correlationId} = params;
 
-      // B-38: getStream is now async (it pre-checks file existence and
+      // getStream is now async (it pre-checks file existence and
       // throws 404 for a missing file instead of returning a stream that
       // emits an unhandled 'error' event)
       const opResult = await mongoOperator.getStream(params);

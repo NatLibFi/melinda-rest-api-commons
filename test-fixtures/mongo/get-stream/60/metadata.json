@@ -1,5 +1,5 @@
 {
-    "description": "Function: getStream - B-38 (fixed): missing content now throws ApiError 404 synchronously (pre-check) instead of returning a stream that emits an unhandled 'error' event",
+    "description": "Function: getStream - missing content now throws ApiError 404 synchronously (pre-check) instead of returning a stream that emits an unhandled 'error' event",
     "only": false,
     "skip": false,
     "functionName": "getStream",

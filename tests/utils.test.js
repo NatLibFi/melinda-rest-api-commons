@@ -159,10 +159,10 @@ test('createRecordResponseItem should omit ids from CONFLICT when ids matches id
   assert.equal(Object.hasOwn(result, 'ids'), false);
 });
 
-// B-28: documents current behaviour — an undefined responsePayload throws a
+// documents current behaviour — an undefined responsePayload throws a
 // TypeError (dereferencing recordMetadata / message). The later fix should
 // make createRecordResponseItem tolerate a missing payload.
-test('createRecordResponseItem should throw with undefined responsePayload (B-28)', () => {
+test('createRecordResponseItem should throw with undefined responsePayload', () => {
   assert.throws(() => {
     createRecordResponseItem({
       responsePayload: undefined,

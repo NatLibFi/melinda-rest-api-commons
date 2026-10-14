@@ -34,8 +34,8 @@ async function makeOperator(channelOverrides) {
   return createAmqp(DUMMY_URL, false, {connection, channel});
 }
 
-test('B-2 (fixed): consumeChunk returns false when queue drains mid-pump', async () => {
-  // See zoo/bug-report.md B-2 (src/amqp.js, getData/pump):
+test('consumeChunk returns false when queue drains mid-pump', async () => {
+  // (src/amqp.js, getData/pump):
   // FIXED: pump now bails out (returns results) when channel.get -> null,
   // and consumeChunk maps an empty pump result to false, matching the
   // empty-queue contract of checkQueue. Previously this crashed with
@@ -48,7 +48,7 @@ test('B-2 (fixed): consumeChunk returns false when queue drains mid-pump', async
   assert.strictEqual(result, false);
 });
 
-test('B-2 (fixed): consumeChunk returns partial chunk when queue drains after first message', async () => {
+test('consumeChunk returns partial chunk when queue drains after first message', async () => {
   // Drains after one of two messages: pump must stop gracefully and
   // consumeChunk must return the one message it got.
   const first = makeMessage('c1', 1);
@@ -67,8 +67,8 @@ test('B-2 (fixed): consumeChunk returns partial chunk when queue drains after fi
 });
 
 
-test('B-1 (fixed): consumeChunk deduplicates messages with same correlationId + deliveryTag', async () => {
-  // See zoo/bug-report.md B-1 (src/amqp.js, getData/pump):
+test('consumeChunk deduplicates messages with same correlationId + deliveryTag', async () => {
+  // (src/amqp.js, getData/pump):
   // FIXED: dedup now compares correlationId + deliveryTag field-by-field,
   // so duplicate messages are filtered out. (Previously the includes()
   // check compared object references and never triggered.)
@@ -82,7 +82,7 @@ test('B-1 (fixed): consumeChunk deduplicates messages with same correlationId + 
   assert.equal(records.length, 1);
 });
 
-test('B-1 (fixed): same deliveryTag with different correlationIds is NOT deduplicated', async () => {
+test('same deliveryTag with different correlationIds is NOT deduplicated', async () => {
   // Dedup key is correlationId + deliveryTag; a redelivery of a message
   // with a new correlationId must still come through.
   const messages = [makeMessage('c1', 1), makeMessage('c2', 1)];
@@ -94,8 +94,8 @@ test('B-1 (fixed): same deliveryTag with different correlationIds is NOT dedupli
   assert.equal(got.length, 2);
 });
 
-test('B-4 (fixed): removeQueue closes the temp channel even when deleteQueue throws', async () => {
-  // See zoo/bug-report.md B-4 (src/amqp.js, removeQueue):
+test('removeQueue closes the temp channel even when deleteQueue throws', async () => {
+  // (src/amqp.js, removeQueue):
   // FIXED: the throwaway tempChannel is now closed in a finally block, so a
   // missing queue (deleteQueue throws) no longer leaks a channel.
   const closedChannels = [];
@@ -116,7 +116,7 @@ test('B-4 (fixed): removeQueue closes the temp channel even when deleteQueue thr
   assert.deepStrictEqual(closedChannels, ['temp']);
 });
 
-test('B-4 (fixed): removeQueue closes the temp channel on success too', async () => {
+test('removeQueue closes the temp channel on success too', async () => {
   const closedChannels = [];
   const amqpOperator = await createAmqp(DUMMY_URL, false, {
     connection: {
@@ -135,8 +135,8 @@ test('B-4 (fixed): removeQueue closes the temp channel on success too', async ()
   assert.deepStrictEqual(closedChannels, ['temp']);
 });
 
-test('B-3 (fixed): healthCheck loop stops after closeChannel and does not keep firing or throw', async () => {
-  // See zoo/bug-report.md B-3 (src/amqp.js, healthCheck):
+test('healthCheck loop stops after closeChannel and does not keep firing or throw', async () => {
+  // (src/amqp.js, healthCheck):
   // FIXED: closeChannel/closeConnection cancel the recursive healthCheck loop,
   // so the ~200 ms chain short-circuits instead of running until the closed
   // channel throws (which used to make graceful shutdown flaky).

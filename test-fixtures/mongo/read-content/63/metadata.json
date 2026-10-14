@@ -1,5 +1,5 @@
 {
-    "description": "Function: readContent - B-10 (fixed): a no-stream bulk job (createBulk never sets noStream) returns the GridFS download stream when the file exists, instead of throwing BAD_REQUEST on a phantom flag",
+    "description": "Function: readContent - a no-stream bulk job (createBulk never sets noStream) returns the GridFS download stream when the file exists, instead of throwing BAD_REQUEST on a phantom flag",
     "only": false,
     "skip": false,
     "functionName": "readContent",

@@ -1,5 +1,5 @@
 {
-    "description": "Function: checkAndSetImportJobState - fail and set state and importJobStates ABORT, if modificationTime is too old. B-36 (fixed): returns discriminated {status, queueItem}",
+    "description": "Function: checkAndSetImportJobState - fail and set state and importJobStates ABORT, if modificationTime is too old. Returns discriminated {status, queueItem}",
     "only": false,
     "skip": false,
     "functionName": "checkAndSetImportJobState",

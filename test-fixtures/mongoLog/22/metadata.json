@@ -1,5 +1,5 @@
 {
-  "description": "Function: removeBySequences - B-20 (fixed): sequences passed as STRINGS [\"1\", \"2\"] are converted to numbers before the $in, so the numeric blobSequence fields match and both unprotected docs are deleted (previously the raw strings never matched and nothing was deleted)",
+  "description": "Function: removeBySequences - sequences passed as STRINGS [\"1\", \"2\"] are converted to numbers before the $in, so the numeric blobSequence fields match and both unprotected docs are deleted (previously the raw strings never matched and nothing was deleted)",
   "only": false,
   "skip": false,
   "functionName": "removeBySequences",

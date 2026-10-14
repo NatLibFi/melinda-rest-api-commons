@@ -150,10 +150,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @param {[String]} catalogers: String array of wanted catalogers. Defaults []
    * @param {String|Date} dateBefore: upper bound, the day itself is EXCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults new Date()
    * @param {String|Date} dateAfter: lower bound, the day itself is INCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults '1970-01-01' (no lower bound)
-   * @param {Boolean} test: kept for backwards compatibility only; no longer changes the match (B-19)
+   * @param {Boolean} test: kept for backwards compatibility only; no longer changes the match
    * @returns Parsed Object {'correlationId', 'logItemType', 'creationTime', 'cataloger', 'logCount'}
    */
-  // B-19: test no longer changes the match behaviour (kept in the
+  // test no longer changes the match behaviour (kept in the
   // signature for backwards compatibility only)
   // eslint-disable-next-line no-unused-vars
   async function getExpandedListOfLogs({logItemTypes, catalogers = [], dateBefore = new Date(), dateAfter = '1970-01-01', test = false}) {
@@ -193,7 +193,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logCount': {'$sum': 1}
         }
       },
-      // B-18: after $group the output has no top-level correlationId /
+      // after $group the output has no top-level correlationId /
       // logItemType, so the sort must address them via _id
       {
         '$sort':
@@ -230,7 +230,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
          '$match': {
            'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
            'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
-           // B-19: creationTime is stored as a Date, so the bounds must be
+           // creationTime is stored as a Date, so the bounds must be
            // Dates too (the old test=true branch compared against ISO strings
            // and never matched; the old non-test branch relied on
            // local-timezone parsing of new Date('YYYY-MM-DD')). Date strings
@@ -379,7 +379,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     // inside a bulk range will not match and its logs are kept
     // blobSequences are integers that start from 1
     // we accept also strings that are convertilble to integers greated than 0
-    // B-20 (and B-21): validate consistently via Number() and store the
+    // validate consistently via Number() and store the
     // converted numbers, since blobSequence is stored as a number in Mongo
     const cleanSequences = sequences
       .map(sequence => Number(sequence))
@@ -389,7 +389,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Invalid sequences in removeBySequences. Sequences should be positive integers`);
     }
 
-    // B-20: use the numeric cleanSequences in BOTH branches (the non-forced
+    // use the numeric cleanSequences in BOTH branches (the non-forced
     // branch used to pass raw `sequences`, so string inputs like '1' would
     // never match the stored numeric blobSequence)
     const filter = force

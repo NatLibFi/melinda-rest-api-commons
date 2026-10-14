@@ -20,7 +20,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   const connection = deps.connection ?? await amqplib.connect(AMQP_URL);
   const channel = deps.channel ?? await connection.createChannel();
 
-  // B-3: the recursive healthCheck loop is never awaited and kept firing
+  // the recursive healthCheck loop is never awaited and kept firing
   // ~every 200 ms even after the connection was closed. This flag is cleared
   // by closeChannel/closeConnection so the loop short-circuits on graceful
   // shutdown instead of running until the closed channel throws.
@@ -34,7 +34,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
   async function closeChannel() {
-    // B-3: stop the health check loop before closing so it does not keep
+    // stop the health check loop before closing so it does not keep
     // firing on a closed channel during graceful shutdown
     healthCheckRunning = false;
     debug(`Closing channel`);
@@ -43,7 +43,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   }
 
   async function closeConnection() {
-    // B-3: stop the health check loop before closing
+    // stop the health check loop before closing
     healthCheckRunning = false;
     debug(`Closing connection`);
     await connection.close();
@@ -51,7 +51,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   }
 
   async function healthCheck(wait = false) {
-    // B-3: cancellable - closeChannel/closeConnection set this to false
+    // cancellable - closeChannel/closeConnection set this to false
     if (!healthCheckRunning) {
       debugHC(`HealthCheck cancelled, not running`);
       return false;
@@ -68,7 +68,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       return healthCheck(200);
     } catch (error) {
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
-      // B-3: if we were asked to stop, do not rethrow - a closed channel
+      // if we were asked to stop, do not rethrow - a closed channel
       // throwing during shutdown would keep the process alive / crash it
       if (!healthCheckRunning) {
         debugHC(`HealthCheck cancelled while erroring, not throwing`);
@@ -149,7 +149,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       // getData: next chunk (100) messages
       const messages = await getData(queue);
 
-      // B-2: queue can drain before/during the pump -> nothing to return,
+      // queue can drain before/during the pump -> nothing to return,
       // matches the `false` contract checkQueue uses for an empty queue
       if (messages.length === 0) {
         debug(`consumeChunk: queue ${queue} drained, returning false`);
@@ -265,7 +265,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       debug(`Removing queue ${queue}.`);
       await tempChannel.deleteQueue(queue);
     } finally {
-      // B-4: if deleteQueue throws (e.g. the queue does not exist) the
+      // if deleteQueue throws (e.g. the queue does not exist) the
       // throwaway channel used to leak -> always close it
       if (tempChannel) {
         await tempChannel.close();
@@ -310,7 +310,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       }
 
       const message = await channel.get(queue);
-      // B-2: queue can drain between the messageCount read and channel.get
+      // queue can drain between the messageCount read and channel.get
       // (race, purge, other consumer) -> channel.get returns null
       if (!message) {
         return results;
@@ -320,7 +320,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
         correlationId: message.properties.correlationId,
         deliveryTag: message.fields.deliveryTag
       };
-      // B-1: filter not unique messages (compare by key, not by object reference)
+      // filter not unique messages (compare by key, not by object reference)
       const isDuplicate = identifiers.some(
         i => i.correlationId === identifier.correlationId && i.deliveryTag === identifier.deliveryTag
       );

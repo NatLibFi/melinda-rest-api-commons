@@ -1,5 +1,5 @@
 {
-    "description": "B-32: two Melinda f884s with no $g subfield; findDates returns the 00000000 sentinel for both, documents sentinel handling in the merged output (firstDate/lastDate stay sentinels, $g is not added, first field's $k wins)",
+    "description": "two Melinda f884s with no $g subfield; findDates returns the 00000000 sentinel for both, documents sentinel handling in the merged output (firstDate/lastDate stay sentinels, $g is not added, first field's $k wins)",
     "settings": "BIB_STRIP_F884S_SETTINGS",
     "skip": false,
     "only": false

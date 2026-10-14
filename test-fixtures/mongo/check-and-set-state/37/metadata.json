@@ -1,5 +1,5 @@
 {
-    "description": "Function checkAndSetState - fail if state is ERROR, even if modificationTime is new enough. B-36 (fixed): returns discriminated {status, queueItem}",
+    "description": "Function checkAndSetState - fail if state is ERROR, even if modificationTime is new enough. Returns discriminated {status, queueItem}",
     "only": false,
     "skip": false,
     "functionName": "checkAndSetState",
