@@ -39,6 +39,14 @@ export function createImportJobState(operation, state, queryImportJobState = fal
 }
 
 export function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
+  // symmetric with addRecordResponseItem — reject a missing payload up
+  // front with a clear message instead of a raw TypeError further down.
+  // Strings are a valid payload form (see getMessageFromResponsePayload),
+  // so only undefined/null are rejected.
+  if (responsePayload === undefined || responsePayload === null) {
+    throw new Error('responsePayload must be an object or a string!');
+  }
+
   const recordResponseStatusAndMessage = getRecordResponseStatusAndMessage(responseStatus, responsePayload, id);
   const recordResponseItem = {
     databaseId: id || '000000000',

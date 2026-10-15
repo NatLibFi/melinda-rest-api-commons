@@ -159,16 +159,23 @@ test('createRecordResponseItem should omit ids from CONFLICT when ids matches id
   assert.equal(Object.hasOwn(result, 'ids'), false);
 });
 
-// documents current behaviour — an undefined responsePayload throws a
-// TypeError (dereferencing recordMetadata / message). The later fix should
-// make createRecordResponseItem tolerate a missing payload.
-test('createRecordResponseItem should throw with undefined responsePayload', () => {
-  assert.throws(() => {
-    createRecordResponseItem({
-      responsePayload: undefined,
-      responseStatus: 'UPDATED'
-    });
-  }, TypeError);
+// a missing (undefined/null) responsePayload is rejected with a clear
+// message; objects and strings remain the valid payload forms
+test('createRecordResponseItem should throw with a missing responsePayload', () => {
+  assert.throws(
+    () => createRecordResponseItem({responsePayload: undefined, responseStatus: 'UPDATED'}),
+    /responsePayload must be an object or a string!/
+  );
+  assert.throws(
+    () => createRecordResponseItem({responsePayload: null, responseStatus: 'UPDATED'}),
+    /responsePayload must be an object or a string!/
+  );
+});
+
+// a string payload is a documented valid form and must not be rejected by the guard
+test('createRecordResponseItem accepts a string responsePayload', () => {
+  const item = createRecordResponseItem({responsePayload: 'Something went wrong', responseStatus: 422, id: '000000001'});
+  assert.equal(item.message, 'Something went wrong');
 });
 
 // for CONFLICT with an empty ids array, no `ids` field is
