@@ -3,8 +3,7 @@ import createDebugLogger from 'debug';
 import {promisify, inspect} from 'util';
 import httpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants.js';
 import {logError} from './utils.js';
 

@@ -1,6 +1,6 @@
 import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger} from '@natlibfi/melinda-commons';
 
 import {FieldExclusion, SubfieldExclusion} from '@natlibfi/marc-record-validators-melinda';
 

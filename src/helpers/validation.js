@@ -2,7 +2,7 @@ import validateFactory from '@natlibfi/marc-record-validate';
 import {
   FieldStructure as fieldStructure
 } from '@natlibfi/marc-record-validators-melinda';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger} from '@natlibfi/melinda-commons';
 
 export default async () => {
   const logger = createLogger();
