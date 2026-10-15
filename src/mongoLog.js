@@ -2,8 +2,7 @@ import {MongoClient} from 'mongodb';
 import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {logError} from './utils.js';
 import {LOG_ITEM_TYPE} from './constants.js';
 

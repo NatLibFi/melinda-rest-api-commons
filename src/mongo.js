@@ -5,8 +5,7 @@ import moment from 'moment';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import createDebugLogger from 'debug';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
+import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
 import {logError} from './utils.js';
 

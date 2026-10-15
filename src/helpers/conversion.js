@@ -2,8 +2,7 @@
 
 import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json, AlephSequential} from '@natlibfi/marc-record-serializers';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ConversionError} from '@natlibfi/melinda-commons';
+import {createLogger, Error as ConversionError} from '@natlibfi/melinda-commons';
 import {CONVERSION_FORMATS} from '../constants.js';
 import {logError} from '../utils.js';
 
