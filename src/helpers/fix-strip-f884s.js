@@ -1,7 +1,6 @@
 import createDebugLogger from 'debug';
 //import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
 import {inspect} from 'util';
-import {MarcRecord} from '@natlibfi/marc-record';
 
 export function stripF884s(newRecord, options) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:stripF884s');
@@ -146,9 +145,29 @@ export function stripF884s(newRecord, options) {
   debugData(inspect(uniq884s, {depth: 3}));
 
 
+  // Canonicalize a raw field object ({tag, ind1, ind2, subfields: [...]}) so
+  // that two structurally equal fields stringify identically: object keys are
+  // sorted recursively, arrays keep their order, primitives pass through.
+  function canonicalize(value) {
+    if (Array.isArray(value)) {
+      return value.map(canonicalize);
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((canonical, key) => {
+        canonical[key] = canonicalize(value[key]);
+        return canonical;
+      }, {});
+    }
+    return value;
+  }
+
+  function fieldsAreEqual(a, b) {
+    return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
+  }
+
   function uniqFields(fields) {
     return fields.reduce((uniq, field) => {
-      if (!uniq.some(f => MarcRecord.isEqual(f, field))) {
+      if (!uniq.some(f => fieldsAreEqual(f, field))) {
         uniq.push(field);
       }
 

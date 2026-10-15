@@ -31,7 +31,9 @@ describe('services/validate', () => {
         ]
       });
       const {_validationOptions, ...expectedRecordData} = expectedRecord;
-      assert.deepStrictEqual(result, {...rest, record: new MarcRecord(expectedRecordData, _validationOptions)});
+      const {record: actualRecord, ...actualRest} = result;
+      assert.deepStrictEqual(actualRest, rest);
+      assert.deepStrictEqual(actualRecord.toObject(), new MarcRecord(expectedRecordData, _validationOptions).toObject());
       assert.equal(result.failed, false);
     });
   });
@@ -53,7 +55,9 @@ describe('services/validate', () => {
         ]
       });
       const {_validationOptions, ...expectedRecordData} = expectedRecord;
-      assert.deepStrictEqual(result, {...rest, record: new MarcRecord(expectedRecordData, _validationOptions)});
+      const {record: actualRecord, ...actualRest} = result;
+      assert.deepStrictEqual(actualRest, rest);
+      assert.deepStrictEqual(actualRecord.toObject(), new MarcRecord(expectedRecordData, _validationOptions).toObject());
       assert.equal(result.failed, true);
     });
   });
