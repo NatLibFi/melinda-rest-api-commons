@@ -55,9 +55,6 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // Connect to mongo (MONGO), unless operator and gridFSBucket are both
   // injected via deps (used by unit tests to avoid a real connection)
   const stubbed = Boolean(deps.operator) && Boolean(deps.gridFSBucket);
-  const dbConnection = stubbed
-    ? {collection: () => deps.operator, db: () => dbConnection}
-    : null;
   let gridFSBucket = deps.gridFSBucket;
   let operator = deps.operator;
   if (!stubbed) {
@@ -703,8 +700,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       if (operation === OPERATIONS.FIX) {
         return {'importJobState.FIX': importJobState};
       }
-      // istanbul ignore next
-      // Ignoring for coverage - we error this already
+      // Unreachable in practice: setImportJobState validates operation
+      // against OPERATIONS before calling; kept defensively.
       throw new ApiError('400', 'Invalid operation for import job state');
     }
 
