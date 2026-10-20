@@ -65,6 +65,22 @@ describe('services/conversion', () => {
       assert.equal(data, alephSeq);
     });
 
+    it('Should rewrap a plain (non-ConversionError) serializer error into a ConversionError with 400', () => {
+      // a plain {} makes MARCXML.to throw a TypeError, which serialize must
+      // rewrap into a ConversionError 400 (not propagate the raw TypeError)
+      // eslint-disable-next-line functional/no-let
+      let threw = false;
+      try {
+        conversionService.serialize({}, CONVERSION_FORMATS.MARCXML);
+      } catch (error) {
+        threw = true;
+        assert(error instanceof ConversionError);
+        assert.equal(error.status, 400);
+        assert.ok(error.payload.includes('Error while serializing record.'));
+      }
+      assert.equal(threw, true);
+    });
+
   });
 
   describe('#unserialize', () => {

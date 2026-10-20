@@ -114,6 +114,56 @@ test('getExpandedListOfLogs throws ApiError when logItemTypes contains an unknow
   );
 });
 
+test('getExpandedListOfLogs uses Date instances for dateBefore and dateAfter as-is', async () => {
+  const logItem = {
+    logItemType: 'MERGE_LOG',
+    cataloger: 'IMP_TEST1',
+    correlationId: '66666666-6666-4666-8666-666666666666',
+    blobSequence: 1
+  };
+  await mongoLogOperator.addLogItem(logItem);
+  // both bounds as Date instances: the match must use them as-is (no UTC
+  // midnight anchoring), so the freshly created log is inside the window
+  const result = await mongoLogOperator.getExpandedListOfLogs({
+    logItemTypes: ['MERGE_LOG'],
+    catalogers: ['IMP_TEST1'],
+    dateBefore: new Date(Date.now() + 60 * 60 * 1000),
+    dateAfter: new Date(Date.now() - 60 * 60 * 1000)
+  });
+  const own = result.filter(entry => entry.correlationId === logItem.correlationId);
+  assert.equal(own.length, 1);
+  assert.equal(own[0].logCount, 1);
+});
+
+test('getListOfLogs throws ApiError 500 for an unknown logItemType', async () => {
+  await assert.rejects(
+    () => mongoLogOperator.getListOfLogs('BOGUS_LOG'),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.strictEqual(error.status, 500);
+      assert.ok(error.payload.includes('Unknown logItemType'));
+      return true;
+    }
+  );
+});
+
+test('addLogItem with an unknown logItemType does not throw (warn path)', async () => {
+  const logItem = {
+    logItemType: 'BOGUS_LOG',
+    cataloger: 'IMP_TEST1',
+    correlationId: '77777777-7777-4777-8777-777777777777',
+    blobSequence: 1
+  };
+  // checkLogItemType is called with errorUnknown=false for addLogItem, so an
+  // unknown type must only warn, not throw, and the log must be stored
+  await mongoLogOperator.addLogItem(logItem);
+
+  const {logs} = await mongoFixtures.dump();
+  const own = logs.filter(doc => doc.correlationId === logItem.correlationId);
+  assert.equal(own.length, 1);
+  assert.equal(own[0].logItemType, 'BOGUS_LOG');
+});
+
 test('getExpandedListOfLogs with a valid logItemTypes array still works', async () => {
   const logItem = {
     logItemType: 'MERGE_LOG',
