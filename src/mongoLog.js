@@ -1,9 +1,8 @@
 import {MongoClient} from 'mongodb';
 import moment from 'moment';
 import httpStatus from 'http-status';
-import sanitize from 'mongo-sanitize';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
-import {logError} from './utils.js';
+import {logError, assertString} from './utils.js';
 import {LOG_ITEM_TYPE} from './constants.js';
 
 /**
@@ -14,6 +13,26 @@ import {LOG_ITEM_TYPE} from './constants.js';
  */
 export default async function (MONGO_URI, dbName = 'rest-api') {
   const logger = createLogger();
+
+  // blobSequence filters: falsy/undefined keeps the legacy behaviour (no
+  // blobSequence in the filter). Otherwise a number or a string parseable
+  // to an integer (existing parseInt behaviour) is accepted, anything else
+  // is rejected with 400.
+  function buildBlobSequenceFilter(correlationId, blobSequence) {
+    if (!blobSequence) {
+      return {correlationId};
+    }
+    if (typeof blobSequence === 'number') {
+      return {correlationId, blobSequence: parseInt(blobSequence, 10)};
+    }
+    if (typeof blobSequence === 'string') {
+      const parsed = parseInt(blobSequence, 10);
+      if (!Number.isNaN(parsed)) {
+        return {correlationId, blobSequence: parsed};
+      }
+    }
+    throw new ApiError(httpStatus.BAD_REQUEST, 'blobSequence must be a number or a numeric string');
+  }
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(MONGO_URI);
@@ -88,6 +107,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns query result array
    */
   async function queryById(correlationId, logItemType = LOG_ITEM_TYPE.MERGE_LOG, skip = 0, limit = 1) {
+    assertString(correlationId, 'correlationId');
     logger.debug(`QueryById: ${correlationId}, logItemType: ${logItemType}, skip: ${skip}, limit: ${limit}`);
     const result = await db.collection(collection)
       .find({correlationId, logItemType})
@@ -284,9 +304,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function protect(correlationId, blobSequence) {
     logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
-    const cleanCorrelationId = sanitize(correlationId);
-    const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+    assertString(correlationId, 'correlationId');
+    const filter = buildBlobSequenceFilter(correlationId, blobSequence);
 
     try {
       const result = await db.collection(collection).updateMany(
@@ -318,9 +337,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function unprotect(correlationId, blobSequence) {
     logger.info(`Unprotecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
-    const cleanCorrelationId = sanitize(correlationId);
-    const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+    assertString(correlationId, 'correlationId');
+    const filter = buildBlobSequenceFilter(correlationId, blobSequence);
 
     try {
       const result = await db.collection(collection).updateMany(
@@ -350,8 +368,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function remove(correlationId, force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
-    const clean = sanitize(correlationId);
-    const filter = force ? {correlationId: clean} : {correlationId: clean, protected: {$ne: true}};
+    assertString(correlationId, 'correlationId');
+    const filter = force ? {correlationId} : {correlationId, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
@@ -372,7 +390,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function removeBySequences(correlationId, sequences = [], force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
-    const clean = sanitize(correlationId);
+    assertString(correlationId, 'correlationId');
     // NOTE: this matches only single-sequence items (blobSequence), NOT bulk
     // range items (blobSequenceStart/blobSequenceEnd); a requested sequence
     // inside a bulk range will not match and its logs are kept
@@ -392,8 +410,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     // branch used to pass raw `sequences`, so string inputs like '1' would
     // never match the stored numeric blobSequence)
     const filter = force
-      ? {correlationId: clean, blobSequence: {$in: cleanSequences}}
-      : {correlationId: clean, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
+      ? {correlationId, blobSequence: {$in: cleanSequences}}
+      : {correlationId, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);

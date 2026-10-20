@@ -18,6 +18,40 @@ export function logError(err) {
   logger.error(err.stack === undefined ? err : err.stack);
 }
 
+// Entry-point type guards: correlationIds and scalar params are expected as
+// plain strings/numbers. A non-scalar (e.g. an object) would be spliced into
+// the query as a MongoDB operator, so reject it with 400 before any query.
+export function assertString(value, name) {
+  if (typeof value !== 'string') {
+    throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be a string`);
+  }
+}
+
+export function assertNumber(value, name) {
+  if (typeof value !== 'number') {
+    throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be a number`);
+  }
+}
+
+// getOne may filter on import job state subfields (importJobState.CREATE /
+// .UPDATE / .FIX), which are spliced straight into the Mongo filter, so a
+// $-operator key or an object value would inject operators: restrict the keys
+// to the known operations and the values to plain state strings.
+export function assertImportJobStateFilter(value, name) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be an object`);
+  }
+  const validKeys = Object.values(OPERATIONS).map(operation => `importJobState.${operation}`);
+  for (const [key, state] of Object.entries(value)) {
+    if (!validKeys.includes(key)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `${name} key ${key} must be one of ${validKeys.join(', ')}`);
+    }
+    if (typeof state !== 'string') {
+      throw new ApiError(httpStatus.BAD_REQUEST, `${name}.${key} must be a string`);
+    }
+  }
+}
+
 export function createImportJobState(operation, state, queryImportJobState = false) {
   if (!(state in IMPORT_JOB_STATE)) {
     throw new Error('Invalid IMPORT_JOB_STATE');
