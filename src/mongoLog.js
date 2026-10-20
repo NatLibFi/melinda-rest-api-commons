@@ -80,7 +80,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function query({limit = 5, skip = 0, ...rest}) {
     logger.debug(`Query params: ${JSON.stringify(rest)}`);
     logger.debug(`Limit and skip params: ${limit} | ${skip}`);
-    checkLogItemType(rest.logItemType, false, false);
+    checkLogItemType(rest.logItemType, false);
     // rest is an internal, trusted query object built by the calling service:
     // callers must not splice raw user input into it. Its keys may legitimately
     // use dot notation and $-operators, which is why rest is not
@@ -126,7 +126,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns Array of query results
    */
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
-    checkLogItemType(logItemType, true, true);
+    checkLogItemType(logItemType, true);
     //logger.debug(logItemType);
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
@@ -426,10 +426,9 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * Checks existence and validity of logItemType
    * @param {String} logItemType constant LOG_ITEM_TYPE
    * @param {Boolean} errorUnknown defaults false
-   * @param {Boolean} errorNotExisting defaults false
    * @returns void
    */
-  function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
+  function checkLogItemType(logItemType, errorUnknown = false) {
     if (logItemType) {
       const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
       if (typeInLogItemTypes) {
@@ -441,9 +440,6 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
       return logger.debug(`WARN: We have unknown logType: ${logItemType}`);
     }
 
-    if (errorNotExisting) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `No logItemType: ${logItemType}`);
-    }
     return logger.debug(`No logItemType: ${logItemType}`);
   }
 }
