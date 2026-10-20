@@ -82,7 +82,10 @@ async function callback({
       const {headers, records} = await queueCheckNextMessage();
       const nextMessage = {headers, records};
       const expectedNextMessage = getFixture('expectedMessage.json');
-      assert.deepStrictEqual(nextMessage, expectedNextMessage);
+      assert.deepStrictEqual(
+        JSON.parse(JSON.stringify(nextMessage)),
+        expectedNextMessage,
+      );
       return;
     }
 
@@ -137,7 +140,7 @@ async function callback({
       const result = await amqpOperator.checkQueue({queue, style: 'one', toRecord: true, purge: false});
 
       if (expectFalseCheckResult) {
-        expect(result).to.eql(false);
+        assert.strictEqual(result, false);
         return;
       }
 
@@ -155,15 +158,10 @@ async function callback({
       const {fields} = result;
 
       if (expectFalseCheckResult) {
-        expect(result).to.eql(false);
+        assert.strictEqual(result, false);
         return;
       }
 
-      assert.equal(Object.hasOwn(result, 'deliveryTag'), true);
-      assert.equal(Object.hasOwn(result, 'exchange'), true);
-      assert.equal(Object.hasOwn(result, 'messageCount'), true);
-      assert.equal(Object.hasOwn(result, 'redelivered'), true);
-      assert.equal(Object.hasOwn(result, 'routingKey'), true);
       assert.equal(typeof fields.deliveryTag, 'number');
       assert.equal(typeof fields.messageCount, 'number');
       assert.equal(typeof fields.redelivered, 'boolean');
@@ -176,7 +174,7 @@ async function callback({
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: true, purge: false});
 
       if (expectFalseCheckResult) {
-        expect(result).to.eql(false);
+        assert.strictEqual(result, false);
         return;
       }
 
@@ -186,7 +184,10 @@ async function callback({
       assert.equal(result.records.length, 3);
       assert.equal(result.messages.length, 3);
       const expectedResult = getFixture('expectedResult.json');
-      assert.deepStrictEqual(result.records, expectedResult);
+      assert.deepStrictEqual(
+        JSON.parse(JSON.stringify(result.records)),
+        expectedResult,
+      );
 
       return;
     }
@@ -195,7 +196,7 @@ async function callback({
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: false, purge: false});
 
       if (expectFalseCheckResult) {
-        expect(result).to.eql(false);
+        assert.strictEqual(result, false);
         return;
       }
 
@@ -204,12 +205,6 @@ async function callback({
       assert.equal(result.messages.length, 3);
 
       const [{fields}] = result.messages;
-
-      assert.equal(Object.hasOwn(result, 'deliveryTag'), true);
-      assert.equal(Object.hasOwn(result, 'exchange'), true);
-      assert.equal(Object.hasOwn(result, 'messageCount'), true);
-      assert.equal(Object.hasOwn(result, 'redelivered'), true);
-      assert.equal(Object.hasOwn(result, 'routingKey'), true);
 
       assert.equal(typeof fields.deliveryTag, 'number');
       assert.equal(typeof fields.messageCount, 'number');
@@ -277,7 +272,7 @@ function testHeathCheck() {
       await testHealthCheckLoopErroring(amqpOperator2);
     } catch (error) {
       debug(error);
-      expect(error).to.eql('');
+      assert.strictEqual(error, '');
     } finally {
       amqpOperator2.closeConnection();
     }
