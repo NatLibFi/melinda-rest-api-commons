@@ -1,7 +1,6 @@
 /* eslint-disable max-lines */
 
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
-import moment from 'moment';
 import httpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
@@ -73,7 +72,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
     debugDev('createPrio');
-    const time = moment().toDate();
+    const time = new Date();
     const newQueueItem = {
       correlationId,
       cataloger,
@@ -116,7 +115,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   }
 
   async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
-    const time = moment().toDate();
+    const time = new Date();
     const newQueueItem = {
       correlationId,
       cataloger,
@@ -385,10 +384,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
 
     // configurable "no progress" window (default 1 minute)
-    const timeoutTime = moment(modificationTime).add(timeoutMinutes, 'm');
+    const timeoutTime = new Date(new Date(modificationTime).getTime() + timeoutMinutes * 60000);
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
-    if (timeoutTime.isBefore()) {
+    if (timeoutTime < new Date()) {
       const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
       if (!finalImportJobStates.includes(importJobState.CREATE)) {
         await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
@@ -597,7 +596,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         correlationId
       }, {
         $set: {
-          modificationTime: moment().toDate()
+          modificationTime: new Date()
         },
         $push: {
           handledIds: {$each: handledIds},
@@ -626,7 +625,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         correlationId
       }, {
         $set: {
-          modificationTime: moment().toDate()
+          modificationTime: new Date()
         },
         $push: {
           [messageField]: {$each: messages}
@@ -654,7 +653,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
     const updateValues = {
       queueItemState: state,
-      modificationTime: moment().toDate(),
+      modificationTime: new Date(),
       errorMessage,
       errorStatus
     };
@@ -714,7 +713,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {
       $set: {
         ...newJobState,
-        modificationTime: moment().toDate()
+        modificationTime: new Date()
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
   }
@@ -749,7 +748,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {
       $set: {
         operation: newOperation,
-        modificationTime: moment().toDate()
+        modificationTime: new Date()
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
@@ -782,7 +781,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {
       $set: {
         operations: operationsAfterRemoveAndAdd,
-        modificationTime: moment().toDate()
+        modificationTime: new Date()
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
@@ -801,7 +800,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         blobSize: 1
       },
       $set: {
-        modificationTime: moment().toDate()
+        modificationTime: new Date()
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
 
@@ -819,7 +818,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {
       $set: {
         blobSize,
-        modificationTime: moment().toDate()
+        modificationTime: new Date()
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
 
