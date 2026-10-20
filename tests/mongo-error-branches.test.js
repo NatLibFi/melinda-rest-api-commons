@@ -6,6 +6,7 @@ import httpStatus from 'http-status';
 import {MongoDriverError} from 'mongodb';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createMongo from '../src/mongo.js';
+import createMongoLog from '../src/mongoLog.js';
 
 const DUMMY_URI = 'mongodb://stub:27017/rest-api';
 const COLLECTION = 'foobar';
@@ -666,4 +667,121 @@ test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null'
       return true;
     }
   );
+});
+
+// mongoLog: same deps-seam convention as mongo (factory last param). When
+// deps.collection is provided no real connection is made and every
+// db.collection('logs') call routes to the injected object. These tests
+// cover the catch blocks that re-wrap driver failures as ApiError 500.
+
+function makeLogCollection(overrides = {}) {
+  return {
+    insertOne: async () => ({acknowledged: true, insertedId: 1}),
+    updateMany: async () => ({acknowledged: true, matchedCount: 0, modifiedCount: 0}),
+    deleteMany: async () => ({acknowledged: true, deletedCount: 0}),
+    ...overrides
+  };
+}
+
+async function makeMongoLog(deps) {
+  return createMongoLog(DUMMY_URI, 'rest-api', deps);
+}
+
+function mongoErrored500(text) {
+  return (error) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+    assert.ok(error.payload.includes('Mongo errored'));
+    assert.ok(error.payload.includes(text));
+    return true;
+  };
+}
+
+test('mongoLog addLogItem: insertOne with acknowledged=false throws ApiError 500', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({insertOne: async () => ({acknowledged: false})})
+  });
+  await assert.rejects(
+    () => mongoLog.addLogItem({correlationId: 'FOO', logItemType: 'MERGE_LOG', blobSequence: 1}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      return true;
+    }
+  );
+});
+
+test('mongoLog addLogItem: insertOne rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({insertOne: async () => {
+      throw new Error('addLogItem boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.addLogItem({correlationId: 'FOO', logItemType: 'MERGE_LOG', blobSequence: 1}),
+    mongoErrored500('addLogItem boom')
+  );
+});
+
+test('mongoLog protect: updateMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async () => {
+      throw new Error('protect boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.protect('FOO'),
+    mongoErrored500('protect boom')
+  );
+});
+
+test('mongoLog unprotect: updateMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async () => {
+      throw new Error('unprotect boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.unprotect('FOO'),
+    mongoErrored500('unprotect boom')
+  );
+});
+
+test('mongoLog remove: deleteMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({deleteMany: async () => {
+      throw new Error('remove boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.remove('FOO'),
+    mongoErrored500('remove boom')
+  );
+});
+
+test('mongoLog removeBySequences: deleteMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({deleteMany: async () => {
+      throw new Error('removeBySequences boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.removeBySequences('FOO', [1, 2]),
+    mongoErrored500('removeBySequences boom')
+  );
+});
+
+test('mongoLog protect: injected collection routes the update and returns its result', async () => {
+  const filters = [];
+  const result = {acknowledged: true, matchedCount: 1, modifiedCount: 1};
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async (filter) => {
+      // eslint-disable-next-line functional/immutable-data
+      filters.push(filter);
+      return result;
+    }})
+  });
+  const mongoLogResult = await mongoLog.protect('FOO');
+  assert.deepStrictEqual(mongoLogResult, result);
+  assert.deepStrictEqual(filters, [{correlationId: 'FOO'}]);
 });
