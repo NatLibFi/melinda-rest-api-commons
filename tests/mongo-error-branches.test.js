@@ -562,3 +562,108 @@ test('pushMessages rejects with ApiError 400 when messageField is not a string',
     }
   );
 });
+
+test('createBulk (stream): insertOne with acknowledged=false throws ApiError 500', async () => {
+  const input = new Readable({
+    read() {
+      this.push(Buffer.from('chunk'));
+      this.push(null);
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator({insertOne: async () => ({acknowledged: false})}),
+    gridFSBucket: makeGridFSBucket({openUploadStream: () => new PassThrough()})
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('Mongo errored'));
+      return true;
+    }
+  );
+});
+
+test('createBulk (stream): a failing GridFS cleanup does not mask the original upload error', async () => {
+  // input errors mid-upload AND the partial-file cleanup (gridFSBucket.find)
+  // throws too: the cleanup error is only logged, the original error must
+  // still propagate
+  const input = new Readable({
+    read() {
+      setImmediate(() => this.emit('error', new Error('input stream boom')));
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator(),
+    gridFSBucket: makeGridFSBucket({
+      openUploadStream: () => new PassThrough(),
+      find: () => {
+        throw new Error('gridfs cleanup boom');
+      }
+    })
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('input stream boom'));
+      assert.ok(!error.payload.includes('gridfs cleanup boom'));
+      return true;
+    }
+  );
+});
+
+test('remove: non-MongoDriverError from deleteOne throws ApiError 500 with the error message', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({deleteOne: async () => {
+      throw new Error('plain delete boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.remove({correlationId: 'FOO'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('plain delete boom'));
+      return true;
+    }
+  );
+});
+
+test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => ({correlationId: 'FOO', operation: 'CREATE'}),
+      findOneAndUpdate: async () => null
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.setOperation({correlationId: 'FOO', operation: 'UPDATE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.NOT_FOUND);
+      assert.ok(error.payload.message.includes('not found'));
+      return true;
+    }
+  );
+});

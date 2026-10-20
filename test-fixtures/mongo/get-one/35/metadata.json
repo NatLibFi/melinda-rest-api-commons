@@ -1,0 +1,13 @@
+{
+  "description": "getOne with a $-operator importJobState key: expectedToThrow WITHOUT expectedErrorMessage/expectedErrorStatus (the handleError early return - the operation throws, but no message/status is asserted)",
+  "only": false,
+  "skip": false,
+  "functionName": "getOne",
+  "preFillDb": false,
+  "expectedToThrow": true,
+  "params": {
+    "importJobState": {
+      "$ne": ""
+    }
+  }
+}
