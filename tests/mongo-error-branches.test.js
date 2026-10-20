@@ -444,3 +444,121 @@ test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne thro
     }
   );
 });
+
+// Entry-point type guards: a non-scalar (e.g. object) correlationId must be
+// rejected with 400 before it can be spliced into a query as a $-operator.
+
+test('checkAndSetState rejects with ApiError 400 when correlationId is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.checkAndSetState({correlationId: {'$ne': ''}, state: 'VALIDATING'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when queueItemState is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({queueItemState: {'$ne': ''}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when importJobState is not an object', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: 'IN_QUEUE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when importJobState has a $-operator key', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: {'$ne': ''}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when an importJobState value is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: {'importJobState.UPDATE': {'$gt': ''}}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne queries findOne with a valid importJobState filter', async () => {
+  const filters = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async (filter) => {
+      // eslint-disable-next-line functional/immutable-data
+      filters.push(filter);
+      return null;
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.getOne({importJobState: {'importJobState.UPDATE': 'IN_QUEUE'}});
+  assert.strictEqual(result, null);
+  assert.deepStrictEqual(filters, [{'importJobState.UPDATE': 'IN_QUEUE'}]);
+});
+
+test('setBlobSize rejects with ApiError 400 when blobSize is not a number', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.setBlobSize({correlationId: 'FOO', blobSize: '7'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('setBlobSize stores a real number when blobSize is a number', async () => {
+  const updates = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({findOneAndUpdate: async (filter, update) => {
+      // eslint-disable-next-line functional/immutable-data
+      updates.push({filter, update});
+      return {correlationId: 'FOO', blobSize: 7};
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await mongo.setBlobSize({correlationId: 'FOO', blobSize: 7});
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0].update.$set.blobSize, 7);
+  assert.strictEqual(typeof updates[0].update.$set.blobSize, 'number');
+});
+
+test('pushMessages rejects with ApiError 400 when messageField is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.pushMessages({correlationId: 'FOO', messages: ['m1'], messageField: 42}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
