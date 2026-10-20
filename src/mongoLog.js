@@ -8,9 +8,10 @@ import {LOG_ITEM_TYPE} from './constants.js';
  * Create log operator
  * @param {String} MONGO_URI connnection address to mongo
  * @param {String} dbName Mongo DB name, defaults 'rest-api'
+ * @param {Object} deps optional dependencies, defaults {}. When deps.collection (a Mongo collection object) is provided, no real Mongo connection is made (used by unit tests)
  * @returns {Object} containing all log handling functions
  */
-export default async function (MONGO_URI, dbName = 'rest-api') {
+export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
   const logger = createLogger();
 
   // blobSequence filters: falsy/undefined keeps the legacy behaviour (no
@@ -33,10 +34,16 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     throw new ApiError(httpStatus.BAD_REQUEST, 'blobSequence must be a number or a numeric string');
   }
 
-  // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI);
-  const db = client.db(dbName);
+  // Connect to mongo (MONGO), unless the logs collection is injected via
+  // deps (used by unit tests to avoid a real connection)
   const collection = 'logs';
+  let db;
+  if (deps.collection) {
+    db = {collection: () => deps.collection};
+  } else {
+    const client = await MongoClient.connect(MONGO_URI);
+    db = client.db(dbName);
+  }
   return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
 
   /**
