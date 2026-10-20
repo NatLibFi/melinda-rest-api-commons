@@ -1,5 +1,4 @@
 import {MongoClient} from 'mongodb';
-import moment from 'moment';
 import httpStatus from 'http-status';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {logError, assertString} from './utils.js';
@@ -46,7 +45,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns void
    */
   async function addLogItem(logItem) {
-    const time = moment().toDate();
+    const time = new Date();
     const newLogItem = {
       ...logItem,
       creationTime: time,
@@ -273,7 +272,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
          }
          const parts = String(value).slice(0, 10).split('-');
          if (parts.length === 3) {
-           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').toDate();
+           return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
          }
          return new Date(value);
        }
@@ -287,7 +286,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
          }
          const parts = String(value).slice(0, 10).split('-');
          if (parts.length === 3) {
-           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').add(1, 'day').toDate();
+           return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]) + 86400000);
          }
          return new Date(value);
        }
@@ -313,7 +312,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
         [
           {
             $set: {
-              modificationTime: moment().toDate(),
+              modificationTime: new Date(),
               // plain true, not a $not toggle: protect must be idempotent
               protected: true
             }
@@ -346,7 +345,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
         [
           {
             $set: {
-              modificationTime: moment().toDate(),
+              modificationTime: new Date(),
               protected: false
             }
           }
