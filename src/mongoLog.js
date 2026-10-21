@@ -1,8 +1,8 @@
 import {MongoClient} from 'mongodb';
 import httpStatus from 'http-status';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
-import {logError, assertString} from './utils.js';
-import {LOG_ITEM_TYPE} from './constants.js';
+import {logError, assertString} from './utils.ts';
+import {LOG_ITEM_TYPE} from './constants.ts';
 
 /**
  * Create log operator
@@ -53,6 +53,18 @@ export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
     db = client.db(dbName);
   }
   return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
+
+  // the free-form logItemType strings (caller input / Mongo docs) are
+  // matched against the as-const LOG_ITEM_TYPE (literal-typed values), so
+  // the values are widened to string[] for the membership checks
+  /**
+   * Check whether a value is a known LOG_ITEM_TYPE
+   * @param {string} value
+   * @returns {boolean}
+   */
+  function isKnownLogItemType(value) {
+    return /** @type {string[]} */ (Object.values(LOG_ITEM_TYPE)).includes(value);
+  }
 
   /**
    * Add log item to collection
@@ -201,7 +213,7 @@ export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
     }
     if (logItemTypes !== undefined) {
       logItemTypes.forEach(logItemType => {
-        if (Object.values(LOG_ITEM_TYPE).includes(logItemType)) {
+        if (isKnownLogItemType(logItemType)) {
           return;
         }
         throw new ApiError(httpStatus.BAD_REQUEST, `Unknown logItemType: ${logItemType}`);
@@ -458,7 +470,7 @@ export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
    */
   function checkLogItemType(logItemType, errorUnknown = false) {
     if (logItemType) {
-      const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
+      const typeInLogItemTypes = isKnownLogItemType(logItemType);
       if (typeInLogItemTypes) {
         return logger.debug(`Valid logItemType: ${logItemType}`);
       }

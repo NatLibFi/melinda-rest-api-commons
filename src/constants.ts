@@ -1,4 +1,7 @@
 // QueueItemState flows: see README.md
+// The constant objects are `as const`, so their members have exact string
+// literal types: callers get precise value types, and later phases can
+// derive unions from them (e.g. logItemType)
 
 export const QUEUE_ITEM_STATE = {
   VALIDATOR: {
@@ -17,7 +20,7 @@ export const QUEUE_ITEM_STATE = {
   DONE: 'DONE',
   ERROR: 'ERROR',
   ABORT: 'ABORT'
-};
+} as const;
 
 export const IMPORT_JOB_STATE = {
   EMPTY: 'EMPTY',
@@ -28,13 +31,13 @@ export const IMPORT_JOB_STATE = {
   DONE: 'DONE',
   ERROR: 'ERROR',
   ABORT: 'ABORT'
-};
+} as const;
 
 export const OPERATIONS = {
   CREATE: 'CREATE',
   UPDATE: 'UPDATE',
   FIX: 'FIX'
-};
+} as const;
 
 export const CHUNK_SIZE = 100;
 
@@ -47,11 +50,11 @@ export const LOG_ITEM_TYPE = {
   RESULT_RECORD_LOG: 'RESULT_RECORD_LOG',
   SPLITTER_LOG: 'SPLITTER_LOG',
   LOAD_PROCESS_LOG: 'LOAD_PROCESS_LOG'
-};
+} as const;
 
 export const CONVERSION_FORMATS = {
   MARCXML: 'MARCXML',
   ISO2709: 'ISO2709',
   JSON: 'JSON',
   ALEPHSEQ: 'ALEPHSEQ'
-};
+} as const;

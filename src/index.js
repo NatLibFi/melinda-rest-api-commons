@@ -6,7 +6,7 @@ import amqpFactory from './amqp.js';
 import conversions from './helpers/conversion.js';
 import validations from './helpers/validation.js';
 import * as fixes from './helpers/fix.js';
-import {logError, createImportJobState, createRecordResponseItem, addRecordResponseItem, addRecordResponseItems} from './utils.js';
+import {logError, createImportJobState, createRecordResponseItem, addRecordResponseItem, addRecordResponseItems} from './utils.ts';
 
 export {mongoFactory, mongoLogFactory, amqpFactory, conversions, validations, fixes, logError, createImportJobState, createRecordResponseItem, addRecordResponseItem, addRecordResponseItems};
-export * from './constants.js';
+export * from './constants.ts';

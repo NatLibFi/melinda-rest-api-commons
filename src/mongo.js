@@ -4,8 +4,8 @@ import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
 import httpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
-import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
-import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.js';
+import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.ts';
+import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.ts';
 
 //import isDeepStrictEqual from 'util';
 
@@ -464,7 +464,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = queueItem;
     //debug(`${modificationTime} - oldState: ${oldState}`);
     // should we check for DONE too?
-    if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {
+    if (oldState === QUEUE_ITEM_STATE.ABORT || oldState === QUEUE_ITEM_STATE.ERROR || oldState === QUEUE_ITEM_STATE.DONE) {
       logger.silly(`${correlationId} has already state: ${oldState}`);
       return false;
     }
@@ -474,6 +474,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
     if (timeoutTime < new Date()) {
+      // the as-const constants yield literal-typed values, so the terminal
+      // states are widened to string[] to compare against the free-form
+      // importJobState strings read from Mongo documents
+      /** @type {string[]} */
       const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
       if (!finalImportJobStates.includes(importJobState.CREATE)) {
         await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
@@ -772,10 +776,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     const errorString = errorMessage || errorStatus ? `, Error message: '${JSON.stringify(errorMessage) || ''}', Error status: '${errorStatus || ''}'` : '';
     logger.info(`Setting queue-item state ${state} for ${correlationId}${errorString} to ${collection}`);
 
-    const stateInQueueItemStates = Object.values(QUEUE_ITEM_STATE).indexOf(state) > -1;
-    const stateInQueueItemStatesValidator = Object.values(QUEUE_ITEM_STATE.VALIDATOR).indexOf(state) > -1;
-    const stateInQueueItemStatesImporter = Object.values(QUEUE_ITEM_STATE.IMPORTER).indexOf(state) > -1;
-    if (!stateInQueueItemStates && !stateInQueueItemStatesValidator && !stateInQueueItemStatesImporter) {
+    // the state comes in as a free-form string (caller input), so the
+    // as-const values (literal-typed) are widened to string[] for the
+    // membership check
+    const allQueueItemStates = /** @type {string[]} */ ([
+      ...Object.values(QUEUE_ITEM_STATE),
+      ...Object.values(QUEUE_ITEM_STATE.VALIDATOR),
+      ...Object.values(QUEUE_ITEM_STATE.IMPORTER)
+    ]);
+    if (!allQueueItemStates.includes(state)) {
       debug(`Trying to set invalid state ${state}`);
       throw new ApiError(httpStatus.BAD_REQUEST, 'Trying to set invalid state');
     }
