@@ -3,8 +3,11 @@ import createDebugLogger from 'debug';
 import {promisify} from 'util';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
+import type {CallbackArgs} from '@natlibfi/fixugen';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
+import type {GetMessage, Message} from 'amqplib';
 import {amqpFactory} from '../src/index.js';
+import type {AmqpOperator, QueueItemMessagePayload, QueueItemRecordPayload, SendToQueueParams} from '../src/amqp.ts';
 
 const setTimeoutPromise = promisify(setTimeout);
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp:test');
@@ -18,8 +21,7 @@ const testData = {
 
 debug(`Testing amqp against a local AMQP instance - we'll need some kind of mockup for this`);
 const amqpUrl = 'amqp://127.0.0.1:5672/';
-/** @type {*} */
-let amqpOperator;
+let amqpOperator: AmqpOperator;
 
 generateTests({
   callback,
@@ -49,9 +51,13 @@ generateTests({
 });
 
 /**
- * @param {*} callbackParams getFixture, expectToFail (false), expectedErrorStatus (''), ackMessages (false), nackMessages (false), checkNextMessage (false), checkQueueStyle (false), queue (testData.queue), sentToQueue, expectedMessageCount, removeQueue (false), expectedErrorMessage (undefined), expectApiError (false), expectFalseCheckResult (false)
+ * One fixture case. See the fixture metadata files in test-fixtures/amqp
+ * for the possible keys (getFixture, expectToFail, expectedErrorStatus,
+ * ackMessages, nackMessages, checkNextMessage, checkQueueStyle, queue,
+ * sentToQueue, expectedMessageCount, removeQueue, expectedErrorMessage,
+ * expectApiError, expectFalseCheckResult).
  */
-async function callback(callbackParams) {
+async function callback(callbackParams: CallbackArgs) {
   const {
   getFixture,
   expectToFail = false,
@@ -60,7 +66,7 @@ async function callback(callbackParams) {
   nackMessages = false,
   checkNextMessage = false,
   checkQueueStyle = false,
-  queue = testData.queue,
+  queue: queueFromFixture = testData.queue,
   sentToQueue,
   expectedMessageCount,
   removeQueue = false,
@@ -68,6 +74,8 @@ async function callback(callbackParams) {
   expectApiError = false,
   expectFalseCheckResult = false
   } = callbackParams;
+  // the fixture contract passes the queue name as a string
+  const queue = queueFromFixture as string;
   try {
     await sendMessagesToQueue();
 
@@ -82,7 +90,7 @@ async function callback(callbackParams) {
     assert.equal(messageCount, expectedMessageCount);
 
     if (checkNextMessage) {
-      const {headers, records} = await queueCheckNextMessage();
+      const {headers, records} = (await queueCheckNextMessage()) as QueueItemRecordPayload;
       const nextMessage = {headers, records};
       const expectedNextMessage = getFixture('expectedMessage.json');
       assert.deepStrictEqual(
@@ -101,18 +109,18 @@ async function callback(callbackParams) {
   }
 
   /**
-   * @param {*} error
-   * @returns {undefined}
+   * @param error
    */
-  function testErrors(error) {
+  function testErrors(error: unknown) {
     const isApiError = error instanceof ApiError;
     if (expectApiError) {
       assert.equal(isApiError, true);
       debug(`We expected and got an ApiError`);
-      assert.equal(error.status, expectedErrorStatus);
+      const apiError = error as ApiError;
+      assert.equal(apiError.status, expectedErrorStatus);
 
       if (expectedErrorMessage) {
-        assert.equal(error.payload, expectedErrorMessage);
+        assert.equal(apiError.payload, expectedErrorMessage);
         return;
       }
 
@@ -120,20 +128,21 @@ async function callback(callbackParams) {
     }
     assert.equal(isApiError, false);
     debug(`We expected and got an non-ApiError`);
-    debug(`Error is a ${error.constructor.name}`);
+    const maybeError = error as Error;
+    debug(`Error is a ${maybeError.constructor.name}`);
   }
 
   function queueRemoval() {
     if (removeQueue) {
-      return amqpOperator.removeQueue(removeQueue);
+      return amqpOperator.removeQueue(removeQueue as string);
     }
 
     return;
   }
 
-  function queueCheckNextMessage() {
+  function queueCheckNextMessage(): Promise<QueueItemRecordPayload> | false {
     if (checkNextMessage) {
-      return amqpOperator.consumeOne(testData.queue, true);
+      return amqpOperator.consumeOne(testData.queue, true) as Promise<QueueItemRecordPayload>;
     }
 
     return false;
@@ -142,7 +151,7 @@ async function callback(callbackParams) {
   async function checkQueue() {
     debug(`checkQueueStyle: ${checkQueueStyle}`);
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'oneToRecord') {
+    if (checkQueueStyle === 'oneToRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'one', toRecord: true, purge: false});
 
       if (expectFalseCheckResult) {
@@ -150,18 +159,19 @@ async function callback(callbackParams) {
         return;
       }
 
-      assert.equal(Object.hasOwn(result, 'headers'), true);
-      assert.equal(Object.hasOwn(result, 'records'), true);
-      assert.equal(Object.hasOwn(result, 'messages'), true);
-      assert.equal(result.records.length, 1);
-      assert.equal(result.messages.length, 1);
+      const recordResult = result as QueueItemRecordPayload;
+      assert.equal(Object.hasOwn(recordResult, 'headers'), true);
+      assert.equal(Object.hasOwn(recordResult, 'records'), true);
+      assert.equal(Object.hasOwn(recordResult, 'messages'), true);
+      assert.equal(recordResult.records.length, 1);
+      assert.equal(recordResult.messages.length, 1);
 
       return;
     }
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'oneNotRecord') {
+    if (checkQueueStyle === 'oneNotRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'one', toRecord: false, purge: false});
-      const {fields} = result;
+      const {fields} = result as GetMessage;
 
       if (expectFalseCheckResult) {
         assert.strictEqual(result, false);
@@ -176,7 +186,7 @@ async function callback(callbackParams) {
       return;
     }
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'basicToRecord') {
+    if (checkQueueStyle === 'basicToRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: true, purge: false});
 
       if (expectFalseCheckResult) {
@@ -184,21 +194,22 @@ async function callback(callbackParams) {
         return;
       }
 
-      assert.equal(Object.hasOwn(result, 'headers'), true);
-      assert.equal(Object.hasOwn(result, 'records'), true);
-      assert.equal(Object.hasOwn(result, 'messages'), true);
-      assert.equal(result.records.length, 3);
-      assert.equal(result.messages.length, 3);
+      const recordResult = result as QueueItemRecordPayload;
+      assert.equal(Object.hasOwn(recordResult, 'headers'), true);
+      assert.equal(Object.hasOwn(recordResult, 'records'), true);
+      assert.equal(Object.hasOwn(recordResult, 'messages'), true);
+      assert.equal(recordResult.records.length, 3);
+      assert.equal(recordResult.messages.length, 3);
       const expectedResult = getFixture('expectedResult.json');
       assert.deepStrictEqual(
-        JSON.parse(JSON.stringify(result.records)),
+        JSON.parse(JSON.stringify(recordResult.records)),
         expectedResult,
       );
 
       return;
     }
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'basicNotRecord') {
+    if (checkQueueStyle === 'basicNotRecord') {
       const result = await amqpOperator.checkQueue({queue, style: 'basic', toRecord: false, purge: false});
 
       if (expectFalseCheckResult) {
@@ -206,11 +217,13 @@ async function callback(callbackParams) {
         return;
       }
 
-      assert.equal(Object.hasOwn(result, 'headers'), true);
-      assert.equal(Object.hasOwn(result, 'messages'), true);
-      assert.equal(result.messages.length, 3);
+      const messageResult = result as QueueItemMessagePayload;
+      assert.equal(Object.hasOwn(messageResult, 'headers'), true);
+      assert.equal(Object.hasOwn(messageResult, 'messages'), true);
+      assert.equal(messageResult.messages.length, 3);
 
-      const [{fields}] = result.messages;
+      const [firstMessage] = messageResult.messages as [Message, ...Message[]];
+      const {fields} = firstMessage;
 
       assert.equal(typeof fields.deliveryTag, 'number');
       assert.equal(typeof fields.messageCount, 'number');
@@ -220,11 +233,11 @@ async function callback(callbackParams) {
       return;
     }
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'purge') {
+    if (checkQueueStyle === 'purge') {
       return amqpOperator.checkQueue({queue, style: 'messages', purge: true});
     }
 
-    if (/** @type {boolean|string} */ (checkQueueStyle) === 'foobar') {
+    if (checkQueueStyle === 'foobar') {
       return amqpOperator.checkQueue({queue, style: 'foobar', toRecord: false, purge: false});
     }
 
@@ -234,14 +247,14 @@ async function callback(callbackParams) {
   async function ackOrNackMessages() {
     if (ackMessages) {
       const message = await amqpOperator.consumeOne(testData.queue, false);
-      await amqpOperator.ackMessages([message]);
+      await amqpOperator.ackMessages([message as GetMessage]);
 
       return setTimeoutPromise(10);
     }
 
     if (nackMessages) {
       const message = await amqpOperator.consumeOne(testData.queue, false);
-      await amqpOperator.nackMessages([message]);
+      await amqpOperator.nackMessages([message as GetMessage]);
 
       return setTimeoutPromise(10);
     }
@@ -251,10 +264,10 @@ async function callback(callbackParams) {
 
   async function sendMessagesToQueue() {
     if (sentToQueue) {
-      const messages = /** @type {*} */ (getFixture('input.json'));
+      const messages = getFixture('input.json') as SendToQueueParams[];
       // {queue, correlationId, headers, data}
 
-      const promises = messages.map(/** @param {*} message */ message => amqpOperator.sendToQueue(message));
+      const promises = messages.map(message => amqpOperator.sendToQueue(message));
       await Promise.all(promises);
 
       return setTimeoutPromise(10);

@@ -3,29 +3,47 @@ import {test} from 'node:test';
 import {execFile} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import createAmqp from '../src/amqp.js';
+import type {Message} from 'amqplib';
+import createAmqp, {type QueueItemMessagePayload, type QueueItemRecordPayload} from '../src/amqp.ts';
 
-const AMQP_MODULE_PATH = fileURLToPath(new URL('../src/amqp.js', import.meta.url));
+const AMQP_MODULE_PATH = fileURLToPath(new URL('../src/amqp.ts', import.meta.url));
 
 const DUMMY_URL = 'amqp://stub:5672/';
 const QUEUE = 'TESTQUEUE';
 
 /**
- * @param {*} correlationId
- * @param {*} deliveryTag
- * @returns {*}
+ * A minimal stub for an amqplib message. The fields beyond deliveryTag
+ * match the shape of a real amqplib message (the tests only exercise
+ * deliveryTag, correlationId and the message body).
  */
-function makeMessage(correlationId, deliveryTag) {
+function makeMessage(correlationId: string, deliveryTag: number): Message {
   const data = {leader: '00000nam a22000000i 4500', fields: [{tag: '001', value: '123'}]};
   const content = JSON.stringify({data});
   return {
     content: Buffer.from(content),
-    properties: {correlationId, headers: {from: 'TEST'}},
-    fields: {deliveryTag}
+    // only correlationId and headers are exercised by these tests; the
+    // remaining message properties stay undefined
+    properties: {
+      contentType: undefined,
+      contentEncoding: undefined,
+      headers: {from: 'TEST'},
+      deliveryMode: undefined,
+      priority: undefined,
+      correlationId,
+      replyTo: undefined,
+      expiration: undefined,
+      messageId: undefined,
+      timestamp: undefined,
+      type: undefined,
+      userId: undefined,
+      appId: undefined,
+      clusterId: undefined
+    },
+    fields: {deliveryTag, redelivered: false, exchange: '', routingKey: ''}
   };
 }
 
-function makeChannel(overrides = {}) {
+function makeChannel(overrides: Record<string, unknown> = {}) {
   return {
     assertQueue: async () => ({messageCount: 0}),
     checkQueue: async () => ({messageCount: 0}),
@@ -40,17 +58,16 @@ function makeChannel(overrides = {}) {
 }
 
 /**
- * @param {*} channelOverrides
- * @returns {Promise<*>}
+ * Create an operator with the given channel stub overrides injected via deps
  */
-async function makeOperator(channelOverrides = undefined) {
+async function makeOperator(channelOverrides?: Record<string, unknown>) {
   const channel = makeChannel(channelOverrides);
   const connection = {createChannel: async () => channel, close: async () => {}};
   return createAmqp(DUMMY_URL, false, {connection, channel});
 }
 
 test('consumeChunk returns false when queue drains mid-pump', async () => {
-  // (src/amqp.js, getData/pump):
+  // (src/amqp.ts, getData/pump):
   // FIXED: pump now bails out (returns results) when channel.get -> null,
   // and consumeChunk maps an empty pump result to false, matching the
   // empty-queue contract of checkQueue. Previously this crashed with
@@ -76,14 +93,14 @@ test('consumeChunk returns partial chunk when queue drains after first message',
       return first;
     }
   });
-  const {records, messages} = await amqpOperator.consumeChunk(QUEUE, true);
+  const {records, messages} = (await amqpOperator.consumeChunk(QUEUE, true)) as QueueItemRecordPayload;
   assert.equal(messages.length, 1);
   assert.equal(records.length, 1);
 });
 
 
 test('consumeChunk deduplicates messages with same correlationId + deliveryTag', async () => {
-  // (src/amqp.js, getData/pump):
+  // (src/amqp.ts, getData/pump):
   // FIXED: dedup now compares correlationId + deliveryTag field-by-field,
   // so duplicate messages are filtered out. (Previously the includes()
   // check compared object references and never triggered.)
@@ -92,7 +109,7 @@ test('consumeChunk deduplicates messages with same correlationId + deliveryTag',
     checkQueue: async () => ({messageCount: 2}),
     get: async () => duplicate
   });
-  const {records, messages} = await amqpOperator.consumeChunk(QUEUE, true);
+  const {records, messages} = (await amqpOperator.consumeChunk(QUEUE, true)) as QueueItemRecordPayload;
   assert.equal(messages.length, 1);
   assert.equal(records.length, 1);
 });
@@ -105,16 +122,15 @@ test('same deliveryTag with different correlationIds is NOT deduplicated', async
     checkQueue: async () => ({messageCount: 2}),
     get: async () => messages.shift()
   });
-  const {messages: got} = await amqpOperator.consumeChunk(QUEUE, true);
+  const {messages: got} = (await amqpOperator.consumeChunk(QUEUE, true)) as QueueItemRecordPayload;
   assert.equal(got.length, 2);
 });
 
 test('removeQueue closes the temp channel even when deleteQueue throws', async () => {
-  // (src/amqp.js, removeQueue):
+  // (src/amqp.ts, removeQueue):
   // FIXED: the throwaway tempChannel is now closed in a finally block, so a
   // missing queue (deleteQueue throws) no longer leaks a channel.
-  /** @type {any[]} */
-  const closedChannels = [];
+  const closedChannels: any[] = [];
   const tempChannel = {
     deleteQueue: async () => {
       throw new Error('NOT_FOUND - queue missing');
@@ -132,8 +148,7 @@ test('removeQueue closes the temp channel even when deleteQueue throws', async (
 });
 
 test('removeQueue closes the temp channel on success too', async () => {
-  /** @type {any[]} */
-  const closedChannels = [];
+  const closedChannels: any[] = [];
   const amqpOperator = await createAmqp(DUMMY_URL, false, {
     connection: {
       createChannel: async () => ({
@@ -151,7 +166,7 @@ test('removeQueue closes the temp channel on success too', async () => {
 });
 
 test('healthCheck loop stops after closeChannel and does not keep firing or throw', async () => {
-  // (src/amqp.js, healthCheck):
+  // (src/amqp.ts, healthCheck):
   // FIXED: closeChannel/closeConnection cancel the recursive healthCheck loop,
   // so the ~200 ms chain short-circuits instead of running until the closed
   // channel throws (which used to make graceful shutdown flaky).
@@ -160,7 +175,7 @@ test('healthCheck loop stops after closeChannel and does not keep firing or thro
   let closed = false;
   let healthCheckCalls = 0;
   const channel = {
-    assertQueue: /** @param {*} name */ async (name) => {
+    assertQueue: async (name: string) => {
       if (name === 'HEALTHCHECK') {
         healthCheckCalls += 1;
         if (closed) {
@@ -201,7 +216,7 @@ test('happy path: consumeChunk returns two distinct messages', async () => {
     checkQueue: async () => ({messageCount: messages.length}),
     get: async () => messages.shift()
   });
-  const {headers, records, messages: got} = await amqpOperator.consumeChunk(QUEUE, true);
+  const {headers, records, messages: got} = (await amqpOperator.consumeChunk(QUEUE, true)) as QueueItemRecordPayload;
   assert.equal(got.length, 2);
   assert.equal(records.length, 2);
   assert.deepStrictEqual(headers, {from: 'TEST'});
@@ -225,7 +240,7 @@ test('checkQueue style one returns the {headers, records, messages} form when to
     assertQueue: async () => ({messageCount: 1}),
     get: async () => message
   });
-  const {headers, records, messages} = await amqpOperator.checkQueue({queue: QUEUE, style: 'one', toRecord: true});
+  const {headers, records, messages} = (await amqpOperator.checkQueue({queue: QUEUE, style: 'one', toRecord: true})) as QueueItemRecordPayload;
   assert.deepStrictEqual(headers, {from: 'TEST'});
   assert.equal(records.length, 1);
   assert.strictEqual(messages.length, 1);
@@ -264,7 +279,7 @@ test('checkQueue style basic returns a chunk of records and messages when the qu
     checkQueue: async () => ({messageCount: messages.length}),
     get: async () => messages.shift()
   });
-  const {headers, records, messages: got} = await amqpOperator.checkQueue({queue: QUEUE, style: 'basic', toRecord: true});
+  const {headers, records, messages: got} = (await amqpOperator.checkQueue({queue: QUEUE, style: 'basic', toRecord: true})) as QueueItemRecordPayload;
   assert.deepStrictEqual(headers, {from: 'TEST'});
   assert.equal(records.length, 2);
   assert.equal(got.length, 2);
@@ -283,8 +298,7 @@ test('checkQueue rejects with a 500 ApiError for an unknown style', async () => 
 });
 
 test('checkQueue purges the queue before returning the style result', async () => {
-  /** @type {any[]} */
-  const purgeCalls = [];
+  const purgeCalls: any[] = [];
   let assertCalls = 0;
   const amqpOperator = await makeOperator({
     assertQueue: async () => {
@@ -292,7 +306,7 @@ test('checkQueue purges the queue before returning the style result', async () =
       // first call (before the purge) reports 3 pending, after the purge 0
       return assertCalls === 1 ? {messageCount: 3} : {messageCount: 0};
     },
-    purgeQueue: /** @param {*} name */ async (name) => {
+    purgeQueue: async (name: string) => {
       purgeCalls.push(name);
     }
   });
@@ -315,7 +329,7 @@ test('consumeOne returns the plain message when toRecord is false', async () => 
 test('consumeOne returns the {headers, records, messages} form when toRecord is true', async () => {
   const message = makeMessage('c1', 1);
   const amqpOperator = await makeOperator({get: async () => message});
-  const {headers, records, messages} = await amqpOperator.consumeOne(QUEUE, true);
+  const {headers, records, messages} = (await amqpOperator.consumeOne(QUEUE, true)) as QueueItemRecordPayload;
   assert.deepStrictEqual(headers, {from: 'TEST'});
   assert.equal(records.length, 1);
   assert.strictEqual(messages.length, 1);
@@ -347,7 +361,7 @@ test('consumeChunk returns {headers, messages} without records when toRecord is 
     checkQueue: async () => ({messageCount: messages.length}),
     get: async () => messages.shift()
   });
-  const {headers, messages: got} = await amqpOperator.consumeChunk(QUEUE, false);
+  const {headers, messages: got} = (await amqpOperator.consumeChunk(QUEUE, false)) as QueueItemMessagePayload;
   assert.deepStrictEqual(headers, {from: 'TEST'});
   assert.equal(got.length, 2);
 });
@@ -366,11 +380,10 @@ test('consumeChunk rejects when the amqplib checkQueue throws a plain Error', as
 // ---------------------------------------------------------------------------
 
 test('ackMessages acks every message on the channel', async () => {
-  /** @type {any[]} */
-  const acked = [];
+  const acked: Message[] = [];
   const messages = [makeMessage('c1', 1), makeMessage('c2', 2)];
   const amqpOperator = await makeOperator({
-    ack: /** @param {*} message */ (message) => {
+    ack: (message: Message) => {
       acked.push(message);
     }
   });
@@ -379,11 +392,10 @@ test('ackMessages acks every message on the channel', async () => {
 });
 
 test('nackMessages nacks every message on the channel', async () => {
-  /** @type {any[]} */
-  const nacked = [];
+  const nacked: Message[] = [];
   const messages = [makeMessage('c1', 1), makeMessage('c2', 2)];
   const amqpOperator = await makeOperator({
-    nack: /** @param {*} message */ (message) => {
+    nack: (message: Message) => {
       nacked.push(message);
     }
   });
@@ -396,10 +408,9 @@ test('nackMessages nacks every message on the channel', async () => {
 // ---------------------------------------------------------------------------
 
 test('sendToQueue sends the JSON body with correlationId, persistent and headers options', async () => {
-  /** @type {any[]} */
-  const sent = [];
+  const sent: {queue: string, content: Buffer, options: Record<string, unknown>}[] = [];
   const amqpOperator = await makeOperator({
-    sendToQueue: /** @param {*} queue @param {*} content @param {*} options */ async (queue, content, options) => {
+    sendToQueue: async (queue: string, content: Buffer, options: Record<string, unknown>) => {
       sent.push({queue, content, options});
     }
   });
@@ -411,10 +422,10 @@ test('sendToQueue sends the JSON body with correlationId, persistent and headers
     data
   });
   assert.equal(sent.length, 1);
-  assert.equal(sent[0].queue, QUEUE);
-  assert.ok(Buffer.isBuffer(sent[0].content));
-  assert.deepStrictEqual(JSON.parse(sent[0].content.toString()), {data});
-  assert.deepStrictEqual(sent[0].options, {correlationId: 'cid-1', persistent: true, headers: {h: 1}});
+  assert.equal(sent[0]?.queue, QUEUE);
+  assert.ok(sent[0] && Buffer.isBuffer(sent[0].content));
+  assert.deepStrictEqual(JSON.parse(sent[0]?.content.toString() ?? ''), {data});
+  assert.deepStrictEqual(sent[0]?.options, {correlationId: 'cid-1', persistent: true, headers: {h: 1}});
 });
 
 test('sendToQueue rejects with a 500 ApiError when the queue is undefined', async () => {
@@ -448,8 +459,7 @@ test('checkQueue rejects with a 500 ApiError when the queue is an empty string',
 // ---------------------------------------------------------------------------
 
 test('closeConnection closes the connection and the operator resolves', async () => {
-  /** @type {any[]} */
-  const closed = [];
+  const closed: any[] = [];
   const channel = makeChannel();
   const amqpOperator = await createAmqp(DUMMY_URL, false, {
     connection: {
@@ -465,14 +475,13 @@ test('closeConnection closes the connection and the operator resolves', async ()
 });
 
 test('healthCheck error arriving after cancel does not rethrow and stops the loop', async () => {
-  /** @type {*} */
-  let rejectAssert;
+  let rejectAssert: ((reason?: unknown) => void) | undefined;
   const pending = new Promise((_, reject) => {
     rejectAssert = reject;
   });
   let healthCheckCalls = 0;
   const channel = makeChannel({
-    assertQueue: /** @param {*} name */ async (name) => {
+    assertQueue: async (name: string) => {
       if (name === 'HEALTHCHECK') {
         healthCheckCalls += 1;
         return pending;
@@ -487,7 +496,9 @@ test('healthCheck error arriving after cancel does not rethrow and stops the loo
   // by now the loop is suspended on the pending assertQueue call;
   // cancel first, then let the error arrive so the catch sees the flag already cleared
   await amqpOperator.closeChannel();
-  rejectAssert(new Error('amqp down after close'));
+  if (rejectAssert) {
+    rejectAssert(new Error('amqp down after close'));
+  }
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(healthCheckCalls, 1, 'no further health checks after cancel');
 });
@@ -528,7 +539,7 @@ test('healthCheck error while running rethrows into the un-awaited loop promise'
     process.stdout.write(ok ? 'OK' : 'FAIL:' + JSON.stringify(captured.map((e) => String(e && e.message))));
     process.exit(ok ? 0 : 1);
   `;
-  const {code, stdout} = await new Promise((resolve) => {
+  const {code, stdout} = await new Promise<{code: number | string, stdout: string}>((resolve) => {
     const child = execFile(process.execPath, ['--input-type=module', '-e', script], (err, out) => {
       resolve({code: err ? (err.code ?? 1) : 0, stdout: out ?? ''});
     });
