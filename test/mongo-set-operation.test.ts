@@ -4,15 +4,14 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-blob-size:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-operation:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-blob-size'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -40,18 +39,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-blob-size'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -68,8 +63,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -77,19 +71,22 @@ async function callback(callbackParams) {
     return;
   }
 
-  if (functionName === 'setBlobSize') {
+  if (functionName === 'setOperation') {
     try {
-      debug(`setBlobSize`);
+      debug(`setOperation`);
       debug(JSON.stringify(params));
-      //{correlationId,  blobSize}
-      const opResult = await mongoOperator.setBlobSize(params);
-      debug(`setBlobSize result: ${JSON.stringify(opResult)}`);
+      //{correlationId, operation}
+      const opResult = await mongoOperator.setOperation(params);
+      debug(`setOperation result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }
+

@@ -3,10 +3,9 @@ import {READERS} from '@natlibfi/fixura';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import generateTests from '@natlibfi/fixugen';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
-import createMongoLogOperator from '../src/mongoLog.js';
+import createMongoLogOperator from '../src/mongoLog.ts';
 
-/** @type {*} */
-let mongoFixtures;
+let mongoFixtures: any;
 
 generateTests({
   callback,
@@ -30,7 +29,7 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
+  mongoFixtures = await mongoFixturesFactory({
     rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
@@ -41,17 +40,14 @@ async function initMongofixtures() {
     // production shape.
     format: {
       logs: {
-        creationTime: /** @param {*} v */ v => new Date(v),
-        modificationTime: /** @param {*} v */ v => new Date(v)
+        creationTime: v => new Date(String(v)),
+        modificationTime: v => new Date(String(v))
       }
     }
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams getFixture, functionName, params, preFillDb (false), expectError (false), expectedErrorStatus (500)
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -180,11 +176,7 @@ async function dumpRemaining() {
 // Convert BSON Dates in the result to ISO strings and drop _id, so the result
 // can be compared with the plain strings in expectedResult.json /
 // expectedRemaining.json (fixura-mongo dump also strips _id)
-/**
- * @param {any[]} docs
- * @returns {any[]}
- */
-function normalizeDates(docs) {
+function normalizeDates(docs: any[]): any[] {
   return docs.map(doc => {
     const fixed = {...doc};
     delete fixed._id;
@@ -197,4 +189,3 @@ function normalizeDates(docs) {
     return fixed;
   });
 }
-

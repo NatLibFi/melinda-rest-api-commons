@@ -4,15 +4,15 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-operation:test');
+
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:add-blob-size:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'add-blob-size'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -40,27 +40,24 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-operation'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'add-blob-size'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
-  getFixture,
-  functionName,
-  params,
-  expectModificationTime = false,
-  preFillDb = false,
-  expectedToThrow = false,
-  expectedErrorMessage = '',
-  expectedErrorStatus = ''
+    getFixture,
+    functionName,
+    params,
+    expectModificationTime = false,
+    preFillDb = false,
+    expectedToThrow = false,
+    expectedErrorMessage = '',
+    expectedErrorStatus = ''
+
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -68,8 +65,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -77,22 +73,19 @@ async function callback(callbackParams) {
     return;
   }
 
-  if (functionName === 'setOperation') {
+  if (functionName === 'addBlobSize') {
     try {
-      debug(`setOperation`);
+      debug(`addBlobSize`);
       debug(JSON.stringify(params));
-      //{correlationId, operation}
-      const opResult = await mongoOperator.setOperation(params);
-      debug(`setOperation result: ${JSON.stringify(opResult)}`);
+      //{correlationId}
+      const opResult = await mongoOperator.addBlobSize(params);
+      debug(`addBlobSize result: ${JSON.stringify(opResult)}`);
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
-
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
-
   throw new Error(`Unknown functionName: ${functionName}`);
 }
-

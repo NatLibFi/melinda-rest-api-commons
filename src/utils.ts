@@ -81,7 +81,7 @@ export function createImportJobState(operation: string, state: string, queryImpo
 
 // responsePayload, responseStatus and the mongoOperator are dynamic shapes
 // (any) on purpose, matching the JSDoc baseline; tighten when the calling
-// services and mongo.js are converted
+// services and mongo.ts are converted
 export function createRecordResponseItem(params: {
   responsePayload?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   responseStatus: number | string;

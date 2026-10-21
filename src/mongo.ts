@@ -1,6 +1,8 @@
 /* eslint-disable max-lines */
 
 import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
+import type {Collection, Filter, GridFSFile, UpdateFilter, WithId} from 'mongodb';
+import type {Readable} from 'stream';
 import httpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
@@ -9,30 +11,51 @@ import {logError, assertString, assertNumber, assertImportJobStateFilter} from '
 
 //import isDeepStrictEqual from 'util';
 
+// The persisted importJobState values always come from the as-const
+// IMPORT_JOB_STATE object (setImportJobState rejects any other string), so
+// the field uses the constant's literal value types instead of free-form
+// string
+export type ImportJobStateValue = (typeof IMPORT_JOB_STATE)[keyof typeof IMPORT_JOB_STATE];
+
 /**
- * A queueItem document in the queue collection
- * @typedef {{
- *   correlationId: string,
- *   cataloger?: string,
- *   oCatalogerIn?: string,
- *   operation?: string,
- *   operations: string[],
- *   contentType?: string,
- *   recordLoadParams?: unknown,
- *   operationSettings: {prio?: boolean, noStream?: boolean},
- *   queueItemState: string,
- *   importJobState: {CREATE: string, UPDATE: string, FIX: string},
- *   blobSize?: number,
- *   records?: unknown[],
- *   handledIds?: string[],
- *   rejectedIds?: string[],
- *   messages?: unknown[],
- *   errorMessage?: string,
- *   errorStatus?: string,
- *   creationTime?: Date,
- *   modificationTime?: Date
- * }} QueueItem
+ * A queueItem document in the queue collection.
+ *
+ * Free-form string fields (queueItemState, operation, operations,
+ * cataloger, ...) stay plain string: callers may pass any of the
+ * as-const constant values, and legacy documents may hold values that
+ * no longer exist in the constants. The persisted `records` and
+ * `messages` arrays are unknown[] on purpose: they store heterogeneous
+ * persisted data (recordResponseItems, message payloads), not the
+ * in-flight AMQP payload shapes (amqp.ts QueueItemRecordPayload /
+ * QueueItemMessagePayload wrap amqplib Message objects that are never
+ * persisted). `errorStatus` is string | number: the timeout path stores
+ * an httpStatus number (408), other paths store strings.
  */
+export interface QueueItem {
+  correlationId: string;
+  cataloger?: string;
+  oCatalogerIn?: string;
+  operation?: string;
+  operations: string[];
+  contentType?: string;
+  recordLoadParams?: unknown;
+  operationSettings: {prio?: boolean, noStream?: boolean};
+  queueItemState: string;
+  importJobState: {
+    CREATE: ImportJobStateValue;
+    UPDATE: ImportJobStateValue;
+    FIX: ImportJobStateValue;
+  };
+  blobSize?: number;
+  records?: unknown[];
+  handledIds?: string[];
+  rejectedIds?: string[];
+  messages?: unknown[];
+  errorMessage?: string;
+  errorStatus?: string | number;
+  creationTime?: Date;
+  modificationTime?: Date;
+}
 
 /* QueueItem:
 {
@@ -63,15 +86,155 @@ import {logError, assertString, assertNumber, assertImportJobStateFilter} from '
 }
 */
 
+export interface CreatePrioParams {
+  correlationId: string;
+  cataloger: string;
+  oCatalogerIn: string;
+  operation: string;
+  operationSettings?: Record<string, unknown>;
+}
+
+export interface CreateBulkParams {
+  correlationId: string;
+  cataloger: string;
+  oCatalogerIn: string;
+  operation: string;
+  contentType: string;
+  recordLoadParams: unknown;
+  stream?: Readable;
+  operationSettings?: Record<string, unknown>;
+}
+
+/**
+ * The normalized return shape of createBulk (both the stream and the
+ * no-stream paths return the same shape)
+ */
+export interface CreateBulkResult {
+  correlationId: string;
+  acknowledged: boolean;
+  queueItemState: string;
+}
+
+export interface CheckAndSetStateParams {
+  correlationId: string;
+  state: string;
+  errorMessage?: unknown;
+  errorStatus?: unknown;
+}
+
+export interface CheckAndSetImportJobStateParams {
+  correlationId: string;
+  operation: string;
+  importJobState: string;
+}
+
+/**
+ * Discriminated result of checkAndSetState / checkAndSetImportJobState:
+ * 'updated' - state was set, 'timeout' - item was aborted by
+ * checkTimeOut, 'unchanged' - state was ABORT/ERROR/DONE already or the
+ * item no longer exists
+ */
+export interface CheckAndSetResult {
+  status: 'updated' | 'timeout' | 'unchanged';
+  queueItem: WithId<QueueItem> | null;
+}
+
+/**
+ * Trusted internal query object built by the calling service (limit, skip
+ * and Mongo query operators). Callers must not splice raw user input into
+ * it: its keys may legitimately use dot notation and $-operators.
+ */
+export interface QueryParams {
+  limit?: number | string;
+  skip?: number | string;
+  [key: string]: unknown;
+}
+
+export interface ShowParams {
+  showAll?: boolean | 0;
+  showOperations?: boolean | 0;
+  showOperationSettings?: boolean | 0;
+  showRecordLoadParams?: boolean | 0;
+  showImportJobState?: boolean | 0;
+}
+
+export interface QueryByIdParams {
+  correlationId: string;
+  checkModTime?: boolean;
+}
+
+export interface CheckTimeOutParams {
+  correlationId: string;
+  operation?: string;
+  importJobState?: string;
+}
+
+export interface GetOneParams {
+  queueItemState?: string;
+  importJobState?: Record<string, unknown>;
+}
+
+export interface SetStateParams {
+  correlationId: string;
+  state: string;
+  errorMessage?: unknown;
+  errorStatus?: unknown;
+}
+
+export interface SetImportJobStateParams {
+  correlationId: string;
+  operation: string;
+  importJobState: string;
+}
+
+export interface PushIdsParams {
+  correlationId: string;
+  handledIds: string[];
+  rejectedIds: string[];
+}
+
+export interface PushMessagesParams {
+  correlationId: string;
+  messages: unknown[];
+  messageField?: string;
+}
+
+/**
+ * The Mongo operator object returned by the factory
+ */
+export interface MongoOperator {
+  createPrio: (params: CreatePrioParams) => Promise<void>;
+  createBulk: (params: CreateBulkParams) => Promise<CreateBulkResult | undefined>;
+  checkAndSetState: (params: CheckAndSetStateParams) => Promise<CheckAndSetResult>;
+  checkAndSetImportJobState: (params: CheckAndSetImportJobStateParams) => Promise<CheckAndSetResult>;
+  query: (params: QueryParams, showParams?: ShowParams) => Promise<WithId<QueueItem>[]>;
+  createProjection: (showParams?: ShowParams) => Record<string, number>;
+  queryById: (params: QueryByIdParams) => Promise<WithId<QueueItem> | null>;
+  checkTimeOut: (params: CheckTimeOutParams) => Promise<boolean>;
+  remove: (params: {correlationId: string}) => Promise<{removed: boolean, deletedContent: boolean}>;
+  readContent: (correlationId: string) => Promise<{contentType: string | undefined, readStream: Readable}>;
+  removeContent: (params: {correlationId: string}) => Promise<boolean>;
+  getOne: (params: GetOneParams) => Promise<WithId<QueueItem> | null>;
+  getStream: (correlationId: string) => Promise<Readable>;
+  setState: (params: SetStateParams) => Promise<WithId<QueueItem> | null>;
+  setImportJobState: (params: SetImportJobStateParams) => Promise<WithId<QueueItem> | null>;
+  pushIds: (params: PushIdsParams) => Promise<void>;
+  pushMessages: (params: PushMessagesParams) => Promise<void>;
+  setOperation: (params: {correlationId: string, operation: string}) => Promise<WithId<QueueItem>>;
+  setOperations: (params: {correlationId: string, addOperation: string, removeOperation?: string}) => Promise<WithId<QueueItem>>;
+  addBlobSize: (params: {correlationId: string}) => Promise<WithId<QueueItem> | null>;
+  setBlobSize: (params: {correlationId: string, blobSize: number}) => Promise<WithId<QueueItem> | null>;
+}
+
 /**
  * Create Mongo operator
- * @param {string} MONGO_URI mongo connection string
- * @param {string} collection queue collection name
- * @param {string} db mongo db name, defaults 'rest-api'
- * @param {{operator?: unknown, gridFSBucket?: unknown}} deps optional dependencies, defaults {}. deps.operator (a Mongo collection) and deps.gridFSBucket may be injected by unit tests
- * @returns {Promise<*>} the Mongo operator object
+ * @param MONGO_URI mongo connection string
+ * @param collection queue collection name
+ * @param db mongo db name, defaults 'rest-api'
+ * @param deps optional dependencies, defaults {}. deps.operator (a Mongo collection) and deps.gridFSBucket may be injected by unit tests
+ * @returns the Mongo operator object
  */
-export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}) {
+export default async function (MONGO_URI: string, collection: string, db = 'rest-api', deps: {operator?: unknown, gridFSBucket?: unknown} = {}): Promise<MongoOperator> {
   const logger = createLogger();
   // the checkTimeOut "no progress" window used to be a hardcoded
   // 1 minute, which is too short for large bulk imports (README benchmark:
@@ -80,23 +243,24 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // that writes (pushMessages / pushIds / setImportJobState / addBlobSize /
   // setBlobSize / setState ...) refreshes modificationTime, so the timeout
   // only triggers when there is genuinely no progress.
-  const timeoutMinutes = Number.parseInt(/** @type {*} */ (process.env['MONGO_TIMEOUT_MINUTES']), 10) || 1;
+  const timeoutMinutes = Number.parseInt(process.env['MONGO_TIMEOUT_MINUTES'] as string, 10) || 1;
   logger.debug(`checkTimeOut window: ${timeoutMinutes} minute(s) (override with MONGO_TIMEOUT_MINUTES)`);
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
 
   // Connect to mongo (MONGO), unless operator and gridFSBucket are both
-  // injected via deps (used by unit tests to avoid a real connection)
+  // injected via deps (used by unit tests to avoid a real connection).
+  // The deps values are cast non-nullable (the runtime values may be
+  // undefined until the connect branch assigns them), which also keeps
+  // the closure-typed functions below from seeing possibly-undefined.
   const stubbed = Boolean(deps.operator) && Boolean(deps.gridFSBucket);
-  /** @type {import('mongodb').GridFSBucket} */
-  let gridFSBucket = /** @type {import('mongodb').GridFSBucket} */ (deps.gridFSBucket);
-  /** @type {import('mongodb').Collection<QueueItem>} */
-  let operator = /** @type {import('mongodb').Collection<QueueItem>} */ (deps.operator);
+  let gridFSBucket: GridFSBucket = deps.gridFSBucket as GridFSBucket;
+  let operator: Collection<QueueItem> = deps.operator as Collection<QueueItem>;
   if (!stubbed) {
     const client = await MongoClient.connect(MONGO_URI);
     const realDb = client.db(db);
     gridFSBucket = gridFSBucket ?? new GridFSBucket(realDb, {bucketName: collection});
-    operator = operator ?? realDb.collection(collection);
+    operator = operator ?? realDb.collection<QueueItem>(collection);
   }
   debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
@@ -104,9 +268,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Create a prio queueItem
-   * @param {{correlationId: string, cataloger: string, oCatalogerIn: string, operation: string, operationSettings?: Record<string, unknown>}} params
+   * @param params
    */
-  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
+  async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}: CreatePrioParams) {
     debugDev('createPrio');
     const time = new Date();
     const newQueueItem = {
@@ -115,10 +279,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       operation,
       operations: [operation],
       oCatalogerIn,
-      operationSettings: /** @type {{prio?: boolean, noStream?: boolean}} */ ({
+      operationSettings: {
         prio: true,
         ...operationSettings
-      }),
+      } as QueueItem['operationSettings'],
       queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION,
       blobSize: 1,
       importJobState: {
@@ -142,9 +306,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       }
       // TEST-COVERAGE: this error is not (currently) tested
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
-    } catch (/** @type {unknown} */ error) {
+    } catch (error) {
       // TEST-COVERAGE: this error is not (currently) tested
-      const apiError = /** @type {ApiError} */ (error);
+      const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -153,10 +317,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Create a bulk queueItem, with or without an input content stream
-   * @param {{correlationId: string, cataloger: string, oCatalogerIn: string, operation: string, contentType: string, recordLoadParams: unknown, stream?: import('stream').Readable, operationSettings?: Record<string, unknown>}} params
-   * @returns {Promise<*>} {correlationId, acknowledged, queueItemState} on success
+   * @param params
+   * @returns {correlationId, acknowledged, queueItemState} on success
    */
-  async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}) {
+  async function createBulk({correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}: CreateBulkParams) {
     const time = new Date();
     const newQueueItem = {
       correlationId,
@@ -164,10 +328,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       oCatalogerIn,
       operation,
       operations: [operation],
-      operationSettings: /** @type {{prio?: boolean, noStream?: boolean}} */ ({
+      operationSettings: {
         prio: false,
         ...operationSettings
-      }),
+      } as QueueItem['operationSettings'],
       contentType,
       recordLoadParams,
       queueItemState: stream ? QUEUE_ITEM_STATE.VALIDATOR.UPLOADING : QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS,
@@ -207,7 +371,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
               reject(error);
             })
             .on('data', chunk => outputStream.write(chunk))
-            .on('end', () => outputStream.end(undefined, /** @type {*} */ (undefined), () => {
+            .on('end', () => outputStream.end(undefined, () => {
               resolve(correlationId);
             }));
         });
@@ -221,8 +385,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         // normalize the return shape to the same one the no-stream
         // path returns - do not leak the driver InsertOneResult
         return {correlationId, acknowledged: result.acknowledged, queueItemState: newQueueItem.queueItemState};
-      } catch (/** @type {unknown} */ error) {
-        const apiError = /** @type {ApiError} */ (error);
+      } catch (error) {
+        const apiError = error as ApiError;
         const errorMessage = apiError.payload || apiError.message || '';
         logError(error);
         // best-effort cleanup of a partial GridFS file
@@ -233,17 +397,17 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
     /**
      * Remove a partial GridFS upload file if the stream upload failed
-     * @param {string} correlationId
+     * @param correlationId
      */
-    async function removePartialContent(correlationId) {
+    async function removePartialContent(correlationId: string) {
       try {
         const files = await gridFSBucket.find({filename: correlationId}).toArray();
         for (const file of files) {
           await gridFSBucket.delete(file._id);
           logger.debug(`mongo/createBulk: removed partial GridFS file for ${correlationId}`);
         }
-      } catch (/** @type {unknown} */ cleanupError) {
-        const apiError = /** @type {ApiError} */ (cleanupError);
+      } catch (cleanupError) {
+        const apiError = cleanupError as ApiError;
         logger.debug(`mongo/createBulk: partial GridFS cleanup failed for ${correlationId}: ${apiError.message}`);
       }
     }
@@ -261,9 +425,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         }
         // TEST-COVERAGE: this error is not (currently) tested
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
-      } catch (/** @type {unknown} */ error) {
+      } catch (error) {
         // TEST-COVERAGE: this error is not (currently) tested
-        const apiError = /** @type {ApiError} */ (error);
+        const apiError = error as ApiError;
         const errorMessage = apiError.payload || apiError.message || '';
         logError(error);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -286,10 +450,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   //                                       or the item no longer exists
   /**
    * Check the queueItem has not waited too long and set its state
-   * @param {{correlationId: string, state: string, errorMessage?: unknown, errorStatus?: unknown}} params
-   * @returns {Promise<{status: string, queueItem: QueueItem|null}>} discriminated result: status 'updated' | 'timeout' | 'unchanged'
+   * @param params
+   * @returns discriminated result: status 'updated' | 'timeout' | 'unchanged'
    */
-  async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
+  async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}: CheckAndSetStateParams): Promise<CheckAndSetResult> {
     assertString(correlationId, 'correlationId');
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
@@ -312,10 +476,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // returns a discriminated result, see checkAndSetState
   /**
    * Check the queueItem has not waited too long and set its importJobState
-   * @param {{correlationId: string, operation: string, importJobState: string}} params
-   * @returns {Promise<{status: string, queueItem: QueueItem|null}>} discriminated result, see checkAndSetState
+   * @param params
+   * @returns discriminated result, see checkAndSetState
    */
-  async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
+  async function checkAndSetImportJobState({correlationId, operation, importJobState}: CheckAndSetImportJobStateParams): Promise<CheckAndSetResult> {
     assertString(correlationId, 'correlationId');
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
@@ -333,11 +497,11 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Query queueItems with a trusted internal query object
-   * @param {*} params trusted query object built by the calling service (limit, skip and Mongo query operators)
-   * @param {{showAll?: boolean|0, showOperations?: boolean|0, showOperationSettings?: boolean|0, showRecordLoadParams?: boolean|0, showImportJobState?: boolean|0}} showParams which internal fields to include in the projection
-   * @returns {Promise<import('mongodb').WithId<QueueItem>[]|unknown[]>} query result documents
+   * @param params trusted query object built by the calling service (limit, skip and Mongo query operators)
+   * @param showParams which internal fields to include in the projection
+   * @returns query result documents
    */
-  async function query(params, showParams = {}) {
+  async function query(params: QueryParams, showParams: ShowParams = {}) {
     logger.debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
@@ -346,9 +510,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     // callers must not splice raw user input into it. Its keys may legitimately
     // use dot notation and $-operators, which is why rest is not
     // field-sanitized here.
-    const result = await operator.find(rest, {projection: createProjection(showParams)})
-      .limit(parseInt(limit, 10))
-      .skip(parseInt(skip, 10))
+    const result = await operator.find(rest as Filter<WithId<QueueItem>>, {projection: createProjection(showParams)})
+      .limit(parseInt(String(limit), 10))
+      .skip(parseInt(String(skip), 10))
       .toArray();
     logger.debug(`Query result: ${result.length > 0 ? 'Found!' : 'Not found!'}`);
     logger.silly(`${JSON.stringify(result)}`);
@@ -362,15 +526,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Build the Mongo projection for query (internal fields hidden unless shown)
-   * @param {{showAll?: boolean|0, showOperations?: boolean|0, showOperationSettings?: boolean|0, showRecordLoadParams?: boolean|0, showImportJobState?: boolean|0}} showParams
-   * @returns {{_id: number, [key: string]: number}} the projection object
+   * @param showParams
+   * @returns the projection object
    */
-  function createProjection(showParams = {}) {
+  function createProjection(showParams: ShowParams = {}) {
     logger.silly(`Creating projection for query: ${JSON.stringify(showParams)}`);
     debug(`Creating projection for query: ${JSON.stringify(showParams)}`);
     const {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
-    /** @type {Record<string, boolean|0>} */
-    const combinedShowParams = {
+    const combinedShowParams: Record<string, boolean | 0> = {
       showAll,
       showOperations,
       showOperationSettings,
@@ -384,7 +547,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     // NOTE: the show-* params are parsed with the shared parseBoolean, whose
     // semantics are: undefined -> false, numeric strings via Boolean(Number(v))
     // ('0' -> false, '1' -> true), other non-empty non-'false' strings -> true.
-    if (parseBoolean(/** @type {*} */ (showAll))) {
+    // The runtime values (boolean | 0) are outside parseBoolean's declared
+    // string|undefined input type - cast at the boundary, runtime behaviour
+    // is unchanged.
+    if (parseBoolean(showAll as unknown as string | undefined)) {
       //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
@@ -392,19 +558,18 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       };
     }
 
-    /** @type {Record<string, string>} */
     const showParamToField = {
       'showOperations': 'operations',
       'showOperationSettings': 'operationSettings',
       'showRecordLoadParams': 'recordLoadParams',
       'showImportJobState': 'importJobState'
-    };
+    } as const;
 
-    const result = /** @type {string[]} */ (Object.keys(combinedShowParams)
+    const result: string[] = Object.keys(combinedShowParams)
       //.filter(param => param !== 'showAll' && combinedShowParams[param] !== true && combinedShowParams[param] !== 1 && combinedShowParams[param] !== '1')
-      .filter(param => param !== 'showAll' && !parseBoolean(/** @type {*} */ (combinedShowParams[param])))
-      .filter(param => showParamToField[param])
-      .map((param) => showParamToField[param]));
+      .filter(param => param !== 'showAll' && !parseBoolean(combinedShowParams[param] as unknown as string | undefined))
+      .filter((param): param is keyof typeof showParamToField => param in showParamToField)
+      .map(param => showParamToField[param]);
     logger.silly(`We want to exclude from projection: ${JSON.stringify(result)}`);
     debug(`We want to exclude from projection: ${JSON.stringify(result)}`);
 
@@ -424,10 +589,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // Note: previous versions returned queueItem *before* its state/queueItemState is timeOuted
   /**
    * Get a queueItem by correlationId
-   * @param {{correlationId: string, checkModTime?: boolean}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the queueItem or null
+   * @param params
+   * @returns the queueItem or null
    */
-  async function queryById({correlationId, checkModTime = false}) {
+  async function queryById({correlationId, checkModTime = false}: QueryByIdParams) {
     assertString(correlationId, 'correlationId');
     if (checkModTime) {
       debug(`queryById checkModTime: ${checkModTime}`);
@@ -448,10 +613,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Check that the queueItem has not waited too long; abort it when it has
-   * @param {{correlationId: string, operation?: string, importJobState?: string}} params
-   * @returns {Promise<boolean>} true when the item is fresh, false when aborted/terminal/not found
+   * @param params
+   * @returns true when the item is fresh, false when aborted/terminal/not found
    */
-  async function checkTimeOut({correlationId}) {
+  async function checkTimeOut({correlationId}: CheckTimeOutParams) {
     assertString(correlationId, 'correlationId');
     const queueItem = await operator.findOne({correlationId});
     if (!queueItem) {
@@ -470,15 +635,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
 
     // configurable "no progress" window (default 1 minute)
-    const timeoutTime = new Date(new Date(/** @type {Date} */ (modificationTime)).getTime() + timeoutMinutes * 60000);
+    const timeoutTime = new Date(new Date(modificationTime as Date).getTime() + timeoutMinutes * 60000);
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
     if (timeoutTime < new Date()) {
       // the as-const constants yield literal-typed values, so the terminal
       // states are widened to string[] to compare against the free-form
       // importJobState strings read from Mongo documents
-      /** @type {string[]} */
-      const finalImportJobStates = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
+      const finalImportJobStates: string[] = [IMPORT_JOB_STATE.ABORT, IMPORT_JOB_STATE.DONE, IMPORT_JOB_STATE.EMPTY, IMPORT_JOB_STATE.ERROR];
       if (!finalImportJobStates.includes(importJobState.CREATE)) {
         await setImportJobState({correlationId, operation: 'CREATE', importJobState: IMPORT_JOB_STATE.ABORT});
       }
@@ -501,10 +665,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Remove a queueItem and its GridFS content
-   * @param {{correlationId: string}} params
-   * @returns {Promise<{removed: boolean, deletedContent: boolean}>} what was actually removed
+   * @param params
+   * @returns what was actually removed
    */
-  async function remove(params) {
+  async function remove(params: {correlationId: string}) {
     logger.silly(`${JSON.stringify(params)}`);
     logger.info(`Removing from Mongo (${collection}) id: ${params.correlationId}`);
     debug(`${JSON.stringify(params)}`);
@@ -522,7 +686,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       // callers need to tell "nothing was there" apart from "a queueItem was
       // deleted" (the old bare `true` said both)
       return {removed: deleteResult.deletedCount > 0, deletedContent: removedContent};
-    } catch (/** @type {unknown} */ err) {
+    } catch (err) {
       // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
         debug(err);
@@ -535,17 +699,17 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         logger.error(err.message);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
       }
-      const driverError = /** @type {MongoDriverError} */ (err);
+      const driverError = err as Error;
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, driverError.message);
     }
   }
 
   /**
    * Read the GridFS content of a queueItem
-   * @param {string} correlationId
-   * @returns {Promise<{contentType: string|undefined, readStream: import('stream').Readable}>} content type + download stream
+   * @param correlationId
+   * @returns content type + download stream
    */
-  async function readContent(correlationId) {
+  async function readContent(correlationId: string) {
     logger.info(`Reading content from mongo for id: ${correlationId} in ${collection}`);
     debug(`Reading content from mongo for id: ${correlationId} in ${collection}`);
     assertString(correlationId, 'correlationId');
@@ -557,7 +721,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       // createBulk never sets operationSettings.noStream (phantom flag,
       // always undefined). Derive the condition from the GridFS file instead:
       // bulk content is available only when a file was actually uploaded.
-      let files = [];
+      let files: GridFSFile[] = [];
       if (operationSettings.prio === false) {
         files = await gridFSBucket.find({filename: correlationId}).toArray();
       }
@@ -583,10 +747,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Remove the GridFS content of a queueItem
-   * @param {{correlationId: string}} params
-   * @returns {Promise<boolean>} true when a file was deleted, false when there was no content
+   * @param params
+   * @returns true when a file was deleted, false when there was no content
    */
-  async function removeContent(params) {
+  async function removeContent(params: {correlationId: string}) {
     logger.info(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
     debug(`Removing content from mongo for id: ${params.correlationId} in ${collection}`);
     assertString(params.correlationId, 'correlationId');
@@ -597,8 +761,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
     if (result.length > 0) {
       // Note: we assume and handle just one file for filename!
+      // the length check above guarantees result[0] exists
       const [firstBucketResult] = result;
-      const fileId = /** @type {import('mongodb').GridFSFile} */ (firstBucketResult)._id;
+      const fileId = (firstBucketResult as GridFSFile)._id;
 
       await gridFSBucket.delete(fileId);
       return true;
@@ -614,10 +779,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // synchronously before any promise is returned
   /**
    * Get one queueItem filtered by queueItemState and/or importJobState
-   * @param {{queueItemState?: string, importJobState?: Record<string, unknown>}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the queueItem or null
+   * @param params
+   * @returns the queueItem or null
    */
-  async function getOne({queueItemState, importJobState = undefined}) {
+  async function getOne({queueItemState, importJobState = undefined}: GetOneParams) {
     //params example: "queueItemState": "IMPORTER.IN_QUEUE", "importJobState":{"importJobState.UPDATE": "IN_QUEUE"}
     logger.silly(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
     //debug(`queueItemState: ${queueItemState}, importJobState: ${JSON.stringify(importJobState)}`);
@@ -635,30 +800,30 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
       // Just queueItemState
       if (queueItemState && importJobState === undefined) {
-        logger.silly(`Checking DB ${collection} for just ${JSON.stringify(/** @type {{queueItemState: string}} */ (cleanQueueItemState).queueItemState)}`);
-        //debug(`Checking DB ${collection} for just ${JSON.stringify(cleanQueueItemState.queueItemState)}`);
-        return operator.findOne(/** @type {import('mongodb').Filter<import('mongodb').WithId<QueueItem>>} */ ({.../** @type {{queueItemState: string}} */ (cleanQueueItemState)}), options);
+        logger.silly(`Checking DB ${collection} for just ${JSON.stringify(queueItemState)}`);
+        //debug(`Checking DB ${collection} for just ${JSON.stringify(queueItemState)}`);
+        return operator.findOne({queueItemState}, options);
       }
 
       // importJobState
       if (importJobState && queueItemState === undefined) {
         logger.silly(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
         //debug(`Checking DB ${collection} for ${JSON.stringify(importJobState)}`);
-        return operator.findOne(/** @type {import('mongodb').Filter<import('mongodb').WithId<QueueItem>>} */ ({...importJobState}), options);
+        return operator.findOne({...importJobState} as Filter<WithId<QueueItem>>, options);
       }
 
       // importJobState and queueItemState
       if (importJobState && queueItemState) {
         logger.silly(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
         //debug(`Checking DB ${collection} for ${queueItemState} and ${JSON.stringify(importJobState)}`);
-        return operator.findOne(/** @type {import('mongodb').Filter<import('mongodb').WithId<QueueItem>>} */ ({.../** @type {{queueItemState: string}} */ (cleanQueueItemState), ...importJobState}), options);
+        return operator.findOne({...cleanQueueItemState, ...importJobState} as Filter<WithId<QueueItem>>, options);
       }
 
       logger.debug(`getOne not working!`);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Missing parameters, cannot get queueItem');
 
-    } catch (/** @type {unknown} */ error) {
-      const apiError = /** @type {ApiError} */ (error);
+    } catch (error) {
+      const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -674,10 +839,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // 'error' handler.
   /**
    * Get a download stream of the GridFS content of a queueItem
-   * @param {string} correlationId
-   * @returns {Promise<import('stream').Readable>} the content download stream (caller MUST attach an 'error' handler)
+   * @param correlationId
+   * @returns the content download stream (caller MUST attach an 'error' handler)
    */
-  async function getStream(correlationId) {
+  async function getStream(correlationId: string) {
     logger.info(`Forming stream from mongo for ${correlationId} in ${collection}`);
     assertString(correlationId, 'correlationId');
     try {
@@ -688,12 +853,12 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       }
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(correlationId);
-    } catch (/** @type {unknown} */ error) {
+    } catch (error) {
       // TEST-COVERAGE: this error is not (currently) tested
       if (error instanceof ApiError) {
         throw error;
       }
-      const apiError = /** @type {ApiError} */ (error);
+      const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -702,9 +867,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Push handled and rejected ids to a queueItem
-   * @param {{correlationId: string, handledIds: string[], rejectedIds: string[]}} params
+   * @param params
    */
-  async function pushIds({correlationId, handledIds, rejectedIds}) {
+  async function pushIds({correlationId, handledIds, rejectedIds}: PushIdsParams) {
     // validate array inputs before dereferencing .length (guard is
     // outside the try so the 400 is not re-wrapped as a 500)
     if (!Array.isArray(handledIds) || !Array.isArray(rejectedIds)) {
@@ -725,8 +890,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
           rejectedIds: {$each: rejectedIds}
         }
       });
-    } catch (/** @type {unknown} */ error) {
-      const apiError = /** @type {ApiError} */ (error);
+    } catch (error) {
+      const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -735,9 +900,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Push message records to a queueItem field
-   * @param {{correlationId: string, messages: unknown[], messageField?: string}} params
+   * @param params
    */
-  async function pushMessages({correlationId, messages, messageField = 'messages'}) {
+  async function pushMessages({correlationId, messages, messageField = 'messages'}: PushMessagesParams) {
     // validate array input before dereferencing .length (guard is
     // outside the try so the 400 is not re-wrapped as a 500)
     if (!Array.isArray(messages)) {
@@ -750,16 +915,16 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     try {
       await operator.updateOne({
         correlationId
-      }, /** @type {import('mongodb').UpdateFilter<import('mongodb').WithId<QueueItem>>} */ ({
+      }, {
         $set: {
           modificationTime: new Date()
         },
         $push: {
           [messageField]: {$each: messages}
         }
-      }));
-    } catch (/** @type {unknown} */ error) {
-      const apiError = /** @type {ApiError} */ (error);
+      });
+    } catch (error) {
+      const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -768,29 +933,31 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Set the queueItem state (drops undefined errorMessage/errorStatus keys from the update)
-   * @param {{correlationId: string, state: string, errorMessage?: unknown, errorStatus?: unknown}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the updated queueItem or null
+   * @param params
+   * @returns the updated queueItem or null
    */
-  function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
+  function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}: SetStateParams) {
     assertString(correlationId, 'correlationId');
     const errorString = errorMessage || errorStatus ? `, Error message: '${JSON.stringify(errorMessage) || ''}', Error status: '${errorStatus || ''}'` : '';
     logger.info(`Setting queue-item state ${state} for ${correlationId}${errorString} to ${collection}`);
 
     // the state comes in as a free-form string (caller input), so the
-    // as-const values (literal-typed) are widened to string[] for the
-    // membership check
-    const allQueueItemStates = /** @type {string[]} */ ([
-      ...Object.values(QUEUE_ITEM_STATE),
+    // as-const values are collected as string for the membership check
+    // (the nested VALIDATOR/IMPORTER objects are never equal to a state
+    // string, so only the top-level terminal states are enumerated)
+    const allQueueItemStates: string[] = [
+      QUEUE_ITEM_STATE.DONE,
+      QUEUE_ITEM_STATE.ERROR,
+      QUEUE_ITEM_STATE.ABORT,
       ...Object.values(QUEUE_ITEM_STATE.VALIDATOR),
       ...Object.values(QUEUE_ITEM_STATE.IMPORTER)
-    ]);
+    ];
     if (!allQueueItemStates.includes(state)) {
       debug(`Trying to set invalid state ${state}`);
       throw new ApiError(httpStatus.BAD_REQUEST, 'Trying to set invalid state');
     }
 
-    /** @type {Record<string, unknown>} */
-    const updateValues = {
+    const updateValues: Record<string, unknown> = {
       queueItemState: state,
       modificationTime: new Date(),
       errorMessage,
@@ -807,17 +974,17 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     return operator
       .findOneAndUpdate(
         {correlationId},
-        /** @type {import('mongodb').UpdateFilter<import('mongodb').WithId<QueueItem>>} */ ({$set: updateValues}),
+        {$set: updateValues} as UpdateFilter<WithId<QueueItem>>,
         {projection: {_id: 0}, returnDocument: 'after'}
       );
   }
 
   /**
    * Set the importJobState of an operation on a queueItem
-   * @param {{correlationId: string, operation: string, importJobState: string}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the updated queueItem or null
+   * @param params
+   * @returns the updated queueItem or null
    */
-  function setImportJobState({correlationId, operation, importJobState}) {
+  function setImportJobState({correlationId, operation, importJobState}: SetImportJobStateParams) {
 
     // should this also get importJobState as previously created object? {}
     assertString(correlationId, 'correlationId');
@@ -836,36 +1003,41 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
     const newJobState = getNewJobState(operation, importJobState);
 
-
-    /**
-     * Build the dotted importJobState update for one operation
-     * @param {string} operation
-     * @param {string} importJobState
-     * @returns {{'importJobState.CREATE'?: string, 'importJobState.UPDATE'?: string, 'importJobState.FIX'?: string}}
-     */
-    function getNewJobState(operation, importJobState) {
-      if (operation === OPERATIONS.CREATE) {
-        return {'importJobState.CREATE': importJobState};
-      }
-      if (operation === OPERATIONS.UPDATE) {
-        return {'importJobState.UPDATE': importJobState};
-      }
-      if (operation === OPERATIONS.FIX) {
-        return {'importJobState.FIX': importJobState};
-      }
-      // Unreachable in practice: setImportJobState validates operation
-      // against OPERATIONS before calling; kept defensively.
-      throw new ApiError(/** @type {*} */ ('400'), 'Invalid operation for import job state');
-    }
-
     return operator.findOneAndUpdate({
       correlationId
     }, {
-      $set: /** @type {import('mongodb').UpdateFilter<import('mongodb').WithId<QueueItem>>['$set']} */ ({
+      $set: {
         ...newJobState,
         modificationTime: new Date()
-      })
+      }
     }, {projection: {_id: 0}, returnDocument: 'after'});
+  }
+
+  /**
+   * Build the dotted importJobState update for one operation
+   * @param operation
+   * @param importJobState
+   * @returns the dotted-key importJobState update
+   */
+  function getNewJobState(operation: string, importJobState: string): {
+    'importJobState.CREATE'?: string,
+    'importJobState.UPDATE'?: string,
+    'importJobState.FIX'?: string
+  } {
+    if (operation === OPERATIONS.CREATE) {
+      return {'importJobState.CREATE': importJobState};
+    }
+    if (operation === OPERATIONS.UPDATE) {
+      return {'importJobState.UPDATE': importJobState};
+    }
+    if (operation === OPERATIONS.FIX) {
+      return {'importJobState.FIX': importJobState};
+    }
+    // Unreachable in practice: setImportJobState validates operation
+    // against OPERATIONS before calling; kept defensively.
+    // the baseline passed the string '400'; the ApiError status is typed
+    // number, so the same value goes in as the constant
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid operation for import job state');
   }
 
   // `findOneAndUpdate` (mongodb v6) returns the resulting document
@@ -876,11 +1048,11 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   // success (no more `{ok, value}` shape to worry about).
   /**
    * Map a null findOneAndUpdate result to a 404 ApiError
-   * @param {import('mongodb').WithId<QueueItem>|null} result
-   * @param {string} correlationId
-   * @returns {import('mongodb').WithId<QueueItem>}
+   * @param result
+   * @param correlationId
+   * @returns the updated document
    */
-  function unwrapAndUpdateResult(result, correlationId) {
+  function unwrapAndUpdateResult(result: WithId<QueueItem> | null, correlationId: string): WithId<QueueItem> {
     if (result === null || result === undefined) {
       logger.info(`Queue item ${correlationId} not found in ${collection}`);
       throw new ApiError(httpStatus.NOT_FOUND, {message: `Job ${correlationId} not found.`});
@@ -890,10 +1062,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Set the operation of a queueItem
-   * @param {{correlationId: string, operation: string}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>>} the updated queueItem
+   * @param params
+   * @returns the updated queueItem
    */
-  async function setOperation({correlationId, operation}) {
+  async function setOperation({correlationId, operation}: {correlationId: string, operation: string}) {
     assertString(correlationId, 'correlationId');
     const newOperation = operation;
     const existing = await operator.findOne({correlationId});
@@ -919,10 +1091,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Add and/or remove an operation on a queueItem
-   * @param {{correlationId: string, addOperation: string, removeOperation?: string}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>>} the updated queueItem
+   * @param params
+   * @returns the updated queueItem
    */
-  async function setOperations({correlationId, addOperation, removeOperation = undefined}) {
+  async function setOperations({correlationId, addOperation, removeOperation = undefined}: {correlationId: string, addOperation: string, removeOperation?: string}) {
     assertString(correlationId, 'correlationId');
 
     const queueItem = await operator.findOne({correlationId});
@@ -957,10 +1129,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Increment the blobSize of a queueItem waiting for records
-   * @param {{correlationId: string}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the updated queueItem or null
+   * @param params
+   * @returns the updated queueItem or null
    */
-  async function addBlobSize({correlationId}) {
+  async function addBlobSize({correlationId}: {correlationId: string}) {
     assertString(correlationId, 'correlationId');
 
     const result = await operator.findOneAndUpdate({
@@ -982,10 +1154,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   /**
    * Set the blobSize of a queueItem
-   * @param {{correlationId: string, blobSize: number}} params
-   * @returns {Promise<import('mongodb').WithId<QueueItem>|null>} the updated queueItem or null
+   * @param params
+   * @returns the updated queueItem or null
    */
-  async function setBlobSize({correlationId, blobSize}) {
+  async function setBlobSize({correlationId, blobSize}: {correlationId: string, blobSize: number}) {
     assertString(correlationId, 'correlationId');
     assertNumber(blobSize, 'blobSize');
 

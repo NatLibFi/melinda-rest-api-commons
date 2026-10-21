@@ -1,19 +1,18 @@
-//import assert from 'node:assert';
-import createDebugLogger from 'debug';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
+import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-state:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-and-set-state'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -41,18 +40,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-and-set-state'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -61,7 +56,9 @@ async function callback(callbackParams) {
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = ''
+  expectedErrorStatus = '',
+  expectedOpResult = undefined,
+  updateStateBeforeTest = undefined
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -69,8 +66,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -78,21 +74,32 @@ async function callback(callbackParams) {
     return;
   }
 
-
-  if (functionName === 'setState') {
+  if (functionName === 'checkAndSetState') {
     try {
-      debug(`setState`);
+      debug(`checkAndSetState`);
       debug(JSON.stringify(params));
-      //{correlationId, state, errorMessage = undefined, errorStatus = undefined}
-      const opResult = await mongoOperator.setState(params);
-      debug(`setState result: ${JSON.stringify(opResult)}`);
+      //{correlationId, state, errorMessage = undefined, errorStatus = undefined})
+      // timeout
+
+      if (updateStateBeforeTest && params.correlationId) {
+        debug(`setState to reset modificationTime`);
+        await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
+      }
+      const opResult = await mongoOperator.checkAndSetState(params);
+      debug(`checkAndSetState result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+
+      // checkAndSetState now returns a discriminated result
+      // {status: 'updated' | 'timeout' | 'unchanged', queueItem} - compare status
+      if (expectedOpResult !== undefined) {
+        assert.deepStrictEqual(opResult.status, expectedOpResult);
+      }
       await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
-      return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }

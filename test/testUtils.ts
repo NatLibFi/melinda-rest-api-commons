@@ -1,35 +1,38 @@
 import assert from 'node:assert';
 import createDebugLogger from 'debug';
-import createMongoOperator from '../src/mongo.js';
+import type {Readable} from 'node:stream';
+import createMongoOperator from '../src/mongo.ts';
 
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
-/**
- * @param {*} mongoFixtures fixura-mongo fixtures
- * @returns {Promise<*>} the Mongo operator
- */
-export async function getMongoOperator(mongoFixtures) {
+// the fixura-mongo fixtures object is intentionally untyped in tests
+// (fixture-driven scaffolding, see the eslint house rules for test/)
+export async function getMongoOperator(mongoFixtures: any) {
   const mongoUri = await mongoFixtures.getUri();
   const mongoOperator = await createMongoOperator(mongoUri, 'foobar', '');
   return mongoOperator;
 }
 
-/**
- * @param {*} params mongoFixtures, expectedResult, expectModificationTime (false), formatDates (true), expectedFileCount (undefined)
- * @returns {Promise<*>}
- */
-export async function compareToFirstDbEntry(params) {
+interface DbEntryCompareParams {
+  mongoFixtures: any;
+  expectedResult: unknown;
+  expectModificationTime?: boolean;
+  formatDates?: boolean;
+  expectedFileCount?: number;
+}
+
+export async function compareToFirstDbEntry(params: DbEntryCompareParams) {
   const {mongoFixtures, expectedResult, expectModificationTime = false, formatDates = true, expectedFileCount = undefined} = params;
   const result = await compareToDbEntry({mongoFixtures, expectedResult, resultIndex: 0, expectModificationTime, formatDates, expectedFileCount});
   return result;
 }
 
-/**
- * @param {*} params mongoFixtures, expectedResult, resultIndex (0), expectModificationTime (false), formatDates (true), expectedFileCount (undefined)
- * @returns {Promise<*>}
- */
-export async function compareToDbEntry(params) {
+interface DbEntryParams extends DbEntryCompareParams {
+  resultIndex?: number;
+}
+
+export async function compareToDbEntry(params: DbEntryParams) {
   const {mongoFixtures, expectedResult, resultIndex = 0, expectModificationTime = false, formatDates = true, expectedFileCount = undefined} = params;
   const dump = await mongoFixtures.dump();
   debug(`--- We have ${dump.foobar.length} documents in db`);
@@ -52,11 +55,12 @@ export async function compareToDbEntry(params) {
   return;
 }
 
-/**
- * @param {*} params dump, expectedFileCount
- * @returns {undefined}
- */
-function checkFileCount(params) {
+interface CheckFileCountParams {
+  dump: any;
+  expectedFileCount: number | undefined;
+}
+
+function checkFileCount(params: CheckFileCountParams) {
   const {dump, expectedFileCount} = params;
   if (expectedFileCount !== undefined) {
     const fileCount = dump['foobar.files']?.length;
@@ -68,11 +72,12 @@ function checkFileCount(params) {
 
 }
 
-/**
- * @param {*} params result, expectModificationTime
- * @returns {undefined}
- */
-function checkModificationTime(params) {
+interface CheckModificationTimeParams {
+  result: any;
+  expectModificationTime: boolean;
+}
+
+function checkModificationTime(params: CheckModificationTimeParams) {
   const {result, expectModificationTime} = params;
   if (expectModificationTime) {
     debug('Check if modificationTime was edited');
@@ -85,11 +90,7 @@ function checkModificationTime(params) {
 }
 
 
-/**
- * @param {*} queueItem
- * @returns {*}
- */
-export function formatQueueItem(queueItem) {
+export function formatQueueItem(queueItem: any): any {
   const filteredQueueItem = {
     ...queueItem,
     creationTime: '',
@@ -99,11 +100,14 @@ export function formatQueueItem(queueItem) {
   return filteredQueueItem;
 }
 
-/**
- * @param {*} params error, expectedToThrow, expectedErrorMessage, expectedErrorStatus
- * @returns {undefined}
- */
-export function handleError(params) {
+interface HandleErrorParams {
+  error: any;
+  expectedToThrow: boolean;
+  expectedErrorMessage: string;
+  expectedErrorStatus: string;
+}
+
+export function handleError(params: HandleErrorParams) {
   const {error, expectedToThrow, expectedErrorMessage, expectedErrorStatus} = params;
   debug(error);
   if (expectedToThrow) {
@@ -123,16 +127,11 @@ export function handleError(params) {
   throw error;
 }
 
-/**
- * @param {*} stream
- * @returns {Promise<string>}
- */
-export function streamToString(stream) {
-  /** @type {any[]} */
-  const chunks = [];
+export function streamToString(stream: Readable): Promise<string> {
+  const chunks: Buffer[] = [];
   return new Promise((resolve, reject) => {
-    stream.on('data', /** @param {Buffer} chunk */ (chunk) => chunks.push(Buffer.from(chunk)));
-    stream.on('error', /** @param {unknown} err */ (err) => reject(err));
+    stream.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+    stream.on('error', (err: unknown) => reject(err));
     stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
   });
 }

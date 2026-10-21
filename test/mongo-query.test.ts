@@ -4,16 +4,14 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError} from './testUtils.js';
+import {getMongoOperator, handleError} from './testUtils.ts';
 
-
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:get-one:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-one'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -41,18 +39,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-one'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -69,8 +63,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -79,21 +72,26 @@ async function callback(callbackParams) {
   }
 
 
-  if (functionName === 'getOne') {
+  if (functionName === 'query') {
     try {
-      debug(`getOne`);
+      debug(`query`);
       debug(JSON.stringify(params));
-      //{queueItemState, importJobState = undefined}
-      const opResult = await mongoOperator.getOne(params);
-      debug(`getOne result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
-
-      assert.deepStrictEqual(opResult, expectedOpResult);
-
+      //params, showParams = {}
+      //params: skip, limit, rest (rest: actual mongo queryParams)
+      //showParams: {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
+      debug(`${JSON.stringify(params.params)}`);
+      debug(`${JSON.stringify(params.showParams)}`);
+      const opResult = await mongoOperator.query(params.params, params.showParams);
+      debug(`query result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+      if (expectedOpResult !== undefined) {
+        assert.deepStrictEqual(opResult, expectedOpResult);
+      }
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }
