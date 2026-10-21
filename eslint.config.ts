@@ -42,9 +42,7 @@ export default defineConfig(
     ...tseslint.configs.stylistic,
     {
       files: [
-        "src/**/*.js",
         "src/**/*.ts",
-        "test/**/*.js",
         "test/**/*.ts"
       ],
       ignores: ['node_modules/**', "**/.*", "**/dist/"],
@@ -58,7 +56,7 @@ export default defineConfig(
       // Fixture-driven test scaffolding: any-typed fixture values and no-op
       // stubs are intentional in tests (tsc -p tsconfig.test.json still
       // typechecks the directory).
-      files: ["test/**/*.js", "test/**/*.ts"],
+      files: ["test/**/*.ts"],
       rules: {
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-empty-function": "off"
