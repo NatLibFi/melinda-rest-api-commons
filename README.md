@@ -51,6 +51,40 @@ need:
 MONGO_TIMEOUT_MINUTES=10 # abort only after 10 minutes without progress
 ```
 
+#### Full `QUEUE_ITEM_STATE` reference
+
+The flow tables above show the happy-path sequence per service. The full set of `queueItemState` values (see `src/constants.js`):
+
+| State | Group | Meaning |
+|-------|-------|---------|
+| `VALIDATOR.PENDING_QUEUING` | VALIDATOR | Bulk job accepted (http); waiting to be picked up for validation. |
+| `VALIDATOR.PENDING_VALIDATION` | VALIDATOR | Prio job accepted (http); waiting to be picked up for validation. |
+| `VALIDATOR.QUEUING_IN_PROGRESS` | VALIDATOR | Validator is distributing records to the per-operation import queues. |
+| `VALIDATOR.UPLOADING` | VALIDATOR | Stream-bulk upload in progress (records written to the GridFS blob). |
+| `VALIDATOR.VALIDATING` | VALIDATOR | Validator is validating records. |
+| `VALIDATOR.WAITING_FOR_RECORDS` | VALIDATOR | Stream-bulk job: partial records received, waiting for the remainder. |
+| `IMPORTER.IN_QUEUE` | IMPORTER | Records are queued for import, awaiting the importer. |
+| `IMPORTER.IMPORTING` | IMPORTER | Importer has the job and is importing it. |
+| `IMPORTER.IN_PROCESS` | IMPORTER | Importer is processing the job. |
+| `DONE` | terminal | Job completed successfully. |
+| `ERROR` | terminal | Job failed; see `errorStatus` / `errorMessage`. |
+| `ABORT` | terminal | Job aborted (e.g. timeout on a stalled job; `errorStatus` 408). |
+
+#### Full `IMPORT_JOB_STATE` reference
+
+Each queue item also carries a per-operation `importJobState` subdocument (`CREATE` / `UPDATE` / `FIX`). The full set of values:
+
+| State | Meaning |
+|-------|---------|
+| `EMPTY` | No such operation in the job (coalesced default when the subdocument is absent). |
+| `QUEUING` | Validator is queuing this operation's records. |
+| `IN_QUEUE` | This operation's records are queued for import. |
+| `IMPORTING` | Importer is importing this operation. |
+| `PROCESSING` | Importer is processing this operation (record-load). |
+| `DONE` | This operation completed. |
+| `ERROR` | This operation failed. |
+| `ABORT` | This operation aborted (e.g. timeout). |
+
 ### CHUNK_SIZE
 Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
 
