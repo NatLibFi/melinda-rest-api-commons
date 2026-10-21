@@ -1,8 +1,7 @@
-
-
 import httpStatus from 'http-status';
 import {MARCXML, ISO2709, Json, AlephSequential} from '@natlibfi/marc-record-serializers';
 import {createLogger, Error as ConversionError} from '@natlibfi/melinda-commons';
+import type {MarcRecord} from '@natlibfi/marc-record';
 import {CONVERSION_FORMATS} from '../constants.ts';
 import {logError} from '../utils.ts';
 
@@ -12,13 +11,9 @@ export default function () {
   return {serialize, unserialize};
 
   // This uses format as a number form contants CONVERSION_FORMATS
-  /**
-   * Serialize a record in the given format
-   * @param {*} record
-   * @param {string} format a CONVERSION_FORMATS value
-   * @returns {string} serialized record
-   */
-  function serialize(record, format) {
+  // Serialize a record in the given format: a CONVERSION_FORMATS value,
+  // returns the serialized record
+  function serialize(record: MarcRecord, format: string): string {
     logger.verbose(`Serializing record to ${format}`);
     try {
       if (format === CONVERSION_FORMATS.MARCXML) {
@@ -38,10 +33,11 @@ export default function () {
       }
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE, undefined);
-    } catch (/** @type {unknown} */ err) {
+    } catch (err: unknown) {
       logError(err);
-      const thrownError = /** @type {ConversionError} */ (err);
-      const message = thrownError.message || (/** @type {{message?: string}} */ (thrownError.payload ?? {})).message || thrownError.payload;
+      const thrownError = err as ConversionError;
+      const payload = thrownError.payload as {message?: string} | undefined;
+      const message = thrownError.message || (payload ?? {}).message || thrownError.payload;
       logger.debug(`${message}`);
       if (err instanceof ConversionError) {
         throw err;
@@ -50,14 +46,9 @@ export default function () {
     }
   }
 
-  /**
-   * Unserialize a record from the given format
-   * @param {*} data
-   * @param {string} format a CONVERSION_FORMATS value
-   * @param {{subfieldValues?: boolean}} validationOptions
-   * @returns {*} the record object
-   */
-  function unserialize(data, format, validationOptions = {subfieldValues: false}) {
+  // Unserialize a record from the given format: a CONVERSION_FORMATS value,
+  // returns the record object
+  function unserialize(data: string | Buffer, format: string, validationOptions: {subfieldValues?: boolean} = {subfieldValues: false}): MarcRecord {
     logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
     logger.debug(`Validation options: ${JSON.stringify(validationOptions)}`);
@@ -84,10 +75,11 @@ export default function () {
       }
 
       throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE, undefined);
-    } catch (/** @type {unknown} */ err) {
+    } catch (err: unknown) {
       logError(err);
-      const thrownError = /** @type {ConversionError} */ (err);
-      const message = thrownError.message || (/** @type {{message?: string}} */ (thrownError.payload ?? {})).message || thrownError.payload;
+      const thrownError = err as ConversionError;
+      const payload = thrownError.payload as {message?: string} | undefined;
+      const message = thrownError.message || (payload ?? {}).message || thrownError.payload;
       logger.debug(`${message}`);
       if (err instanceof ConversionError) {
         throw err;

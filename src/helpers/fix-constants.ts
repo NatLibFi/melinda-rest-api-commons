@@ -1,3 +1,25 @@
+// Settings shapes used by fixRecord and the fix-* modules; the constant
+// settings objects below are all assignable to these
+export interface SidFilters {
+  f035Filters?: RegExp[];
+  fSIDFilters?: string[];
+}
+
+export interface ReplacePrefixOptions {
+  oldPrefix: string;
+  newPrefix: string;
+  prefixReplaceCodes: string[];
+}
+
+export interface FixSettings {
+  generateMissingSIDs?: SidFilters;
+  replacePrefixes?: ReplacePrefixOptions[];
+  handleTempUrns?: boolean;
+  stripF884s?: boolean;
+  stripF984s?: boolean;
+  stripMelindaTempSubfields?: boolean;
+}
+
 // This could be formatted so that 035-prefix and SID contents would be better connected than by just an array index
 export const BIB_F035_TO_SID = {
   f035Filters: [/^\(FI-BTJ\)/u, /^\(FI-TATI\)/u],
