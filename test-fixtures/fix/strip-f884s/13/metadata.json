@@ -1,0 +1,6 @@
+{
+    "description": "regression for sentinel-first field order: in one convSource group a Melinda f884 with no $g subfield (findDates returns the 00000000 sentinel) comes FIRST and a second field with a real $g range comes later; the old firstDate merge never replaced a sentinel current value with a real one, truncating the merged $g to only the last date - this pins the full range '20100101 - 20200101'",
+    "settings": "BIB_STRIP_F884S_SETTINGS",
+    "skip": false,
+    "only": false
+}

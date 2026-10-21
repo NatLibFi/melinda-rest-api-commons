@@ -82,11 +82,12 @@ export function stripF884s(newRecord: MarcRecord, options: boolean | undefined):
     debugData(`- Current result: ${JSON.stringify(currResult)}`);
 
     // '00000000' is the deliberate no-date sentinel for a missing $g (see
-    // findDates): it must never win a date comparison, and both sides must
-    // agree on this sentinel
+    // findDates): it must never win a date comparison on either side - a
+    // real value replaces a sentinel current value, and a sentinel new
+    // value is discarded (like the hash line below guards both sides)
     const updatedResult: F884Result = {
       ...currResult,
-      firstDate: currResult.firstDate > firstDate && firstDate !== '00000000' ? firstDate : currResult.firstDate,
+      firstDate: firstDate !== '00000000' && (currResult.firstDate === '00000000' || firstDate < currResult.firstDate) ? firstDate : currResult.firstDate,
       lastDate: currResult.lastDate < lastDate ? lastDate : currResult.lastDate,
       hash: currResult.lastDate < lastDate && lastDate !== '00000000' && hash !== '0000000000000000000000000000000000000000000000000000000000000000' ? hash : currResult.hash
     };
