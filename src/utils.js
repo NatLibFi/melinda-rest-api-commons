@@ -4,6 +4,11 @@ import {IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
 
 const logger = createLogger();
 
+/**
+ * Log an error: ApiErrors are stringified, the SIGINT marker is logged as-is,
+ * everything else is logged with its stack when it has one
+ * @param {unknown} err
+ */
 export function logError(err) {
   if (err instanceof ApiError) {
     logger.error(JSON.stringify(err));
@@ -15,18 +20,29 @@ export function logError(err) {
     return;
   }
 
-  logger.error(err.stack === undefined ? err : err.stack);
+  const maybeError = /** @type {Error} */ (err);
+  logger.error(maybeError.stack === undefined ? err : maybeError.stack);
 }
 
 // Entry-point type guards: correlationIds and scalar params are expected as
 // plain strings/numbers. A non-scalar (e.g. an object) would be spliced into
 // the query as a MongoDB operator, so reject it with 400 before any query.
+/**
+ * @param {unknown} value
+ * @param {string} name
+ * @throws {Error}
+ */
 export function assertString(value, name) {
   if (typeof value !== 'string') {
     throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be a string`);
   }
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} name
+ * @throws {Error}
+ */
 export function assertNumber(value, name) {
   if (typeof value !== 'number') {
     throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be a number`);
@@ -37,6 +53,11 @@ export function assertNumber(value, name) {
 // .UPDATE / .FIX), which are spliced straight into the Mongo filter, so a
 // $-operator key or an object value would inject operators: restrict the keys
 // to the known operations and the values to plain state strings.
+/**
+ * @param {Record<string, unknown>} value
+ * @param {string} name
+ * @throws {Error}
+ */
 export function assertImportJobStateFilter(value, name) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new ApiError(httpStatus.BAD_REQUEST, `${name} must be an object`);
@@ -52,6 +73,13 @@ export function assertImportJobStateFilter(value, name) {
   }
 }
 
+/**
+ * Create an importJobState object, optionally keyed by the dotted query form
+ * @param {string} operation
+ * @param {string} state
+ * @param {boolean} queryImportJobState key by 'importJobState.OPERATION' when true
+ * @returns {{[key: string]: string}}
+ */
 export function createImportJobState(operation, state, queryImportJobState = false) {
   if (!(state in IMPORT_JOB_STATE)) {
     throw new Error('Invalid IMPORT_JOB_STATE');
@@ -71,7 +99,12 @@ export function createImportJobState(operation, state, queryImportJobState = fal
   return {[operation]: state};
 }
 
-export function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
+/**
+ * @param {*} params response payload (object or string), its status, optional record metadata and id
+ * @returns {*} the recordResponseItem
+ */
+export function createRecordResponseItem(params) {
+  const {responsePayload, responseStatus, recordMetadata, id} = params;
   // symmetric with addRecordResponseItem — reject a missing payload up
   // front with a clear message instead of a raw TypeError further down.
   // Strings are a valid payload form (see getMessageFromResponsePayload),
@@ -89,6 +122,12 @@ export function createRecordResponseItem({responsePayload, responseStatus, recor
   return recordResponseItem;
 }
 
+/**
+ * @param {*} responseStatus
+ * @param {*} responsePayload
+ * @param {string|undefined} id
+ * @returns {{recordStatus: string, detailedRecordStatus: *, message: string, ids?: *}}
+ */
 function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) {
 
   logger.debug(`Response status: ${responseStatus} responsePayload: ${JSON.stringify(responsePayload)}`);
@@ -156,6 +195,10 @@ function getRecordResponseStatusAndMessage(responseStatus, responsePayload, id) 
   return {recordStatus: 'ERROR', detailedRecordStatus: responseStatus, message: newMessage};
 }
 
+/**
+ * @param {*} responsePayload
+ * @returns {*}
+ */
 function getMessageFromResponsePayload(responsePayload) {
   if (responsePayload.message) {
     return responsePayload.message;
@@ -166,6 +209,11 @@ function getMessageFromResponsePayload(responsePayload) {
   return '';
 }
 
+/**
+ * Add one recordResponseItem to the records field of a queueItem
+ * @param {{recordResponseItem: unknown, correlationId: string, mongoOperator: *}} params
+ * @returns {Promise<boolean>}
+ */
 export async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator}) {
   // symmetric with addRecordResponseItems — reject non-object input
   // (including arrays) before it gets pushed into the records field
@@ -177,6 +225,10 @@ export async function addRecordResponseItem({recordResponseItem, correlationId, 
 }
 
 // Use addRecordResponseItems to add several recordResponseItems in one mongo operation to avoid writeconflicts
+/**
+ * @param {{recordResponseItems: unknown[], correlationId: string, mongoOperator: *}} params
+ * @returns {Promise<boolean>}
+ */
 export async function addRecordResponseItems({recordResponseItems, correlationId, mongoOperator}) {
   if (!Array.isArray(recordResponseItems)) {
     throw new Error('RecordResponseItems is not an array!');

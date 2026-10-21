@@ -12,6 +12,12 @@ export default function () {
   return {serialize, unserialize};
 
   // This uses format as a number form contants CONVERSION_FORMATS
+  /**
+   * Serialize a record in the given format
+   * @param {*} record
+   * @param {string} format a CONVERSION_FORMATS value
+   * @returns {string} serialized record
+   */
   function serialize(record, format) {
     logger.verbose(`Serializing record to ${format}`);
     try {
@@ -31,10 +37,11 @@ export default function () {
         return AlephSequential.to(record);
       }
 
-      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
-    } catch (err) {
+      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE, undefined);
+    } catch (/** @type {unknown} */ err) {
       logError(err);
-      const message = err.message || err.payload?.message || err.payload;
+      const thrownError = /** @type {ConversionError} */ (err);
+      const message = thrownError.message || (/** @type {{message?: string}} */ (thrownError.payload ?? {})).message || thrownError.payload;
       logger.debug(`${message}`);
       if (err instanceof ConversionError) {
         throw err;
@@ -43,6 +50,13 @@ export default function () {
     }
   }
 
+  /**
+   * Unserialize a record from the given format
+   * @param {*} data
+   * @param {string} format a CONVERSION_FORMATS value
+   * @param {{subfieldValues?: boolean}} validationOptions
+   * @returns {*} the record object
+   */
   function unserialize(data, format, validationOptions = {subfieldValues: false}) {
     logger.verbose(`Unserializing record from ${format}`);
     logger.silly(`Format: ${format}`);
@@ -69,10 +83,11 @@ export default function () {
         return AlephSequential.from(data, validationOptions);
       }
 
-      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE);
-    } catch (err) {
+      throw new ConversionError(httpStatus.UNSUPPORTED_MEDIA_TYPE, undefined);
+    } catch (/** @type {unknown} */ err) {
       logError(err);
-      const message = err.message || err.payload?.message || err.payload;
+      const thrownError = /** @type {ConversionError} */ (err);
+      const message = thrownError.message || (/** @type {{message?: string}} */ (thrownError.payload ?? {})).message || thrownError.payload;
       logger.debug(`${message}`);
       if (err instanceof ConversionError) {
         throw err;
