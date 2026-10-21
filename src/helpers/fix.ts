@@ -1,13 +1,15 @@
 import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
+import type {MarcField, MarcRecordObject} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-commons';
 
 import {FieldExclusion, SubfieldExclusion} from '@natlibfi/marc-record-validators-melinda';
 
-import {handleTempUrns} from './fix-handle-tempurns.js';
-import {stripF884s} from './fix-strip-f884s.js';
+import {handleTempUrns} from './fix-handle-tempurns.ts';
+import {stripF884s} from './fix-strip-f884s.ts';
+import type {FixSettings, ReplacePrefixOptions, SidFilters} from './fix-constants.ts';
 
-export * from './fix-constants.js';
+export * from './fix-constants.ts';
 
 const logger = createLogger();
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord');
@@ -15,11 +17,8 @@ const debugData = debug.extend('data');
 
 /**
  * Apply the configured record fixes
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {*} settings fix settings (generateMissingSIDs / replacePrefixes / handleTempUrns / stripF884s / stripF984s / stripMelindaTempSubfields)
- * @returns {import('@natlibfi/marc-record').MarcRecordObject} the fixed record
  */
-export function fixRecord(record, settings = {}) {
+export function fixRecord(record: MarcRecord, settings: FixSettings = {}): MarcRecordObject {
 
   logger.verbose(`We will apply formatting to the record according to settings: ${JSON.stringify(settings)}`);
   const newRecord = MarcRecord.clone(record, {subfieldValues: false});
@@ -53,13 +52,7 @@ export function fixRecord(record, settings = {}) {
 
 }
 
-
-/**
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {{oldPrefix: string, newPrefix: string, prefixReplaceCodes: string[]}[]} replacePrefixesOptions
- * @returns {import('@natlibfi/marc-record').MarcRecord}
- */
-function replaceAllPrefixes(record, replacePrefixesOptions) {
+function replaceAllPrefixes(record: MarcRecord, replacePrefixesOptions: ReplacePrefixOptions[]): MarcRecord {
   if (replacePrefixesOptions.length < 1) {
     debug(`NOT running replacePrefixes, no options`);
     return record;
@@ -74,14 +67,8 @@ function replaceAllPrefixes(record, replacePrefixesOptions) {
   return record;
 }
 
-
 // Replace prefix in all specified subfields
-/**
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {{oldPrefix: string, newPrefix: string, prefixReplaceCodes: string[]}} options
- * @returns {import('@natlibfi/marc-record').MarcRecord}
- */
-function replacePrefix(record, options) {
+function replacePrefix(record: MarcRecord, options: ReplacePrefixOptions): MarcRecord {
   const {oldPrefix, newPrefix, prefixReplaceCodes} = options;
   debug(`Replacing ${oldPrefix} with ${newPrefix} in subfields ${prefixReplaceCodes}`);
   const pattern = `(${oldPrefix})`;
@@ -91,23 +78,19 @@ function replacePrefix(record, options) {
       field.subfields
         .filter(({code}) => prefixReplaceCodes.includes(code))
         .forEach(subfield => {
-          subfield.value = (/** @type {string} */ (subfield.value)).replace(pattern, replacement);
+          // as string mirrors the JSDoc baseline: a missing value still
+          // throws exactly as before the conversion
+          subfield.value = (subfield.value as string).replace(pattern, replacement);
         });
     });
   return record;
 }
 
+// Generate missing SIDs from f035s according to the filters
+function generateMissingSIDs(record: MarcRecord, options: SidFilters | undefined): MarcRecord {
 
-/**
- * Generate missing SIDs from f035s according to the filters
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {{f035Filters?: RegExp[], fSIDFilters?: string[]}|undefined} options
- * @returns {import('@natlibfi/marc-record').MarcRecord}
- */
-function generateMissingSIDs(record, options) {
-
-  const f035Filters = options && options.f035Filters ? options.f035Filters : [];
-  const fSIDFilters = options && options.fSIDFilters ? options.fSIDFilters : [];
+  const f035Filters = options?.f035Filters ?? [];
+  const fSIDFilters = options?.fSIDFilters ?? [];
 
   if (f035Filters.length !== fSIDFilters.length) {
     debug(`NOT running generateMissingSIDs: f035Filters (${f035Filters.length}) and fSIDFilters (${fSIDFilters.length}) lengths differ`);
@@ -121,8 +104,11 @@ function generateMissingSIDs(record, options) {
   debug(`Running generateMissingSIDs fixer`);
   debugData(`generateMissingSIDs options: ${JSON.stringify(options)}`);
 
-  const f035s = f035ToSidInfo(/** @type {import('@natlibfi/marc-record').MarcField[]} */ (record.get(/^035$/u)));
-  const fSIDs = sidsToSidInfo(/** @type {import('@natlibfi/marc-record').MarcField[]} */ (record.get(/^SID$/u)));
+  // record.get() returns the control/data field union; both tags resolve to
+  // data fields, so these mirror the JSDoc baseline casts (keeping the
+  // original runtime behavior on degenerate records)
+  const f035s = f035ToSidInfo(record.get(/^035$/u) as MarcField[]);
+  const fSIDs = sidsToSidInfo(record.get(/^SID$/u) as MarcField[]);
 
   const sidsToBeAdded = genNewSids(fSIDs.length === 0
     ? f035s
@@ -135,22 +121,16 @@ function generateMissingSIDs(record, options) {
   sidsToBeAdded.forEach(sidField => record.insertField(sidField));
   return record;
 
-  /**
-   * @param {{SID: string, value: string}[]} sidsToBeAdded
-   * @returns {{tag: string, ind1: string, ind2: string, subfields: {code: string, value: string}[]}[]}
-   */
-  function genNewSids(sidsToBeAdded) {
+  function genNewSids(sidsToBeAdded: {SID: string, value: string}[]): {tag: string, ind1: string, ind2: string, subfields: {code: string, value: string}[]}[] {
     return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: sidInfo.value}, {code: 'b', value: sidInfo.SID}]}));
   }
 
-  /**
-   * @param {import('@natlibfi/marc-record').MarcField[]} SIDs
-   * @returns {{SID: string, value: string}[]}
-   */
-  function sidsToSidInfo(SIDs) {
+  function sidsToSidInfo(SIDs: MarcField[]): {SID: string, value: string}[] {
     return SIDs.flatMap(({subfields}) => {
-      const [SID] = subfields.filter(sub => sub.code === 'b' && fSIDFilters.includes(/** @type {string} */ (sub.value))).map(sub => sub.value);
-      const [value] = subfields.filter(sub => sub.code === 'c' && sub.value !== undefined).map(sub => sub.value);
+      const sidSubfields = subfields.filter(sub => sub.code === 'b' && sub.value !== undefined && fSIDFilters.includes(sub.value));
+      const SID = sidSubfields[0]?.value;
+      const valueSubfields = subfields.filter(sub => sub.code === 'c' && sub.value !== undefined);
+      const value = valueSubfields[0]?.value;
 
       if (SID && value) {
         return {
@@ -160,43 +140,37 @@ function generateMissingSIDs(record, options) {
       }
 
       return undefined;
-    }).filter(value => value !== undefined);
+    }).filter((value): value is {SID: string, value: string} => value !== undefined);
   }
 
-  /**
-   * @param {import('@natlibfi/marc-record').MarcField[]} f035s
-   * @returns {{SID: string, value: string}[]}
-   */
-  function f035ToSidInfo(f035s) {
+  function f035ToSidInfo(f035s: MarcField[]): {SID: string, value: string}[] {
     return f035s.flatMap(({subfields}) => {
       // single pass over the filters - the subfield AND the SID are
       // both chosen by the SAME first matching filter index (previously the
       // subfield matched any filter but the SID lookup re-scanned with
       // findIndex, which was order-sensitive and O(n^2) per field)
-      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(/** @type {string} */ (sub.value))) > -1);
+      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(sub.value as string)) > -1);
 
       if (wantedSub) {
-        const wantedSubValue = /** @type {string} */ (wantedSub.value);
+        const wantedSubValue = wantedSub.value as string;
         const filterIndex = f035Filters.findIndex(regexp => regexp.test(wantedSubValue));
-        return {
-          SID: /** @type {string} */ (fSIDFilters[filterIndex]),
-          value: wantedSubValue.slice(wantedSubValue.indexOf(')') + 1)
-        };
+        const fSID = fSIDFilters[filterIndex];
+        if (fSID !== undefined) {
+          return {
+            SID: fSID,
+            value: wantedSubValue.slice(wantedSubValue.indexOf(')') + 1)
+          };
+        }
+        return undefined;
       }
 
       return undefined;
-    }).filter(value => value !== undefined);
+    }).filter((value): value is {SID: string, value: string} => value !== undefined);
   }
 }
 
-
-/**
- * Strip f984s with $a values ALWAYS/NEVER-PREFER-IN-MERGE
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {*} stripF984sSettings
- * @returns {import('@natlibfi/marc-record').MarcRecord}
- */
-function stripF984s(record, stripF984sSettings) {
+// Strip f984s with $a values ALWAYS/NEVER-PREFER-IN-MERGE
+function stripF984s(record: MarcRecord, stripF984sSettings: boolean): MarcRecord {
   const F984A_PATTERN = /^(?:ALWAYS|NEVER)-PREFER-IN-MERGE$/u;
   const config = [
     {
@@ -218,19 +192,15 @@ function stripF984s(record, stripF984sSettings) {
   }
 
   debug(`Removing f984 fields with subfield $a consisting values ${F984A_PATTERN.toString()}`);
+  // FieldExclusion comes from the untyped validators-melinda shim
   const validator = FieldExclusion(config);
   validator.fix(record);
   return record;
 
 }
 
-/**
- * Strip the $9 MELINDA<TEMP> subfields from f856s
- * @param {import('@natlibfi/marc-record').MarcRecord} record
- * @param {*} stripMelindaTempSubfieldsSettings
- * @returns {import('@natlibfi/marc-record').MarcRecord}
- */
-function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
+// Strip the $9 MELINDA<TEMP> subfields from f856s
+function stripMelindaTempSubfields(record: MarcRecord, stripMelindaTempSubfieldsSettings: boolean): MarcRecord {
   if (!stripMelindaTempSubfieldsSettings) {
     debug(`No settings for stripMelindaTempSubfields`);
     return record;
@@ -255,6 +225,7 @@ function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
 
   debug(`Running stripMelindaTempSubfields`);
 
+  // SubfieldExclusion comes from the untyped validators-melinda shim
   const validator = SubfieldExclusion(config);
   validator.fix(record);
   return record;

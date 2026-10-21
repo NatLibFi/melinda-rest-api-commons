@@ -1,11 +1,10 @@
-
-
 import assert from 'node:assert';
 import {describe, it} from 'node:test';
 import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
+import type {MarcRecordObject} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
-import createConversionService from '../../src/helpers/conversion.js';
+import createConversionService from '../../src/helpers/conversion.ts';
 import {CONVERSION_FORMATS} from '../../src/constants.ts';
 
 describe('services/conversion', () => {
@@ -20,11 +19,11 @@ describe('services/conversion', () => {
   });
   const conversionService = createConversionService();
 
-  const marcRecord = new MarcRecord(JSON.parse(/** @type {*} */ (getFixture({components: ['json1']}))), {subfieldValues: false});
-  const marcXml = getFixture({components: ['marcxml1']});
-  const iso2709 = getFixture({components: ['iso2709_1']});
-  const json = getFixture({components: ['json1']});
-  const alephSeq = getFixture({components: ['aleph_sequential']});
+  const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']}) as string) as MarcRecordObject, {subfieldValues: false});
+  const marcXml = getFixture({components: ['marcxml1']}) as string;
+  const iso2709 = getFixture({components: ['iso2709_1']}) as string;
+  const json = getFixture({components: ['json1']}) as string;
+  const alephSeq = getFixture({components: ['aleph_sequential']}) as string;
 
 
   describe('factory', () => {
@@ -39,7 +38,9 @@ describe('services/conversion', () => {
   describe('#serialize', () => {
     it('Should throw because of unsupported format', () => {
       try {
-        conversionService.serialize(/** @type {*} */ (undefined), /** @type {*} */ (undefined));
+        // the undefined inputs are the point of this test: serialize must
+        // throw a ConversionError for an unsupported format, not a TypeError
+        conversionService.serialize(undefined as never, undefined as never);
       } catch (error) {
         assert(error instanceof ConversionError);
       }
@@ -70,12 +71,13 @@ describe('services/conversion', () => {
       // rewrap into a ConversionError 400 (not propagate the raw TypeError)
       let threw = false;
       try {
-        conversionService.serialize({}, CONVERSION_FORMATS.MARCXML);
+        conversionService.serialize({} as never, CONVERSION_FORMATS.MARCXML);
       } catch (error) {
         threw = true;
         assert(error instanceof ConversionError);
         assert.equal(error.status, 400);
-        assert.ok((/** @type {*} */ (error.payload)).includes('Error while serializing record.'));
+        // the payload is a string here: 'Error while serializing record. ...'
+        assert.ok((error.payload as string).includes('Error while serializing record.'));
       }
       assert.equal(threw, true);
     });
@@ -85,7 +87,9 @@ describe('services/conversion', () => {
   describe('#unserialize', () => {
     it('Should throw because of unsupported format', () => {
       try {
-        conversionService.unserialize(/** @type {*} */ (undefined), /** @type {*} */ (undefined));
+        // the undefined inputs are the point of this test: unserialize must
+        // throw a ConversionError for an unsupported format, not a TypeError
+        conversionService.unserialize(undefined as never, undefined as never);
       } catch (error) {
         assert(error instanceof ConversionError);
       }

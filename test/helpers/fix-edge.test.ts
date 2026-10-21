@@ -3,8 +3,9 @@
 import assert from 'node:assert';
 import {test} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {fixRecord} from '../../src/helpers/fix.js';
-import {BIB_STRIP_F884S_SETTINGS, BIB_F035_TO_SID} from '../../src/helpers/fix-constants.js';
+import type {MarcField} from '@natlibfi/marc-record';
+import {fixRecord} from '../../src/helpers/fix.ts';
+import {BIB_STRIP_F884S_SETTINGS, BIB_F035_TO_SID} from '../../src/helpers/fix-constants.ts';
 
 // a Melinda f884 (tag 884, $5 MELINDA, $a + $g present) that
 // has NO $k subfield. findSource/findHash used to call `sfK.replace(...)` on
@@ -52,7 +53,8 @@ test('fixRecord handles Melinda f884 without $k subfield without crashing', () =
   const result = fixRecord(record, BIB_STRIP_F884S_SETTINGS);
 
   // Both Melinda f884s survive (they are not identical, so uniq keeps both)
-  const f884s = /** @type {import("@natlibfi/marc-record").MarcField[]} */ (result.fields).filter((f) => f.tag === '884');
+  // these are data fields: mirrors the JSDoc baseline MarcField[] cast
+  const f884s = (result.fields as MarcField[]).filter((f) => f.tag === '884');
   assert.equal(f884s.length, 2);
 
   // The field WITHOUT $k still has its $a, $g and $5 MELINDA
@@ -62,8 +64,8 @@ test('fixRecord handles Melinda f884 without $k subfield without crashing', () =
     noK.subfields.map((s) => s.code).sort(),
     ['5', 'a', 'g']
   );
-  const gNoK = (/** @type {*} */ (noK.subfields.find((s) => s.code === 'g'))).value;
-  const aNoK = (/** @type {*} */ (noK.subfields.find((s) => s.code === 'a'))).value;
+  const gNoK = noK.subfields.find((s) => s.code === 'g')?.value;
+  const aNoK = noK.subfields.find((s) => s.code === 'a')?.value;
   assert.equal(aNoK, 'ONIX3 to MARC transformation');
   assert.equal(gNoK, '20220101');
 
@@ -74,8 +76,8 @@ test('fixRecord handles Melinda f884 without $k subfield without crashing', () =
     withK.subfields.map((s) => s.code).sort(),
     ['5', 'a', 'g', 'k']
   );
-  assert.equal((/** @type {*} */ (withK.subfields.find((s) => s.code === 'g'))).value, '20000718');
-  assert.equal((/** @type {*} */ (withK.subfields.find((s) => s.code === 'k'))).value,
+  assert.equal(withK.subfields.find((s) => s.code === 'g')?.value, '20000718');
+  assert.equal(withK.subfields.find((s) => s.code === 'k')?.value,
     'SRC_4:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 });
 
@@ -146,11 +148,12 @@ test('fixRecord ignores an existing SID field whose $b is not in fSIDFilters and
   }, {subfieldValues: false});
 
   const result = fixRecord(record, {generateMissingSIDs: BIB_F035_TO_SID});
-  const sids = /** @type {import("@natlibfi/marc-record").MarcField[]} */ (result.fields).filter((f) => f.tag === 'SID');
+  // these are data fields: mirrors the JSDoc baseline MarcField[] cast
+  const sids = (result.fields as MarcField[]).filter((f) => f.tag === 'SID');
   assert.equal(sids.length, 2);
   const generated = sids.find((f) => f.subfields.some((s) => s.code === 'b' && s.value === 'FI-BTJ'));
   assert.ok(generated, 'a new SID with $b FI-BTJ should have been generated');
-  assert.equal((/** @type {*} */ (generated.subfields.find((s) => s.code === 'c'))).value, '12345');
+  assert.equal(generated.subfields.find((s) => s.code === 'c')?.value, '12345');
 });
 
 test('fixRecord ignores an existing SID field with a matching $b but missing $c and generates the SID from the f035', () => {
@@ -173,12 +176,13 @@ test('fixRecord ignores an existing SID field with a matching $b but missing $c 
   }, {subfieldValues: false});
 
   const result = fixRecord(record, {generateMissingSIDs: BIB_F035_TO_SID});
-  const sids = /** @type {import("@natlibfi/marc-record").MarcField[]} */ (result.fields).filter((f) => f.tag === 'SID');
+  // these are data fields: mirrors the JSDoc baseline MarcField[] cast
+  const sids = (result.fields as MarcField[]).filter((f) => f.tag === 'SID');
   assert.equal(sids.length, 2);
   const generated = sids.find((f) => f.subfields.some((s) => s.code === 'c'));
   assert.ok(generated, 'a generated SID with $c should exist');
-  assert.equal((/** @type {*} */ (generated.subfields.find((s) => s.code === 'b'))).value, 'FI-BTJ');
-  assert.equal((/** @type {*} */ (generated.subfields.find((s) => s.code === 'c'))).value, '12345');
+  assert.equal(generated.subfields.find((s) => s.code === 'b')?.value, 'FI-BTJ');
+  assert.equal(generated.subfields.find((s) => s.code === 'c')?.value, '12345');
 });
 
 test('fixRecord adds no SID when the f035 $a matches no f035Filter', () => {
