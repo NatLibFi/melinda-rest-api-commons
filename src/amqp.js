@@ -7,6 +7,13 @@ import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {CHUNK_SIZE} from './constants.js';
 import {logError} from './utils.js';
 
+/**
+ * Create AMQP operator
+ * @param {string} AMQP_URL amqp connection url
+ * @param {boolean} runHealthCheck run the health check loop
+ * @param {{connection?: unknown, channel?: unknown}} deps optional dependencies, defaults {}. deps.connection / deps.channel (amqplib objects) may be injected by unit tests
+ * @returns {Promise<*>} the AMQP operator object
+ */
 export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp');
@@ -16,8 +23,8 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
   // deps allows injecting stubbed connection/channel in unit tests
-  const connection = deps.connection ?? await amqplib.connect(AMQP_URL);
-  const channel = deps.channel ?? await connection.createChannel();
+  const connection = /** @type {import('amqplib').ChannelModel} */ (deps.connection ?? await amqplib.connect(AMQP_URL));
+  const channel = /** @type {import('amqplib').Channel} */ (deps.channel ?? await connection.createChannel());
 
   // the recursive healthCheck loop is never awaited and kept firing
   // ~every 200 ms even after the connection was closed. This flag is cleared
@@ -49,6 +56,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     debug(`Connection: ${connection}`);
   }
 
+  /**
+   * @param {number|false} wait false cancels/starts, a number of ms waits before re-checking
+   * @returns {Promise<boolean>} false when the loop stopped, the loop re-arms otherwise
+   */
   async function healthCheck(wait = false) {
     // cancellable - closeChannel/closeConnection set this to false
     if (!healthCheckRunning) {
@@ -77,6 +88,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Check a queue: consume one message or a chunk, return the message count, or purge
+   * @param {{queue: string, style?: 'basic'|'one'|'messages', toRecord?: boolean, purge?: boolean}} params
+   * @returns {Promise<*>} false (empty queue) | message count (style 'messages') | message/records/chunk object (style 'one'/'basic')
+   */
   async function checkQueue({queue, style = 'basic', toRecord = true, purge = false}) {
     debug(`checkQueue: ${queue}, Style: ${style}, toRecord: ${toRecord}, Purge: ${purge}`);
 
@@ -123,6 +139,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       handleAmqpErrors(error);
     }
 
+    /**
+     * @param {{messageCount: number}} channelInfo
+     * @returns {boolean}
+     */
     function checkMessageCount(channelInfo) {
       if (channelInfo.messageCount < 1) {
         debug(`checkQueue: ${channelInfo.messageCount} - ${queue} is empty`);
@@ -132,6 +152,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       return true;
     }
 
+    /**
+     * @param {boolean} purge
+     * @returns {*}
+     */
     function purgeQueue(purge) {
       debug(`Purging queue: ${queue}, purge: ${purge}`);
       if (purge) {
@@ -140,6 +164,12 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Consume a chunk of messages from a queue
+   * @param {string} queue
+   * @param {boolean} toRecord
+   * @returns {Promise<*>} false (drained queue) or {headers, [records,] messages}
+   */
   async function consumeChunk(queue, toRecord) {
     debug(`Prepared to consumeChunk from queue: ${queue}`);
     try {
@@ -156,7 +186,7 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       }
 
       // Note: headers are from the first message of the chunk
-      const headers = getHeaderInfo(messages[0]);
+      const headers = getHeaderInfo(/** @type {import('amqplib').Message} */ (messages[0]));
       debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 
       if (toRecord) {
@@ -170,6 +200,12 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Consume one message from a queue
+   * @param {string} queue
+   * @param {boolean} toRecord
+   * @returns {Promise<*>} false (empty queue) or the message / {headers, records, messages}
+   */
   async function consumeOne(queue, toRecord) {
     debug(`Prepared to consumeOne from queue: ${queue}`);
     try {
@@ -198,6 +234,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Ack a list of messages
+   * @param {import('amqplib').Message[]} messages
+   */
   function ackMessages(messages) {
     messages.forEach(message => {
       debug(`Ack message ${message.properties.correlationId}`);
@@ -205,6 +245,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     });
   }
 
+  /**
+   * Nack a list of messages
+   * @param {import('amqplib').Message[]} messages
+   */
   function nackMessages(messages) {
     messages.forEach(message => {
       debug(`Nack message ${message.properties.correlationId}`);
@@ -212,6 +256,10 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     });
   }
 
+  /**
+   * Send a message to a queue (correlationId is delivered via message properties only)
+   * @param {{queue: string, correlationId: string, headers?: Record<string, unknown>, data: unknown}} params
+   */
   async function sendToQueue({queue, correlationId, headers, data}) {
     debug(`sendToQueue`);
     try {
@@ -253,10 +301,15 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Delete a queue via a throwaway channel
+   * @param {string} queue
+   */
   async function removeQueue(queue) {
     // deleteQueue borks the channel if the queue does not exist
     // -> use throwaway tempChannel to avoid killing actual channel in use
     // this might be doable also with assertQueue before deleteQueue
+    /** @type {import('amqplib').Channel|undefined} */
     let tempChannel;
     try {
       tempChannel = await connection.createChannel();
@@ -276,6 +329,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   // Helper functions
   // ----------------
 
+  /**
+   * Parse a list of consumed messages to MarcRecords
+   * @param {import('amqplib').Message[]} messages
+   * @returns {import('@natlibfi/marc-record').MarcRecord[]}
+   */
   function messagesToRecords(messages) {
     debug(`Parsing messages (${messages.length}) to records`);
 
@@ -286,6 +344,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     });
   }
 
+  /**
+   * Get the next chunk of messages from a queue
+   * @param {string} queue
+   * @returns {Promise<import('amqplib').Message[]>}
+   */
   async function getData(queue) {
     debug(`Getting queue data from ${queue}`);
     try {
@@ -303,6 +366,13 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       handleAmqpErrors(error);
     }
 
+    /**
+     * Recursively pump messages until count is reached or the queue drains
+     * @param {number} count
+     * @param {import('amqplib').Message[]} results
+     * @param {{correlationId: string, deliveryTag: number}[]} identifiers
+     * @returns {Promise<import('amqplib').Message[]>}
+     */
     async function pump(count, results = [], identifiers = []) {
       if (count === 0) {
         return results;
@@ -331,22 +401,38 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     }
   }
 
+  /**
+   * Get the message properties headers of a message
+   * @param {*} data a consumed amqplib message
+   * @returns {*} the message headers
+   */
   function getHeaderInfo(data) {
     return data.properties.headers;
   }
 
+  /**
+   * Throw 500 when the queue is undefined/empty/null
+   * @param {string} queue
+   * @throws {Error}
+   */
   function errorUndefinedQueue(queue) {
     if (queue === undefined || queue === '' || queue === null) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Undefined queue!`);
     }
   }
 
+  /**
+   * Rethrow ApiErrors as ApiError and log + rethrow anything else; always throws
+   * @param {unknown} error
+   * @returns {never}
+   */
   function handleAmqpErrors(error) {
     const newError = error;
     debug(`HandleAmqpErrors got an error: ${JSON.stringify(error)}`);
     if (error instanceof ApiError) {
       debug(`We have an ApiError`);
-      throw new ApiError(newError.status, newError.payload);
+      const apiError = /** @type {ApiError} */ (newError);
+      throw new ApiError(apiError.status, apiError.payload);
     }
     debug(`We have a non-ApiError`);
     logError(error);

@@ -2,6 +2,24 @@ import createDebugLogger from 'debug';
 //import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
 import {inspect} from 'util';
 
+/**
+ * A conversion:source result collected from the Melinda f884s
+ * @typedef {{
+ *   conversion: string|undefined,
+ *   source: string,
+ *   firstDate: string,
+ *   lastDate: string,
+ *   hash: string
+ * }} F884Result
+ */
+
+/**
+ * Strip the redundant Melinda f884s from a record, keeping one
+ * conversion:source combination per pair with edited $g/$k subfields
+ * @param {import('@natlibfi/marc-record').MarcRecord} newRecord
+ * @param {boolean} options run the fixer when true
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 export function stripF884s(newRecord, options) {
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord:stripF884s');
   const debugData = debug.extend('data');
@@ -15,9 +33,10 @@ export function stripF884s(newRecord, options) {
   debugData(`Options for stripF884s: ${JSON.stringify(options)}`);
 
   // Handle only f884 with $5 MELINDA - let's no remove random f884s
+  /** @param {import('@natlibfi/marc-record').MarcField} f */
   const isMelindaf884 = f => f.tag === '884' && f.subfields.some(({code, value}) => code === '5' && value === 'MELINDA');
 
-  const f884Melindas = newRecord.fields.filter(isMelindaf884);
+  const f884Melindas = /** @type {import('@natlibfi/marc-record').MarcField[]} */ (newRecord.fields).filter(isMelindaf884);
   debugData(`Melinda's f884s (${f884Melindas.length}) \n ${JSON.stringify(f884Melindas)}`);
   //debugData(`Melinda's f884s (${f884Melindas.length}) \n ${inspect(f884Melindas, {depth: 3})}`);
 
@@ -27,7 +46,14 @@ export function stripF884s(newRecord, options) {
   }
 
   // Pick data (firstDate, lastDate, hash with latest date) for all conversion : source combinations
-  const results = f884Melindas.reduce((allResults, f884, index) => {
+  const results = f884Melindas.reduce(
+    /**
+     * @param {Record<string, F884Result>} allResults
+     * @param {import('@natlibfi/marc-record').MarcField} f884
+     * @param {number} index
+     * @returns {Record<string, F884Result>}
+     */
+    (allResults, f884, index) => {
     debugData(`All results: ${JSON.stringify(allResults)}`);
     //debugData(`Handling field (${index}): ${inspect(f884, {depth: 3})}`);
     debugData(`Handling field *(${index})*: ${JSON.stringify(f884)}`);
@@ -76,7 +102,8 @@ export function stripF884s(newRecord, options) {
       ...allResults,
       [convSource]: updatedResult
     };
-  }, {});
+    },
+    /** @type {Record<string, F884Result>} */ ({}));
 
   debugData(`RESULTS: ${JSON.stringify(results)}`);
   const editedf884s = editFields(f884Melindas, results);
@@ -87,6 +114,11 @@ export function stripF884s(newRecord, options) {
 
   // We update each field based on the results we got from fields
   // Note: we do not add $g:s or $k:s if the field doesn't have them
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField[]} fields
+   * @param {Record<string, F884Result>} results
+   * @returns {import('@natlibfi/marc-record').MarcField[]}
+   */
   function editFields(fields, results) {
     debug(`EDITING FIELDS (${fields.length})`);
     const editedFields = fields.map((field) => {
@@ -150,31 +182,56 @@ export function stripF884s(newRecord, options) {
   // Canonicalize a raw field object ({tag, ind1, ind2, subfields: [...]}) so
   // that two structurally equal fields stringify identically: object keys are
   // sorted recursively, arrays keep their order, primitives pass through.
+  /**
+   * @param {*} value
+   * @returns {*}
+   */
   function canonicalize(value) {
     if (Array.isArray(value)) {
       return value.map(canonicalize);
     }
     if (value && typeof value === 'object') {
-      return Object.keys(value).sort().reduce((canonical, key) => {
+      /**
+       * @param {Record<string, *>} canonical
+       * @param {string} key
+       * @returns {Record<string, *>}
+       */
+      const canonicalized = Object.keys(value).sort().reduce((canonical, key) => {
         canonical[key] = canonicalize(value[key]);
         return canonical;
-      }, {});
+      }, /** @type {Record<string, *>} */ ({}));
+      return canonicalized;
     }
     return value;
   }
 
+  /**
+   * @param {*} a
+   * @param {*} b
+   * @returns {boolean}
+   */
   function fieldsAreEqual(a, b) {
     return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField[]} fields
+   * @returns {import('@natlibfi/marc-record').MarcField[]}
+   */
   function uniqFields(fields) {
-    return fields.reduce((uniq, field) => {
+    /**
+     * @param {import('@natlibfi/marc-record').MarcField[]} uniq
+     * @param {import('@natlibfi/marc-record').MarcField} field
+     * @returns {import('@natlibfi/marc-record').MarcField[]}
+     */
+    const uniqed = fields.reduce((uniq, field) => {
       if (!uniq.some(f => fieldsAreEqual(f, field))) {
         uniq.push(field);
       }
 
       return uniq;
-    }, []);
+    }, /** @type {import('@natlibfi/marc-record').MarcField[]} */ ([]));
+    return uniqed;
   }
   // Replace original Melinda-f884s with remaining Melinda-f884s
   // NOTE: this sorts MELINDA-f884s after possible other f884s
@@ -189,6 +246,10 @@ export function stripF884s(newRecord, options) {
   // Find last date and last hash
 
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField} f884
+   * @returns {string|undefined}
+   */
   function findConversion(f884) {
     const [sfA] = f884.subfields.filter((subfield) => subfield.code === 'a').map(subfield => subfield.value);
     const conversion = sfA;
@@ -196,6 +257,10 @@ export function stripF884s(newRecord, options) {
     return conversion;
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField} f884
+   * @returns {string}
+   */
   function findSource(f884) {
     const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
     // a Melinda f884 may have no $k subfield -> sfK is undefined
@@ -209,6 +274,10 @@ export function stripF884s(newRecord, options) {
     return emptySource;
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField} f884
+   * @returns {string}
+   */
   function findHash(f884) {
     const [sfK] = f884.subfields.filter((subfield) => subfield.code === 'k').map(subfield => subfield.value);
     // a Melinda f884 may have no $k subfield -> sfK is undefined
@@ -222,6 +291,10 @@ export function stripF884s(newRecord, options) {
     return emptyHash;
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField} f884
+   * @returns {{firstDate: string, lastDate: string}}
+   */
   function findDates(f884) {
     const [sfG] = f884.subfields.filter((subfield) => subfield.code === 'g').map(subfield => subfield.value);
     if (sfG && (/ - /u).test(sfG)) {

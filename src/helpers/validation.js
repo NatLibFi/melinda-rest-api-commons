@@ -10,6 +10,11 @@ export default async () => {
   logger.verbose('Running inbuilt record validations');
   const validate = validateFactory([await fieldStructure([{tag: /^003$/u, valuePattern: /^FI-MELINDA$/u}])]);
 
+  /**
+   * Validate a record
+   * @param {*} unvalidRecord the record to validate
+   * @returns {Promise<{record: *, failed: boolean, messages: *}>} the (fixed) record, whether validation failed and the report
+   */
   return async unvalidRecord => {
     const {record, valid, report} = await validate(unvalidRecord, {fix: false, validateFixes: false}, {subfieldValues: false});
 

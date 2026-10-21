@@ -13,6 +13,12 @@ const logger = createLogger();
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord');
 const debugData = debug.extend('data');
 
+/**
+ * Apply the configured record fixes
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {*} settings fix settings (generateMissingSIDs / replacePrefixes / handleTempUrns / stripF884s / stripF984s / stripMelindaTempSubfields)
+ * @returns {import('@natlibfi/marc-record').MarcRecordObject} the fixed record
+ */
 export function fixRecord(record, settings = {}) {
 
   logger.verbose(`We will apply formatting to the record according to settings: ${JSON.stringify(settings)}`);
@@ -48,6 +54,11 @@ export function fixRecord(record, settings = {}) {
 }
 
 
+/**
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {{oldPrefix: string, newPrefix: string, prefixReplaceCodes: string[]}[]} replacePrefixesOptions
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 function replaceAllPrefixes(record, replacePrefixesOptions) {
   if (replacePrefixesOptions.length < 1) {
     debug(`NOT running replacePrefixes, no options`);
@@ -65,6 +76,11 @@ function replaceAllPrefixes(record, replacePrefixesOptions) {
 
 
 // Replace prefix in all specified subfields
+/**
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {{oldPrefix: string, newPrefix: string, prefixReplaceCodes: string[]}} options
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 function replacePrefix(record, options) {
   const {oldPrefix, newPrefix, prefixReplaceCodes} = options;
   debug(`Replacing ${oldPrefix} with ${newPrefix} in subfields ${prefixReplaceCodes}`);
@@ -75,13 +91,19 @@ function replacePrefix(record, options) {
       field.subfields
         .filter(({code}) => prefixReplaceCodes.includes(code))
         .forEach(subfield => {
-          subfield.value = subfield.value.replace(pattern, replacement);
+          subfield.value = (/** @type {string} */ (subfield.value)).replace(pattern, replacement);
         });
     });
   return record;
 }
 
 
+/**
+ * Generate missing SIDs from f035s according to the filters
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {{f035Filters?: RegExp[], fSIDFilters?: string[]}|undefined} options
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 function generateMissingSIDs(record, options) {
 
   const f035Filters = options && options.f035Filters ? options.f035Filters : [];
@@ -99,8 +121,8 @@ function generateMissingSIDs(record, options) {
   debug(`Running generateMissingSIDs fixer`);
   debugData(`generateMissingSIDs options: ${JSON.stringify(options)}`);
 
-  const f035s = f035ToSidInfo(record.get(/^035$/u));
-  const fSIDs = sidsToSidInfo(record.get(/^SID$/u));
+  const f035s = f035ToSidInfo(/** @type {import('@natlibfi/marc-record').MarcField[]} */ (record.get(/^035$/u)));
+  const fSIDs = sidsToSidInfo(/** @type {import('@natlibfi/marc-record').MarcField[]} */ (record.get(/^SID$/u)));
 
   const sidsToBeAdded = genNewSids(fSIDs.length === 0
     ? f035s
@@ -113,13 +135,21 @@ function generateMissingSIDs(record, options) {
   sidsToBeAdded.forEach(sidField => record.insertField(sidField));
   return record;
 
+  /**
+   * @param {{SID: string, value: string}[]} sidsToBeAdded
+   * @returns {{tag: string, ind1: string, ind2: string, subfields: {code: string, value: string}[]}[]}
+   */
   function genNewSids(sidsToBeAdded) {
     return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: sidInfo.value}, {code: 'b', value: sidInfo.SID}]}));
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField[]} SIDs
+   * @returns {{SID: string, value: string}[]}
+   */
   function sidsToSidInfo(SIDs) {
     return SIDs.flatMap(({subfields}) => {
-      const [SID] = subfields.filter(sub => sub.code === 'b' && fSIDFilters.includes(sub.value)).map(sub => sub.value);
+      const [SID] = subfields.filter(sub => sub.code === 'b' && fSIDFilters.includes(/** @type {string} */ (sub.value))).map(sub => sub.value);
       const [value] = subfields.filter(sub => sub.code === 'c' && sub.value !== undefined).map(sub => sub.value);
 
       if (SID && value) {
@@ -133,19 +163,24 @@ function generateMissingSIDs(record, options) {
     }).filter(value => value !== undefined);
   }
 
+  /**
+   * @param {import('@natlibfi/marc-record').MarcField[]} f035s
+   * @returns {{SID: string, value: string}[]}
+   */
   function f035ToSidInfo(f035s) {
     return f035s.flatMap(({subfields}) => {
       // single pass over the filters - the subfield AND the SID are
       // both chosen by the SAME first matching filter index (previously the
       // subfield matched any filter but the SID lookup re-scanned with
       // findIndex, which was order-sensitive and O(n^2) per field)
-      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(sub.value)) > -1);
+      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(/** @type {string} */ (sub.value))) > -1);
 
       if (wantedSub) {
-        const filterIndex = f035Filters.findIndex(regexp => regexp.test(wantedSub.value));
+        const wantedSubValue = /** @type {string} */ (wantedSub.value);
+        const filterIndex = f035Filters.findIndex(regexp => regexp.test(wantedSubValue));
         return {
-          SID: fSIDFilters[filterIndex],
-          value: wantedSub.value.slice(wantedSub.value.indexOf(')') + 1)
+          SID: /** @type {string} */ (fSIDFilters[filterIndex]),
+          value: wantedSubValue.slice(wantedSubValue.indexOf(')') + 1)
         };
       }
 
@@ -155,6 +190,12 @@ function generateMissingSIDs(record, options) {
 }
 
 
+/**
+ * Strip f984s with $a values ALWAYS/NEVER-PREFER-IN-MERGE
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {*} stripF984sSettings
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 function stripF984s(record, stripF984sSettings) {
   const F984A_PATTERN = /^(?:ALWAYS|NEVER)-PREFER-IN-MERGE$/u;
   const config = [
@@ -183,6 +224,12 @@ function stripF984s(record, stripF984sSettings) {
 
 }
 
+/**
+ * Strip the $9 MELINDA<TEMP> subfields from f856s
+ * @param {import('@natlibfi/marc-record').MarcRecord} record
+ * @param {*} stripMelindaTempSubfieldsSettings
+ * @returns {import('@natlibfi/marc-record').MarcRecord}
+ */
 function stripMelindaTempSubfields(record, stripMelindaTempSubfieldsSettings) {
   if (!stripMelindaTempSubfieldsSettings) {
     debug(`No settings for stripMelindaTempSubfields`);
