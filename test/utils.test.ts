@@ -9,7 +9,7 @@ import {
   createRecordResponseItem,
   addRecordResponseItem,
   addRecordResponseItems
-} from '../src/utils.js';
+} from '../src/utils.ts';
 
 test('createImportJobState should return state object for valid operation and state', () => {
   const result = createImportJobState('CREATE', 'EMPTY');
@@ -267,9 +267,9 @@ test('createRecordResponseItem should map UNKNOWN status to ERROR with ids', () 
 });
 
 test('addRecordResponseItem should push the recordResponseItem via mongoOperator', async () => {
-  let captured;
+  let captured: unknown;
   const mongoOperator = {
-    pushMessages: /** @param {*} args */ async (args) => {
+    pushMessages: async (args: unknown) => {
       captured = args;
     }
   };
@@ -304,10 +304,10 @@ test('addRecordResponseItem should throw for non-object input', async () => {
 });
 
 test('addRecordResponseItems should push all items in one call', async () => {
-  let captured;
+  let captured: unknown;
   let callCount = 0;
   const mongoOperator = {
-    pushMessages: /** @param {*} args */ async (args) => {
+    pushMessages: async (args: unknown) => {
       callCount += 1;
       captured = args;
     }
@@ -336,7 +336,7 @@ test('addRecordResponseItems should throw for non-array input', async () => {
   };
   await assert.rejects(
     addRecordResponseItems({
-      recordResponseItems: /** @type {*} */ ('not-an-array'),
+      recordResponseItems: 'not-an-array',
       correlationId: 'corr-3',
       mongoOperator
     }),

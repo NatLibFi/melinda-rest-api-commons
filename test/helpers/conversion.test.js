@@ -6,7 +6,7 @@ import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import createConversionService from '../../src/helpers/conversion.js';
-import {CONVERSION_FORMATS} from '../../src/constants.js';
+import {CONVERSION_FORMATS} from '../../src/constants.ts';
 
 describe('services/conversion', () => {
   const {getFixture} = fixtureFactory({

@@ -1,7 +1,7 @@
 import {MongoDriverError} from 'mongodb';
 import httpStatus from 'http-status';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {logError} from './utils.js';
+import {logError} from './utils.ts';
 
 /**
  * Wrap a public Mongo operator method body so Mongo driver failures

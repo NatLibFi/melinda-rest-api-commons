@@ -4,8 +4,8 @@ import {promisify, inspect} from 'util';
 import httpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
-import {CHUNK_SIZE} from './constants.js';
-import {logError} from './utils.js';
+import {CHUNK_SIZE} from './constants.ts';
+import {logError} from './utils.ts';
 
 /**
  * Create AMQP operator
