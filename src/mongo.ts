@@ -8,6 +8,7 @@ import createDebugLogger from 'debug';
 import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.ts';
 import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.ts';
+import {withMongoError} from './mongoError.ts';
 
 //import isDeepStrictEqual from 'util';
 
@@ -264,7 +265,35 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
   }
   debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
-  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
+  // The previously-unwrapped public methods are wrapped with the shared
+  // withMongoError helper so a Mongo driver failure rejects with
+  // ApiError 500 ('Mongo errored: ...') instead of a raw driver error;
+  // validation (400) and not-found (404) errors pass through unchanged.
+  // The pre-wrapped methods (createPrio, createBulk, remove, getOne,
+  // getStream, pushIds, pushMessages) keep their inline handling.
+  return {
+    createPrio,
+    createBulk,
+    checkAndSetState: (params: CheckAndSetStateParams) => withMongoError(() => checkAndSetState(params)),
+    checkAndSetImportJobState: (params: CheckAndSetImportJobStateParams) => withMongoError(() => checkAndSetImportJobState(params)),
+    query: (params: QueryParams, showParams?: ShowParams) => withMongoError(() => query(params, showParams)),
+    createProjection,
+    queryById: (params: QueryByIdParams) => withMongoError(() => queryById(params)),
+    checkTimeOut: (params: CheckTimeOutParams) => withMongoError(() => checkTimeOut(params)),
+    remove,
+    readContent: (correlationId: string) => withMongoError(() => readContent(correlationId)),
+    removeContent: (params: {correlationId: string}) => withMongoError(() => removeContent(params)),
+    getOne,
+    getStream,
+    setState: (params: SetStateParams) => withMongoError(() => setState(params)),
+    setImportJobState: (params: SetImportJobStateParams) => withMongoError(() => setImportJobState(params)),
+    pushIds,
+    pushMessages,
+    setOperation: (params: {correlationId: string, operation: string}) => withMongoError(() => setOperation(params)),
+    setOperations: (params: {correlationId: string, addOperation: string, removeOperation?: string}) => withMongoError(() => setOperations(params)),
+    addBlobSize: (params: {correlationId: string}) => withMongoError(() => addBlobSize(params)),
+    setBlobSize: (params: {correlationId: string, blobSize: number}) => withMongoError(() => setBlobSize(params))
+  };
 
   /**
    * Create a prio queueItem

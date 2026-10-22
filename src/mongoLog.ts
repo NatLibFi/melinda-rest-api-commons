@@ -3,6 +3,7 @@ import type {Collection, DeleteResult, Document, Filter, UpdateResult, WithId} f
 import httpStatus from 'http-status';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {logError, assertString} from './utils.ts';
+import {withMongoError} from './mongoError.ts';
 import {LOG_ITEM_TYPE} from './constants.ts';
 
 // The persisted logItemType values always come from the as-const
@@ -132,7 +133,25 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     const client = await MongoClient.connect(MONGO_URI);
     logCollection = client.db(dbName).collection<LogItem>(collection);
   }
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
+  // The previously-unwrapped public methods are wrapped with the shared
+  // withMongoError helper so a Mongo driver failure rejects with
+  // ApiError 500 ('Mongo errored: ...') instead of a raw driver error;
+  // validation errors (400) pass through unchanged. The pre-wrapped
+  // methods (addLogItem, protect, unprotect, remove, removeBySequences)
+  // keep their inline handling.
+  return {
+    addLogItem,
+    query: (params: LogQueryParams) => withMongoError(() => query(params)),
+    queryById: (correlationId: string, logItemType?: string, skip?: number, limit?: number) => withMongoError(() => queryById(correlationId, logItemType, skip, limit)),
+    getListOfLogs: (logItemType?: string) => withMongoError(() => getListOfLogs(logItemType)),
+    getListOfCatalogers: () => withMongoError(() => getListOfCatalogers()),
+    getListOfCorrelationIds: () => withMongoError(() => getListOfCorrelationIds()),
+    getExpandedListOfLogs: (params: ExpandedLogListParams) => withMongoError(() => getExpandedListOfLogs(params)),
+    protect,
+    unprotect,
+    remove,
+    removeBySequences
+  };
 
   // the free-form logItemType strings (caller input / Mongo docs) are
   // matched against the as-const LOG_ITEM_TYPE (literal-typed values), so

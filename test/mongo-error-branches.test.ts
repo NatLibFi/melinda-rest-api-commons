@@ -683,6 +683,50 @@ test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null'
   );
 });
 
+// Q-3: previously-unwrapped public methods now reject with ApiError 500
+// ("Mongo errored: ...") when the driver fails, instead of leaking the raw
+// MongoDriverError. Non-driver errors (400/404 ApiErrors) still pass
+// through unchanged.
+
+test('mongo query: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({find: () => {
+      throw new MongoDriverError('query driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.query({}),
+    mongoErrored500('query driver boom')
+  );
+});
+
+test('mongo queryById: MongoDriverError from findOne rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => {
+      throw new MongoDriverError('queryById driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.queryById({correlationId: 'FOO'}),
+    mongoErrored500('queryById driver boom')
+  );
+});
+
+test('mongo checkTimeOut: MongoDriverError from findOne rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => {
+      throw new MongoDriverError('checkTimeOut driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.checkTimeOut({correlationId: 'FOO'}),
+    mongoErrored500('checkTimeOut driver boom')
+  );
+});
+
 // mongoLog: same deps-seam convention as mongo (factory last param). When
 // deps.collection is provided no real connection is made and every
 // db.collection('logs') call routes to the injected object. These tests
@@ -737,6 +781,42 @@ test('mongoLog addLogItem: insertOne rejecting throws ApiError 500 with "Mongo e
   await assert.rejects(
     () => mongoLog.addLogItem({correlationId: 'FOO', logItemType: 'MERGE_LOG', blobSequence: 1}),
     mongoErrored500('addLogItem boom')
+  );
+});
+
+test('mongoLog query: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({find: () => {
+      throw new MongoDriverError('mongoLog query driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.query({}),
+    mongoErrored500('mongoLog query driver boom')
+  );
+});
+
+test('mongoLog queryById: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({find: () => {
+      throw new MongoDriverError('mongoLog queryById driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.queryById('FOO'),
+    mongoErrored500('mongoLog queryById driver boom')
+  );
+});
+
+test('mongoLog getListOfCatalogers: MongoDriverError from distinct rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({distinct: async () => {
+      throw new MongoDriverError('mongoLog distinct driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.getListOfCatalogers(),
+    mongoErrored500('mongoLog distinct driver boom')
   );
 });
 
