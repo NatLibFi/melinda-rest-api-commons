@@ -13,9 +13,16 @@ const setTimeoutPromise = promisify(setTimeout);
 
 describe('HealthCheck: amqpOperator should error if channel or connection fails', () => {
 
-  it('FIX: test healthCheck - this test does not really test anything, but error can be seen in debug!', async () => {
+  it('healthcheck loop stops silently on closeChannel without unhandled rejections', async (t) => {
     debug(`Testing amqp against a local AMQP instance - we'll need some kind of mockup for this`);
     const amqpUrl = 'amqp://127.0.0.1:5672/';
+
+    // pin the contract: the loop must never leak an unhandled rejection,
+    // both while running and after closeChannel cancels it
+    const unhandled: unknown[] = [];
+    const onUnhandledRejection = (error: unknown) => unhandled.push(error);
+    process.on('unhandledRejection', onUnhandledRejection);
+    t.after(() => process.off('unhandledRejection', onUnhandledRejection));
 
     const amqpOperator = await amqpFactory(amqpUrl, true);
     debug(`Connecting to ${amqpUrl}, with healthCheck running`);
@@ -31,7 +38,7 @@ describe('HealthCheck: amqpOperator should error if channel or connection fails'
     await awaitTime(amqpOperator, true);
     // closeChannel() sets the run flag so the loop short-circuits gracefully:
     // it must stop silently without throwing or firing further health checks
-    assert.ok(true, 'healthCheck loop stopped without error');
+    assert.deepStrictEqual(unhandled, [], 'no unhandled rejections while running or after closeChannel');
 
     debug(`Closing connection`);
     await amqpOperator.closeConnection();
@@ -42,13 +49,10 @@ describe('HealthCheck: amqpOperator should error if channel or connection fails'
      */
     async function awaitTime(amqpOperator: AmqpOperator, close: boolean): Promise<void> {
       if (close) {
-        // wrap the wait so any error thrown by the (cancelled) loop fails the test
         await amqpOperator.closeChannel();
-        try {
-          await setTimeoutPromise(500);
-        } catch (error) {
-          assert.fail(`healthCheck loop threw after closeChannel: ${error}`);
-        }
+        // note: promisify(setTimeout) never rejects, so a try/catch around it
+        // can never catch; the unhandledRejection assertion above is the pin
+        await setTimeoutPromise(500);
         return;
       }
 
