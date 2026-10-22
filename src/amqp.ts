@@ -393,9 +393,6 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
 
     } catch (error) {
       const errorToThrow = error;
-      //if (error instanceof ApiError) {
-      //  throw error;
-      //}
       debug(`SendToQueue errored: ${JSON.stringify(error)}`);
       handleAmqpErrors(errorToThrow);
     }
