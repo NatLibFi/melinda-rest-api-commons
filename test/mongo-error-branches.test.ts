@@ -286,21 +286,26 @@ test('createBulk (stream) returns the normalized {correlationId, acknowledged, q
 
 test('checkTimeOut honours MONGO_TIMEOUT_MINUTES (older item than the window is aborted)', async () => {
   process.env['MONGO_TIMEOUT_MINUTES'] = '5';
-  const oldDate = new Date(Date.now() - 4 * 60 * 1000); // 4 min old: fine at 5m, not at 1m
-  const mongo = await makeMongo({
-    operator: makeOperator({
-      findOne: async () => ({
-        correlationId: 'FOO',
-        queueItemState: 'VALIDATING',
-        modificationTime: oldDate,
-        importJobState: {CREATE: 'DONE', UPDATE: 'DONE', FIX: 'DONE'}
-      })
-    }),
-    gridFSBucket: makeGridFSBucket()
-  });
-  const result = await mongo.checkTimeOut({correlationId: 'FOO'});
-  delete process.env['MONGO_TIMEOUT_MINUTES'];
-  assert.equal(result, true);
+  try {
+    const oldDate = new Date(Date.now() - 4 * 60 * 1000); // 4 min old: fine at 5m, not at 1m
+    const mongo = await makeMongo({
+      operator: makeOperator({
+        findOne: async () => ({
+          correlationId: 'FOO',
+          queueItemState: 'VALIDATING',
+          modificationTime: oldDate,
+          importJobState: {CREATE: 'DONE', UPDATE: 'DONE', FIX: 'DONE'}
+        })
+      }),
+      gridFSBucket: makeGridFSBucket()
+    });
+    const result = await mongo.checkTimeOut({correlationId: 'FOO'});
+    assert.equal(result, true);
+  } finally {
+    // restore the env even on failure so a later operator does not inherit a
+    // 5-minute timeout window
+    delete process.env['MONGO_TIMEOUT_MINUTES'];
+  }
 });
 
 // createBulk stream path used to have no error handling on the GridFS

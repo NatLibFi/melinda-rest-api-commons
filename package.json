@@ -13,7 +13,7 @@
     "url": "https://github.com/NatLibFi/melinda-rest-api-commons"
   },
   "license": "MIT",
-  "version": "6.2.0-alpha.0",
+  "version": "6.2.0-alpha.1",
   "main": "./dist/index.js",
   "type": "module",
   "engines": {
@@ -51,6 +51,8 @@
     "@natlibfi/fixugen": "^4.0.0",
     "@natlibfi/fixura": "^5.0.0",
     "@natlibfi/fixura-mongo": "^4.0.2",
+    "@types/debug": "^4.1.13",
+    "@types/http-status": "^0.2.30",
     "@types/node": "^25.9.9",
     "cross-env": "^10.1.0",
     "eslint": "^10.12.0",

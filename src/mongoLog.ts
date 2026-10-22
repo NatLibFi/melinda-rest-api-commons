@@ -94,7 +94,7 @@ export interface MongoLogOperator {
 
 /**
  * Create log operator
- * @param MONGO_URI connnection address to mongo
+ * @param MONGO_URI connection address to mongo
  * @param dbName Mongo DB name, defaults 'rest-api'
  * @param deps optional dependencies, defaults {}. When deps.collection (a Mongo collection object) is provided, no real Mongo connection is made (used by unit tests)
  * @returns the Mongo log operator object
@@ -217,7 +217,6 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     return result;
   }
 
-  // DEVELOP: queryById returns jsut one (randomish) log! is this useful?
   // Get single log item by correlationId
   // @param correlationId
   // @param logItemType constant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
@@ -302,7 +301,7 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
         throw new ApiError(httpStatus.BAD_REQUEST, `Unknown logItemType: ${logItemType}`);
       });
     }
-    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.silly(JSON.stringify(generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter})));
     //logger.debug(`Getting expanded list of logs`);
     const pipeline: Document[] = [

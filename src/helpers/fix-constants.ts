@@ -55,7 +55,6 @@ export const REPLACE_PREFIXES = [
   }
 ];
 
-// If placed in config.js testing needs envs
 // BIB_FORMAT_SETTINGS is outdated, use other settings instead
 
 

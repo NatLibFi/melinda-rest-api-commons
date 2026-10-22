@@ -10,8 +10,6 @@ import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.ts';
 import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.ts';
 import {withMongoError} from './mongoError.ts';
 
-//import isDeepStrictEqual from 'util';
-
 // The persisted importJobState values always come from the as-const
 // IMPORT_JOB_STATE object (setImportJobState rejects any other string), so
 // the field uses the constant's literal value types instead of free-form
@@ -333,10 +331,8 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
         logger.info(`New PRIO queue item for ${operation} ${correlationId} has been made in ${collection}`);
         return;
       }
-      // TEST-COVERAGE: this error is not (currently) tested
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
     } catch (error) {
-      // TEST-COVERAGE: this error is not (currently) tested
       const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
@@ -408,7 +404,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
         debug(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
         const result = await operator.insertOne(newQueueItem);
         if (!result.acknowledged) {
-          // TEST-COVERAGE: this error is not (currently) tested
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
         }
         // normalize the return shape to the same one the no-stream
@@ -452,10 +447,8 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
           // same normalized shape as the stream path above
           return {correlationId, acknowledged: result.acknowledged, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
-        // TEST-COVERAGE: this error is not (currently) tested
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
       } catch (error) {
-        // TEST-COVERAGE: this error is not (currently) tested
         const apiError = error as ApiError;
         const errorMessage = apiError.payload || apiError.message || '';
         logError(error);
@@ -580,7 +573,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
     // string|undefined input type - cast at the boundary, runtime behaviour
     // is unchanged.
     if (parseBoolean(showAll as unknown as string | undefined)) {
-      //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
@@ -716,7 +708,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       // deleted" (the old bare `true` said both)
       return {removed: deleteResult.deletedCount > 0, deletedContent: removedContent};
     } catch (err) {
-      // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
         debug(err);
         if (err.message.indexOf('File not found for id') !== -1) {
@@ -883,7 +874,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(correlationId);
     } catch (error) {
-      // TEST-COVERAGE: this error is not (currently) tested
       if (error instanceof ApiError) {
         throw error;
       }
