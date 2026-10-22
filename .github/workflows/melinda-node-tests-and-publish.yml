@@ -28,7 +28,6 @@ jobs:
         cache: 'npm'
       env:
         NPM_CONFIG_IGNORE_SCRIPTS: true
-    - run: npm update
     - run: npm audit --package-lock-only --production --audit-level=moderate
     - run: npm i
     - run: npm test

@@ -1,0 +1,232 @@
+import createDebugLogger from 'debug';
+import {MarcRecord} from '@natlibfi/marc-record';
+import type {MarcField, MarcRecordObject} from '@natlibfi/marc-record';
+import {createLogger} from '@natlibfi/melinda-commons';
+
+import {FieldExclusion, SubfieldExclusion} from '@natlibfi/marc-record-validators-melinda';
+
+import {handleTempUrns} from './fix-handle-tempurns.ts';
+import {stripF884s} from './fix-strip-f884s.ts';
+import type {FixSettings, ReplacePrefixOptions, SidFilters} from './fix-constants.ts';
+
+export * from './fix-constants.ts';
+
+const logger = createLogger();
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:fixRecord');
+const debugData = debug.extend('data');
+
+/**
+ * Apply the configured record fixes
+ */
+export function fixRecord(record: MarcRecord, settings: FixSettings = {}): MarcRecordObject {
+
+  logger.verbose(`We will apply formatting to the record according to settings: ${JSON.stringify(settings)}`);
+  const newRecord = MarcRecord.clone(record, {subfieldValues: false});
+  debugData(`settings: ${JSON.stringify(settings)}`);
+
+  // We should handle these in some prettier way ...
+
+  // Fix 1, generate SIDs
+  const generateMissingSIDsOptions = settings.generateMissingSIDs || undefined;
+  const newRecord1 = generateMissingSIDs(newRecord, generateMissingSIDsOptions);
+
+  // Fix 2, replace identifier prefixes
+  const replacePrefixesOptions = settings.replacePrefixes || [];
+  const newRecord2 = replaceAllPrefixes(newRecord1, replacePrefixesOptions);
+
+  // Fix 3, handle temporary URNs from legal deposit record import
+  const newRecord3 = handleTempUrns(newRecord2, settings.handleTempUrns);
+
+  // Fix 4, strip extra field 884s
+  const newRecord4 = stripF884s(newRecord3, settings.stripF884s);
+
+  // Fix 5, strip extra field 984s
+  const newRecord5 = stripF984s(newRecord4, settings.stripF984s || false);
+
+  // Fix 6, strip $9 MELINDA<TEMP> subfields
+  const newRecord6 = stripMelindaTempSubfields(newRecord5, settings.stripMelindaTempSubfields || false);
+
+  debugData(newRecord6);
+
+  return newRecord6.toObject();
+
+}
+
+function replaceAllPrefixes(record: MarcRecord, replacePrefixesOptions: ReplacePrefixOptions[]): MarcRecord {
+  if (replacePrefixesOptions.length < 1) {
+    debug(`NOT running replacePrefixes, no options`);
+    return record;
+  }
+
+  debug(`Running replacePrefixes fixer`);
+  debugData(`replacePrefixesOptions: ${JSON.stringify(replacePrefixesOptions)}`);
+
+  replacePrefixesOptions.forEach(options => {
+    replacePrefix(record, options);
+  });
+  return record;
+}
+
+// Replace prefix in all specified subfields
+function replacePrefix(record: MarcRecord, options: ReplacePrefixOptions): MarcRecord {
+  const {oldPrefix, newPrefix, prefixReplaceCodes} = options;
+  debug(`Replacing ${oldPrefix} with ${newPrefix} in subfields ${prefixReplaceCodes}`);
+  const pattern = `(${oldPrefix})`;
+  const replacement = `(${newPrefix})`;
+  record.getDatafields()
+    .forEach(field => {
+      field.subfields
+        .filter(({code}) => prefixReplaceCodes.includes(code))
+        .forEach(subfield => {
+          // as string mirrors the JSDoc baseline: a missing value still
+          // throws exactly as before the conversion
+          subfield.value = (subfield.value as string).replace(pattern, replacement);
+        });
+    });
+  return record;
+}
+
+// Generate missing SIDs from f035s according to the filters
+function generateMissingSIDs(record: MarcRecord, options: SidFilters | undefined): MarcRecord {
+
+  const f035Filters = options?.f035Filters ?? [];
+  const fSIDFilters = options?.fSIDFilters ?? [];
+
+  if (f035Filters.length !== fSIDFilters.length) {
+    debug(`NOT running generateMissingSIDs: f035Filters (${f035Filters.length}) and fSIDFilters (${fSIDFilters.length}) lengths differ`);
+    return record;
+  }
+  if (f035Filters.length < 1) {
+    debug(`NOT running generateMissingSIDs, no options`);
+    return record;
+  }
+
+  debug(`Running generateMissingSIDs fixer`);
+  debugData(`generateMissingSIDs options: ${JSON.stringify(options)}`);
+
+  // record.get() returns the control/data field union; both tags resolve to
+  // data fields, so these mirror the JSDoc baseline casts (keeping the
+  // original runtime behavior on degenerate records)
+  const f035s = f035ToSidInfo(record.get(/^035$/u) as MarcField[]);
+  const fSIDs = sidsToSidInfo(record.get(/^SID$/u) as MarcField[]);
+
+  const sidsToBeAdded = genNewSids(fSIDs.length === 0
+    ? f035s
+    // test that SIDs are not there yet
+    : f035s.filter(f035SidInfo => !fSIDs.some(fSIDInfo => f035SidInfo.SID === fSIDInfo.SID && f035SidInfo.value === fSIDInfo.value)));
+
+  debugData(`Adding (${sidsToBeAdded.length}) SIDs: ${JSON.stringify(sidsToBeAdded)}`);
+
+  // Add new SIDs
+  sidsToBeAdded.forEach(sidField => record.insertField(sidField));
+  return record;
+
+  function genNewSids(sidsToBeAdded: {SID: string, value: string}[]): {tag: string, ind1: string, ind2: string, subfields: {code: string, value: string}[]}[] {
+    return sidsToBeAdded.map(sidInfo => ({tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: sidInfo.value}, {code: 'b', value: sidInfo.SID}]}));
+  }
+
+  function sidsToSidInfo(SIDs: MarcField[]): {SID: string, value: string}[] {
+    return SIDs.flatMap(({subfields}) => {
+      const sidSubfields = subfields.filter(sub => sub.code === 'b' && sub.value !== undefined && fSIDFilters.includes(sub.value));
+      const SID = sidSubfields[0]?.value;
+      const valueSubfields = subfields.filter(sub => sub.code === 'c' && sub.value !== undefined);
+      const value = valueSubfields[0]?.value;
+
+      if (SID && value) {
+        return {
+          SID,
+          value
+        };
+      }
+
+      return undefined;
+    }).filter((value): value is {SID: string, value: string} => value !== undefined);
+  }
+
+  function f035ToSidInfo(f035s: MarcField[]): {SID: string, value: string}[] {
+    return f035s.flatMap(({subfields}) => {
+      // single pass over the filters - the subfield AND the SID are
+      // both chosen by the SAME first matching filter index (previously the
+      // subfield matched any filter but the SID lookup re-scanned with
+      // findIndex, which was order-sensitive and O(n^2) per field)
+      const wantedSub = subfields.find(sub => sub.code === 'a' && f035Filters.findIndex(regexp => regexp.test(sub.value as string)) > -1);
+
+      if (wantedSub) {
+        const wantedSubValue = wantedSub.value as string;
+        const filterIndex = f035Filters.findIndex(regexp => regexp.test(wantedSubValue));
+        const fSID = fSIDFilters[filterIndex];
+        if (fSID !== undefined) {
+          return {
+            SID: fSID,
+            value: wantedSubValue.slice(wantedSubValue.indexOf(')') + 1)
+          };
+        }
+        return undefined;
+      }
+
+      return undefined;
+    }).filter((value): value is {SID: string, value: string} => value !== undefined);
+  }
+}
+
+// Strip f984s with $a values ALWAYS/NEVER-PREFER-IN-MERGE
+function stripF984s(record: MarcRecord, stripF984sSettings: boolean): MarcRecord {
+  const F984A_PATTERN = /^(?:ALWAYS|NEVER)-PREFER-IN-MERGE$/u;
+  const config = [
+    {
+      tag: /^984$/u,
+      subfields: [
+        {
+          code: /a/u,
+          value: F984A_PATTERN
+        }
+      ]
+    }
+  ];
+
+  debugData(`removeF984AFieldsSettings: ${JSON.stringify(stripF984sSettings)}`);
+
+  if (!stripF984sSettings || !F984A_PATTERN || record.get('984').length < 1) {
+    debug(`No settings or pattern for removeF984AFields or f984 in record`);
+    return record;
+  }
+
+  debug(`Removing f984 fields with subfield $a consisting values ${F984A_PATTERN.toString()}`);
+  // FieldExclusion comes from the untyped validators-melinda shim
+  const validator = FieldExclusion(config);
+  validator.fix(record);
+  return record;
+
+}
+
+// Strip the $9 MELINDA<TEMP> subfields from f856s
+function stripMelindaTempSubfields(record: MarcRecord, stripMelindaTempSubfieldsSettings: boolean): MarcRecord {
+  if (!stripMelindaTempSubfieldsSettings) {
+    debug(`No settings for stripMelindaTempSubfields`);
+    return record;
+  }
+  // NOTE: we remove $9 MELINDA<TEMP> subfields only from f856
+  // Anchored so e.g. tag '8560'-ish values or multi-char subfield codes can
+  // never over-match (SubfieldExclusion tests these RegExps, not replaces)
+  const tagPattern = /^856$/u;
+  const subfieldCodePattern = /^9$/u;
+  const subfieldValuePattern = /^MELINDA<TEMP>$/u;
+  const config = [
+    {
+      tag: tagPattern,
+      subfields: [
+        {
+          code: subfieldCodePattern,
+          value: subfieldValuePattern
+        }
+      ]
+    }
+  ];
+
+  debug(`Running stripMelindaTempSubfields`);
+
+  // SubfieldExclusion comes from the untyped validators-melinda shim
+  const validator = SubfieldExclusion(config);
+  validator.fix(record);
+  return record;
+}
