@@ -1,7 +1,7 @@
 import {describe, it} from 'node:test';
 import assert from 'node:assert';
 import createDebugLogger from 'debug';
-import {amqpFactory} from '../src/index.js';
+import {amqpFactory} from '../src/index.ts';
 import type {AmqpOperator} from '../src/amqp.ts';
 
 
