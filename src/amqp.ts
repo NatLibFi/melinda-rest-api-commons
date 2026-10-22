@@ -90,7 +90,14 @@ interface MessageIdentifier {
 /**
  * Create AMQP operator
  * @param AMQP_URL amqp connection url
- * @param runHealthCheck run the health check loop
+ * @param runHealthCheck when true, a background loop asserts a temporary
+ *   HEALTHCHECK queue about every 200 ms. This is the pod healthcheck
+ *   contract, a deliberate fast-fail: when the broker is unreachable the
+ *   loop's un-awaited promise rejects and the error escapes as an unhandled
+ *   rejection — the operator does not catch, retry or reconnect. The
+ *   process MUST be deployed with unhandledRejection/uncaughtException
+ *   handlers that log and process.exit(1) so the orchestrator (OpenShift)
+ *   restarts the pod.
  * @param deps optional dependencies, defaults {}. deps.connection / deps.channel (amqplib objects) may be injected by unit tests
  * @returns the AMQP operator object
  */
@@ -111,6 +118,26 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
   // by closeChannel/closeConnection so the loop short-circuits on graceful
   // shutdown instead of running until the closed channel throws.
   let healthCheckRunning = runHealthCheck;
+  // failure-path listeners: amqplib emits 'error' on socket loss and 'close'
+  // when the link dies. Without these an unhandled 'error' on an EventEmitter
+  // would become an uncaughtException, and a dead link with runHealthCheck
+  // false would be invisible. 'error' only logs (the deliberate fast-fail
+  // contract of the healthCheck loop is unchanged); 'close' deterministically
+  // cancels the loop so no iterations keep running on a dead link.
+  connection.on('error', (error: Error) => {
+    debug(`Connection error: ${error}`);
+    logError(error);
+  });
+  connection.on('close', () => {
+    healthCheckRunning = false;
+  });
+  channel.on('error', (error: Error) => {
+    debug(`Channel error: ${error}`);
+    logError(error);
+  });
+  channel.on('close', () => {
+    healthCheckRunning = false;
+  });
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
   debug(`Connection: ${connection}`);
@@ -138,7 +165,10 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
 
   /**
    * @param wait false cancels/starts, a number of ms waits before re-checking
-   * @returns false when the loop stopped, the loop re-arms otherwise
+   * @returns false when the loop stopped, the loop re-arms otherwise. When the
+   *   queue assert fails while the loop is still running, the error rethrows
+   *   (handleAmqpErrors) into the un-awaited loop promise — an unhandled
+   *   rejection by design, see the runHealthCheck contract in the factory
    */
   async function healthCheck(wait: number | false = false): Promise<boolean> {
     // cancellable - closeChannel/closeConnection set this to false
