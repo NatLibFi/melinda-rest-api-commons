@@ -333,10 +333,8 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
         logger.info(`New PRIO queue item for ${operation} ${correlationId} has been made in ${collection}`);
         return;
       }
-      // TEST-COVERAGE: this error is not (currently) tested
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
     } catch (error) {
-      // TEST-COVERAGE: this error is not (currently) tested
       const apiError = error as ApiError;
       const errorMessage = apiError.payload || apiError.message || '';
       logError(error);
@@ -408,7 +406,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
         debug(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
         const result = await operator.insertOne(newQueueItem);
         if (!result.acknowledged) {
-          // TEST-COVERAGE: this error is not (currently) tested
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
         }
         // normalize the return shape to the same one the no-stream
@@ -452,10 +449,8 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
           // same normalized shape as the stream path above
           return {correlationId, acknowledged: result.acknowledged, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
-        // TEST-COVERAGE: this error is not (currently) tested
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, undefined);
       } catch (error) {
-        // TEST-COVERAGE: this error is not (currently) tested
         const apiError = error as ApiError;
         const errorMessage = apiError.payload || apiError.message || '';
         logError(error);
@@ -716,7 +711,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       // deleted" (the old bare `true` said both)
       return {removed: deleteResult.deletedCount > 0, deletedContent: removedContent};
     } catch (err) {
-      // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
         debug(err);
         if (err.message.indexOf('File not found for id') !== -1) {
@@ -883,7 +877,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(correlationId);
     } catch (error) {
-      // TEST-COVERAGE: this error is not (currently) tested
       if (error instanceof ApiError) {
         throw error;
       }
