@@ -1,5 +1,4 @@
 import createDebugLogger from 'debug';
-//import {sortFieldsBySubfieldValue, removeSubfield} from './fix-utils';
 import type {MarcField, MarcRecord} from '@natlibfi/marc-record';
 import {inspect} from 'util';
 
