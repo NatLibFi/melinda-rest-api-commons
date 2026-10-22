@@ -37,13 +37,16 @@ describe('services/conversion', () => {
 
   describe('#serialize', () => {
     it('Should throw because of unsupported format', () => {
+      let threw = false;
       try {
         // the undefined inputs are the point of this test: serialize must
         // throw a ConversionError for an unsupported format, not a TypeError
         conversionService.serialize(undefined as never, undefined as never);
       } catch (error) {
+        threw = true;
         assert(error instanceof ConversionError);
       }
+      assert.equal(threw, true);
     });
 
     it('Should serialize to MARCXML', () => {
@@ -86,13 +89,16 @@ describe('services/conversion', () => {
 
   describe('#unserialize', () => {
     it('Should throw because of unsupported format', () => {
+      let threw = false;
       try {
         // the undefined inputs are the point of this test: unserialize must
         // throw a ConversionError for an unsupported format, not a TypeError
         conversionService.unserialize(undefined as never, undefined as never);
       } catch (error) {
+        threw = true;
         assert(error instanceof ConversionError);
       }
+      assert.equal(threw, true);
     });
 
     it('Should unserialize from MARCXML', async () => {
@@ -117,11 +123,14 @@ describe('services/conversion', () => {
 
 
     it('Should throw because the record could not be unserialized', () => {
+      let threw = false;
       try {
         conversionService.unserialize('', CONVERSION_FORMATS.JSON);
       } catch (error) {
+        threw = true;
         assert(error instanceof ConversionError);
       }
+      assert.equal(threw, true);
     });
   });
 });
