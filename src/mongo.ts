@@ -10,8 +10,6 @@ import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.ts';
 import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.ts';
 import {withMongoError} from './mongoError.ts';
 
-//import isDeepStrictEqual from 'util';
-
 // The persisted importJobState values always come from the as-const
 // IMPORT_JOB_STATE object (setImportJobState rejects any other string), so
 // the field uses the constant's literal value types instead of free-form
@@ -575,7 +573,6 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
     // string|undefined input type - cast at the boundary, runtime behaviour
     // is unchanged.
     if (parseBoolean(showAll as unknown as string | undefined)) {
-      //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
       return {
         _id: 0
