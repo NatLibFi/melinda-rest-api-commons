@@ -6,7 +6,7 @@ import generateTests from '@natlibfi/fixugen';
 import type {CallbackArgs} from '@natlibfi/fixugen';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import type {GetMessage, Message} from 'amqplib';
-import {amqpFactory} from '../src/index.js';
+import {amqpFactory} from '../src/index.ts';
 import type {AmqpOperator, QueueItemMessagePayload, QueueItemRecordPayload, SendToQueueParams} from '../src/amqp.ts';
 
 const setTimeoutPromise = promisify(setTimeout);
