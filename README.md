@@ -81,7 +81,7 @@ defaults to `'rest-api'`.
 | `getListOfLogs(logItemType?)` | Get the list of `correlationId`s that have logs of a given type (default `MERGE_LOG`) | `string[]` |
 | `getListOfCatalogers()` | Get the list of catalogers over all logs | `string[]` |
 | `getListOfCorrelationIds()` | Get the list of `correlationId`s over all logs | `string[]` |
-| `getExpandedListOfLogs(params)` | Aggregated log list per `correlationId` + `logItemType` with cataloger, creation time and record count; optional filters `logItemTypes`, `catalogers`, `dateBefore`, `dateAfter` (a provided `logItemTypes` is validated element-wise, unknown element rejects with 400) | `ExpandedLogListItem[]` |
+| `getExpandedListOfLogs(params)` | Aggregated log list per `correlationId` + `logItemType` with cataloger, creation time and record count; optional filters `logItemTypes`, `catalogers`, `dateBefore`, `dateAfter` (a provided `logItemTypes` is validated element-wise, unknown element rejects with 400; `dateBefore` is an exclusive upper bound and `dateAfter` an inclusive lower bound on `creationTime`, UTC `'YYYY-MM-DD'` or `Date`, defaults now / epoch = no effective filter) | `ExpandedLogListItem[]` |
 | `protect(correlationId, blobSequence?)` | Mark matching log items as protected (idempotent) | `UpdateResult` |
 | `unprotect(correlationId, blobSequence?)` | Mark matching log items as unprotected, so regular cleaning can remove them | `UpdateResult` |
 | `remove(correlationId, force?)` | Remove log items for a `correlationId`; protected items are kept unless `force` | `DeleteResult` |
