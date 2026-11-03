@@ -6,6 +6,7 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import createMongoLogOperator from '../src/mongoLog.ts';
 
 let mongoFixtures: any;
+const openedOperators: any[] = [];
 
 generateTests({
   callback,
@@ -23,6 +24,10 @@ generateTests({
     beforeEach: () => mongoFixtures.clear(),
     afterEach: () => mongoFixtures.clear(),
     after: async () => {
+      // close the operators the tests opened (one per test) before the server
+      for (const op of openedOperators) {
+        await op.close();
+      }
       await mongoFixtures.close();
     }
   }
@@ -58,6 +63,7 @@ async function callback(callbackParams: Record<string, any>) {
   } = callbackParams;
   const mongoUri = await mongoFixtures.getUri();
   const mongoLogOperator = await createMongoLogOperator(mongoUri, '');
+  openedOperators.push(mongoLogOperator);
   const expectedResult = expectError ? undefined : await getFixture('expectedResult.json');
 
   if (expectError) {

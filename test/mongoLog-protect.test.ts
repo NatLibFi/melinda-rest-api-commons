@@ -26,6 +26,7 @@ async function initMongofixtures() {
 
 async function cleanup() {
   await mongoFixtures.clear();
+  await mongoLogOperator.close();
   await mongoFixtures.close();
 }
 
