@@ -257,6 +257,45 @@ test('checkAndSetState reports a pre-existing ABORT as "unchanged" without writi
   assert.deepStrictEqual(writes, []);
 });
 
+test('checkAndSetImportJobState reports a pre-existing ABORT as "unchanged" without writing', async () => {
+  const doc = {correlationId: 'FOO', queueItemState: 'ABORT', errorStatus: 408, errorMessage: 'Timeout in VALIDATING'};
+  const writes: unknown[] = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => doc,
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
+        writes.push({filter, update});
+        return doc;
+      }
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetImportJobState({correlationId: 'FOO', operation: 'FIX', importJobState: 'DONE'});
+  assert.deepStrictEqual(result, {status: 'unchanged', queueItem: doc});
+  assert.deepStrictEqual(writes, []);
+});
+
+// a pre-existing DONE item is terminal too (like ABORT/ERROR) and must be
+// reported as 'unchanged' without touching the document
+
+test('checkAndSetState reports a pre-existing DONE as "unchanged" without writing', async () => {
+  const doc = {correlationId: 'FOO', queueItemState: 'DONE'};
+  const writes: unknown[] = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => doc,
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
+        writes.push({filter, update});
+        return doc;
+      }
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetState({correlationId: 'FOO', state: 'VALIDATING'});
+  assert.deepStrictEqual(result, {status: 'unchanged', queueItem: doc});
+  assert.deepStrictEqual(writes, []);
+});
+
 test('setOperation rejects with ApiError 404 for a non-matching correlationId', async () => {
   const mongo = await makeMongo({
     operator: makeOperator({findOne: async () => null}),
