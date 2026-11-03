@@ -214,6 +214,49 @@ test('checkTimeOut returns false (no crash) when the queueItem does not exist', 
   assert.equal(result, false);
 });
 
+// checkAndSetState / checkAndSetImportJobState must report a missing item
+// as 'unchanged' (with a null queueItem) — not as a timeout
+
+test('checkAndSetState returns {status: "unchanged", queueItem: null} when the queueItem does not exist', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => null}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetState({correlationId: 'NOPE', state: 'VALIDATING'});
+  assert.deepStrictEqual(result, {status: 'unchanged', queueItem: null});
+});
+
+test('checkAndSetImportJobState returns {status: "unchanged", queueItem: null} when the queueItem does not exist', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => null}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetImportJobState({correlationId: 'NOPE', operation: 'FIX', importJobState: 'DONE'});
+  assert.deepStrictEqual(result, {status: 'unchanged', queueItem: null});
+});
+
+// a pre-existing ABORT item must be reported as 'unchanged' (not
+// 'timeout', which is reserved for items aborted by checkTimeOut in this
+// call) and the document must be left untouched
+
+test('checkAndSetState reports a pre-existing ABORT as "unchanged" without writing', async () => {
+  const doc = {correlationId: 'FOO', queueItemState: 'ABORT', errorStatus: 408, errorMessage: 'Timeout in VALIDATING'};
+  const writes: unknown[] = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => doc,
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
+        writes.push({filter, update});
+        return doc;
+      }
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetState({correlationId: 'FOO', state: 'VALIDATING'});
+  assert.deepStrictEqual(result, {status: 'unchanged', queueItem: doc});
+  assert.deepStrictEqual(writes, []);
+});
+
 test('setOperation rejects with ApiError 404 for a non-matching correlationId', async () => {
   const mongo = await makeMongo({
     operator: makeOperator({findOne: async () => null}),
