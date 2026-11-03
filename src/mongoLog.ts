@@ -90,11 +90,13 @@ export interface MongoLogOperator {
   unprotect: (correlationId: string, blobSequence?: number | string) => Promise<UpdateResult>;
   remove: (correlationId: string, force?: boolean) => Promise<DeleteResult>;
   removeBySequences: (correlationId: string, sequences?: (number | string)[], force?: boolean) => Promise<DeleteResult>;
+  /** Close the Mongo connection (idempotent, always resolves; a stubbed factory is a no-op) */
+  close: () => Promise<void>;
 }
 
 /**
  * Create log operator
- * @param MONGO_URI connnection address to mongo
+ * @param MONGO_URI connection address to mongo
  * @param dbName Mongo DB name, defaults 'rest-api'
  * @param deps optional dependencies, defaults {}. When deps.collection (a Mongo collection object) is provided, no real Mongo connection is made (used by unit tests)
  * @returns the Mongo log operator object
@@ -128,9 +130,11 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
   // deps (used by unit tests to avoid a real connection). The deps value
   // is cast (the runtime value may be undefined until the connect branch
   // assigns), mirroring the operator seam in mongo.ts.
+  let client: MongoClient | undefined;
+  let closed = false;
   let logCollection: Collection<LogItem> = deps.collection as Collection<LogItem>;
   if (!deps.collection) {
-    const client = await MongoClient.connect(MONGO_URI);
+    client = await MongoClient.connect(MONGO_URI);
     logCollection = client.db(dbName).collection<LogItem>(collection);
   }
   // The previously-unwrapped public methods are wrapped with the shared
@@ -150,8 +154,19 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     protect,
     unprotect,
     remove,
-    removeBySequences
+    removeBySequences,
+    close
   };
+
+  // Close the Mongo connection (idempotent, always resolves: a stubbed
+  // factory has no client, a second call returns immediately). Mirrors the
+  // amqp.ts closeChannel/closeConnection convention: no withMongoError
+  // wrapper, a live client.close() rejection propagates raw.
+  async function close() {
+    if (closed) return;
+    closed = true;
+    await client?.close();
+  }
 
   // the free-form logItemType strings (caller input / Mongo docs) are
   // matched against the as-const LOG_ITEM_TYPE (literal-typed values), so
@@ -217,7 +232,6 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     return result;
   }
 
-  // DEVELOP: queryById returns jsut one (randomish) log! is this useful?
   // Get single log item by correlationId
   // @param correlationId
   // @param logItemType constant LOG_ITEM_TYPE defaults LOG_ITEM_TYPE.MERGE_LOG
@@ -302,7 +316,7 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
         throw new ApiError(httpStatus.BAD_REQUEST, `Unknown logItemType: ${logItemType}`);
       });
     }
-    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}, catalogers: ${JSON.stringify(catalogers)}`);
     logger.silly(JSON.stringify(generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter})));
     //logger.debug(`Getting expanded list of logs`);
     const pipeline: Document[] = [

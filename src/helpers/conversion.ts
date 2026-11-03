@@ -10,7 +10,6 @@ export default function () {
 
   return {serialize, unserialize};
 
-  // This uses format as a number form contants CONVERSION_FORMATS
   // Serialize a record in the given format: a CONVERSION_FORMATS value,
   // returns the serialized record
   function serialize(record: MarcRecord, format: string): string {

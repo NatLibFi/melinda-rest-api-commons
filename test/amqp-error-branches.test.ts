@@ -53,6 +53,7 @@ function makeChannel(overrides: Record<string, unknown> = {}) {
     purgeQueue: async () => {},
     close: async () => {},
     sendToQueue: async () => {},
+    on: () => {},
     ...overrides
   };
 }
@@ -62,7 +63,7 @@ function makeChannel(overrides: Record<string, unknown> = {}) {
  */
 async function makeOperator(channelOverrides?: Record<string, unknown>) {
   const channel = makeChannel(channelOverrides);
-  const connection = {createChannel: async () => channel, close: async () => {}};
+  const connection = {createChannel: async () => channel, close: async () => {}, on: () => {}};
   return createAmqp(DUMMY_URL, false, {connection, channel});
 }
 
@@ -140,7 +141,7 @@ test('removeQueue closes the temp channel even when deleteQueue throws', async (
     }
   };
   const amqpOperator = await createAmqp(DUMMY_URL, false, {
-    connection: {createChannel: async () => tempChannel, close: async () => {}},
+    connection: {createChannel: async () => tempChannel, close: async () => {}, on: () => {}},
     channel: makeChannel()
   });
   await assert.rejects(() => amqpOperator.removeQueue(QUEUE));
@@ -157,7 +158,8 @@ test('removeQueue closes the temp channel on success too', async () => {
           closedChannels.push('temp');
         }
       }),
-      close: async () => {}
+      close: async () => {},
+      on: () => {}
     },
     channel: makeChannel()
   });
@@ -191,10 +193,11 @@ test('healthCheck loop stops after closeChannel and does not keep firing or thro
     purgeQueue: async () => {},
     close: async () => {
       closed = true;
-    }
+    },
+    on: () => {}
   };
   const amqpOperator = await createAmqp(DUMMY_URL, true, {
-    connection: {createChannel: async () => channel, close: async () => {}},
+    connection: {createChannel: async () => channel, close: async () => {}, on: () => {}},
     channel
   });
   // let the health check run at least once, then cancel it
@@ -466,7 +469,8 @@ test('closeConnection closes the connection and the operator resolves', async ()
       createChannel: async () => channel,
       close: async () => {
         closed.push('connection');
-      }
+      },
+      on: () => {}
     },
     channel
   });
@@ -490,7 +494,7 @@ test('healthCheck error arriving after cancel does not rethrow and stops the loo
     }
   });
   const amqpOperator = await createAmqp(DUMMY_URL, true, {
-    connection: {createChannel: async () => channel, close: async () => {}},
+    connection: {createChannel: async () => channel, close: async () => {}, on: () => {}},
     channel
   });
   // by now the loop is suspended on the pending assertQueue call;
@@ -525,12 +529,13 @@ test('healthCheck error while running rethrows into the un-awaited loop promise'
       nack: () => {},
       purgeQueue: async () => {},
       close: async () => {},
-      sendToQueue: async () => {}
+      sendToQueue: async () => {},
+      on: () => {}
     };
     const captured = [];
     process.on('unhandledRejection', (err) => captured.push(err));
     await createAmqp('amqp://stub:5672/', true, {
-      connection: {createChannel: async () => channel, close: async () => {}},
+      connection: {createChannel: async () => channel, close: async () => {}, on: () => {}},
       channel
     });
     // the first loop iteration rejects and the error escapes the un-awaited loop promise
@@ -548,4 +553,57 @@ test('healthCheck error while running rethrows into the un-awaited loop promise'
   assert.equal(code, 0, `child process output: ${stdout}`);
   // handleAmqpErrors logs the error to stdout before the escape, so only the tail matters
   assert.ok(stdout.endsWith('OK'), `expected child output to end with OK, got: ${stdout}`);
+});
+
+test('broker loss (error + close events) logs the error and close cancels the health check', async () => {
+  // Failure-path listeners on the amqplib connection/channel:
+  // - 'error' must only log: without a handler an unhandled EventEmitter
+  //   'error' would become an uncaughtException, and the error alone must
+  //   NOT stop the loop (the fast-fail contract is unchanged)
+  // - 'close' must cancel the health check loop so no iterations keep
+  //   running on a dead link (matters for runHealthCheck: false consumers)
+  const handlers: Record<string, ((...args: unknown[]) => void)[]> = {};
+  const makeOn = (target: string) => (event: string, handler: (...args: unknown[]) => void) => {
+    const key = `${target}:${event}`;
+    const list = handlers[key] ?? (handlers[key] = []);
+    list.push(handler);
+    return {off: () => {}};
+  };
+  let healthCheckCalls = 0;
+  const channel = makeChannel({
+    on: makeOn('channel'),
+    assertQueue: async (name: string) => {
+      if (name === 'HEALTHCHECK') {
+        healthCheckCalls += 1;
+      }
+      return {messageCount: 0};
+    }
+  });
+  await createAmqp(DUMMY_URL, true, {
+    connection: {createChannel: async () => channel, close: async () => {}, on: makeOn('connection')},
+    channel
+  });
+  // all four listeners must be attached (connection + channel, error + close)
+  assert.deepStrictEqual(Object.keys(handlers).sort(), [
+    'channel:close',
+    'channel:error',
+    'connection:close',
+    'connection:error'
+  ]);
+  // let the loop run a couple of iterations, then simulate broker loss the
+  // way amqplib signals it: an 'error' event followed by 'close'
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  for (const handler of handlers['channel:error'] ?? []) handler(new Error('socket lost'));
+  for (const handler of handlers['connection:error'] ?? []) handler(new Error('socket lost'));
+  // the 'error' events alone must not cancel the loop
+  const callsAfterError = healthCheckCalls;
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  assert.ok(healthCheckCalls > 0, 'health check should have run before the broker loss');
+  assert.ok(healthCheckCalls > callsAfterError, 'health check keeps running after the error events');
+  for (const handler of handlers['channel:close'] ?? []) handler();
+  for (const handler of handlers['connection:close'] ?? []) handler();
+  const callsAfterClose = healthCheckCalls;
+  // wait longer than the 200 ms loop interval - no further health checks may fire
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  assert.equal(healthCheckCalls, callsAfterClose, 'no health checks after the close events');
 });
