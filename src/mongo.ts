@@ -484,6 +484,16 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
    */
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}: CheckAndSetStateParams): Promise<CheckAndSetResult> {
     assertString(correlationId, 'correlationId');
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
@@ -492,8 +502,11 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       const queueItem = await setState({correlationId, state, errorMessage, errorStatus});
       return {status: 'updated', queueItem};
     }
-    // Read the current item so the caller can tell "aborted by timeout"
-    // apart from "unchanged" and see the resulting document
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
     const queueItem = await operator.findOne({correlationId}, {projection: {_id: 0}});
     const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
     return {status, queueItem};
@@ -510,6 +523,16 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
    */
   async function checkAndSetImportJobState({correlationId, operation, importJobState}: CheckAndSetImportJobStateParams): Promise<CheckAndSetResult> {
     assertString(correlationId, 'correlationId');
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
@@ -519,6 +542,11 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
       const queueItem = await setImportJobState({correlationId, operation, importJobState});
       return {status: 'updated', queueItem};
     }
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
     const queueItem = await operator.findOne({correlationId}, {projection: {_id: 0}});
     const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
     return {status, queueItem};
