@@ -182,7 +182,7 @@ export function stripF884s(newRecord: MarcRecord, options: boolean | undefined):
     return value;
   }
 
-  function fieldsAreEqual(a: unknown, b: unknown): boolean {
+  function fieldsAreEqual(a: MarcField, b: MarcField): boolean {
     return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
   }
 
