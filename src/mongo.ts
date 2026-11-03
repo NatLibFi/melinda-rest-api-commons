@@ -223,6 +223,8 @@ export interface MongoOperator {
   setOperations: (params: {correlationId: string, addOperation: string, removeOperation?: string}) => Promise<WithId<QueueItem>>;
   addBlobSize: (params: {correlationId: string}) => Promise<WithId<QueueItem> | null>;
   setBlobSize: (params: {correlationId: string, blobSize: number}) => Promise<WithId<QueueItem> | null>;
+  /** Close the Mongo connection (idempotent, always resolves; a stubbed factory is a no-op) */
+  close: () => Promise<void>;
 }
 
 /**
@@ -253,10 +255,12 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
   // undefined until the connect branch assigns them), which also keeps
   // the closure-typed functions below from seeing possibly-undefined.
   const stubbed = Boolean(deps.operator) && Boolean(deps.gridFSBucket);
+  let client: MongoClient | undefined;
+  let closed = false;
   let gridFSBucket: GridFSBucket = deps.gridFSBucket as GridFSBucket;
   let operator: Collection<QueueItem> = deps.operator as Collection<QueueItem>;
   if (!stubbed) {
-    const client = await MongoClient.connect(MONGO_URI);
+    client = await MongoClient.connect(MONGO_URI);
     const realDb = client.db(db);
     gridFSBucket = gridFSBucket ?? new GridFSBucket(realDb, {bucketName: collection});
     operator = operator ?? realDb.collection<QueueItem>(collection);
@@ -290,8 +294,19 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
     setOperation: (params: {correlationId: string, operation: string}) => withMongoError(() => setOperation(params)),
     setOperations: (params: {correlationId: string, addOperation: string, removeOperation?: string}) => withMongoError(() => setOperations(params)),
     addBlobSize: (params: {correlationId: string}) => withMongoError(() => addBlobSize(params)),
-    setBlobSize: (params: {correlationId: string, blobSize: number}) => withMongoError(() => setBlobSize(params))
+    setBlobSize: (params: {correlationId: string, blobSize: number}) => withMongoError(() => setBlobSize(params)),
+    close
   };
+
+  // Close the Mongo connection (idempotent, always resolves: a stubbed
+  // factory has no client, a second call returns immediately). Mirrors the
+  // amqp.ts closeChannel/closeConnection convention: no withMongoError
+  // wrapper, a live client.close() rejection propagates raw.
+  async function close() {
+    if (closed) return;
+    closed = true;
+    await client?.close();
+  }
 
   /**
    * Create a prio queueItem
