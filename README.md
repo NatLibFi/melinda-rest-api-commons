@@ -1,8 +1,8 @@
-# Shared modules for microservices of Melinda rest api import system
+# Shared modules for microservices of the Melinda REST API
 [![NPM Version](https://img.shields.io/npm/v/@natlibfi/melinda-rest-api-commons.svg)](https://npmjs.org/package/@natlibfi/melinda-rest-api-commons)
 ![Node Version](https://img.shields.io/node/v/@natlibfi/melinda-rest-api-commons.svg)
 
-Shared modules for microservices of Melinda rest api import system
+Shared modules for microservices of the Melinda REST API
 
 ## API
 
@@ -53,6 +53,7 @@ Creates the queue-item operator on a Mongo collection. `db` defaults to
 | `setOperations({correlationId, addOperation, removeOperation?})` | Add and/or remove operations on a queue item | `QueueItem` |
 | `addBlobSize({correlationId})` | Increment the `blobSize` of a queue item waiting for records | `QueueItem \| null` |
 | `setBlobSize({correlationId, blobSize})` | Set the `blobSize` of a queue item | `QueueItem \| null` |
+| `close()` | Close the Mongo connection (idempotent, always resolves) | `void` |
 
 **`CheckAndSetResult`** — the discriminated result of
 `checkAndSetState` / `checkAndSetImportJobState` (branch on `status`, read
@@ -86,6 +87,7 @@ defaults to `'rest-api'`.
 | `unprotect(correlationId, blobSequence?)` | Mark matching log items as unprotected, so regular cleaning can remove them | `UpdateResult` |
 | `remove(correlationId, force?)` | Remove log items for a `correlationId`; protected items are kept unless `force` | `DeleteResult` |
 | `removeBySequences(correlationId, sequences?, force?)` | Remove log items for a `correlationId` matching blob sequences; protected items are kept unless `force` | `DeleteResult` |
+| `close()` | Close the Mongo connection (idempotent, always resolves) | `void` |
 
 ### `amqpFactory(AMQP_URL, runHealthCheck?)`
 
