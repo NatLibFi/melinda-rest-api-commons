@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import {test} from 'node:test';
+import {test, after} from 'node:test';
 import {Readable, PassThrough} from 'node:stream';
 import httpStatus from 'http-status';
 import {MongoDriverError} from 'mongodb';
@@ -10,6 +10,9 @@ import {payloadObject, payloadText} from './testUtils.ts';
 
 const DUMMY_URI = 'mongodb://stub:27017/rest-api';
 const COLLECTION = 'foobar';
+// every test creates its own (stubbed) operators; close them all at the
+// end - close is a no-op for stubbed factories, which is the point
+const stubOperators: any[] = [];
 
 // the deps seam takes unknown-typed dependencies, so plain stub objects
 // are fine to inject (the driver types are never exercised here)
@@ -36,7 +39,9 @@ function makeGridFSBucket(overrides: Record<string, any> = {}) {
  * @param deps the injected stub operator/gridFSBucket
  */
 async function makeMongo(deps: Record<string, any>) {
-  return createMongo(DUMMY_URI, COLLECTION, 'rest-api', deps);
+  const mongo = await createMongo(DUMMY_URI, COLLECTION, 'rest-api', deps);
+  stubOperators.push(mongo);
+  return mongo;
 }
 
 // The 400-guard tests pass intentionally malformed inputs (non-string
@@ -864,8 +869,16 @@ function makeLogCollection(overrides: Record<string, any> = {}) {
  * @param deps the injected stub collection
  */
 async function makeMongoLog(deps: Record<string, any>) {
-  return createMongoLog(DUMMY_URI, 'rest-api', deps);
+  const mongoLog = await createMongoLog(DUMMY_URI, 'rest-api', deps);
+  stubOperators.push(mongoLog);
+  return mongoLog;
 }
+
+after(async () => {
+  for (const op of stubOperators) {
+    await op.close();
+  }
+});
 
 function mongoErrored500(text: string) {
   return (error: unknown) => {

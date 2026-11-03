@@ -7,6 +7,7 @@ import createDebugLogger from 'debug';
 import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
 let mongoFixtures: any;
+const openedOperators: any[] = [];
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-blob-size:test');
 
 generateTests({
@@ -33,6 +34,10 @@ generateTests({
     },
     after: async () => {
       //debug(`<< After`);
+      // close the operators the tests opened (one per test) before the server
+      for (const op of openedOperators) {
+        await op.close();
+      }
       await mongoFixtures.close();
     }
   }
@@ -59,6 +64,7 @@ async function callback(callbackParams: Record<string, any>) {
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
+  openedOperators.push(mongoOperator);
   const expectedResult = await getFixture('expectedResult.json');
 
   await doPreFillDb(preFillDb);

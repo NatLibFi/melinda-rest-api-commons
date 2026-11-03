@@ -112,6 +112,8 @@ export interface MongoLogOperator {
   unprotect: (correlationId: string, blobSequence?: number | string) => Promise<UpdateResult>;
   remove: (correlationId: string, force?: boolean) => Promise<DeleteResult>;
   removeBySequences: (correlationId: string, sequences?: (number | string)[], force?: boolean) => Promise<DeleteResult>;
+  /** Close the Mongo connection (idempotent, always resolves; a stubbed factory is a no-op) */
+  close: () => Promise<void>;
 }
 
 /**
@@ -150,9 +152,11 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
   // deps (used by unit tests to avoid a real connection). The deps value
   // is cast (the runtime value may be undefined until the connect branch
   // assigns), mirroring the operator seam in mongo.ts.
+  let client: MongoClient | undefined;
+  let closed = false;
   let logCollection: Collection<LogItem> = deps.collection as Collection<LogItem>;
   if (!deps.collection) {
-    const client = await MongoClient.connect(MONGO_URI);
+    client = await MongoClient.connect(MONGO_URI);
     logCollection = client.db(dbName).collection<LogItem>(collection);
   }
   // The previously-unwrapped public methods are wrapped with the shared
@@ -172,8 +176,19 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     protect,
     unprotect,
     remove,
-    removeBySequences
+    removeBySequences,
+    close
   };
+
+  // Close the Mongo connection (idempotent, always resolves: a stubbed
+  // factory has no client, a second call returns immediately). Mirrors the
+  // amqp.ts closeChannel/closeConnection convention: no withMongoError
+  // wrapper, a live client.close() rejection propagates raw.
+  async function close() {
+    if (closed) return;
+    closed = true;
+    await client?.close();
+  }
 
   // the free-form logItemType strings (caller input / Mongo docs) are
   // matched against the as-const LOG_ITEM_TYPE (literal-typed values), so
