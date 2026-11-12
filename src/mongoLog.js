@@ -2,6 +2,7 @@ import {MongoClient} from 'mongodb';
 import httpStatus from 'http-status';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
 import {logError, assertString} from './utils.js';
+import {withMongoError} from './mongoError.js';
 import {LOG_ITEM_TYPE} from './constants.js';
 
 /**
@@ -44,7 +45,25 @@ export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
     const client = await MongoClient.connect(MONGO_URI);
     db = client.db(dbName);
   }
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
+  // The previously-unwrapped public methods are wrapped with the shared
+  // withMongoError helper so a Mongo driver failure rejects with
+  // ApiError 500 ('Mongo errored: ...') instead of a raw driver error;
+  // validation errors (400) pass through unchanged. The pre-wrapped
+  // methods (addLogItem, protect, unprotect, remove, removeBySequences)
+  // keep their inline handling.
+  return {
+    addLogItem,
+    query: (params) => withMongoError(() => query(params)),
+    queryById: (correlationId, logItemType, skip, limit) => withMongoError(() => queryById(correlationId, logItemType, skip, limit)),
+    getListOfLogs: (logItemType) => withMongoError(() => getListOfLogs(logItemType)),
+    getListOfCatalogers: () => withMongoError(() => getListOfCatalogers()),
+    getListOfCorrelationIds: () => withMongoError(() => getListOfCorrelationIds()),
+    getExpandedListOfLogs: (params) => withMongoError(() => getExpandedListOfLogs(params)),
+    protect,
+    unprotect,
+    remove,
+    removeBySequences
+  };
 
   /**
    * Add log item to collection

@@ -6,6 +6,7 @@ import createDebugLogger from 'debug';
 import {createLogger, Error as ApiError, parseBoolean} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS} from './constants.js';
 import {logError, assertString, assertNumber, assertImportJobStateFilter} from './utils.js';
+import {withMongoError} from './mongoError.js';
 
 //import isDeepStrictEqual from 'util';
 
@@ -65,7 +66,35 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   }
   debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
-  return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
+  // The previously-unwrapped public methods are wrapped with the shared
+  // withMongoError helper so a Mongo driver failure rejects with
+  // ApiError 500 ('Mongo errored: ...') instead of a raw driver error;
+  // validation (400) and not-found (404) errors pass through unchanged.
+  // The pre-wrapped methods (createPrio, createBulk, remove, getOne,
+  // getStream, pushIds, pushMessages) keep their inline handling.
+  return {
+    createPrio,
+    createBulk,
+    checkAndSetState: (params) => withMongoError(() => checkAndSetState(params)),
+    checkAndSetImportJobState: (params) => withMongoError(() => checkAndSetImportJobState(params)),
+    query: (params, showParams) => withMongoError(() => query(params, showParams)),
+    createProjection,
+    queryById: (params) => withMongoError(() => queryById(params)),
+    checkTimeOut: (params) => withMongoError(() => checkTimeOut(params)),
+    remove,
+    readContent: (correlationId) => withMongoError(() => readContent(correlationId)),
+    removeContent: (params) => withMongoError(() => removeContent(params)),
+    getOne,
+    getStream,
+    setState: (params) => withMongoError(() => setState(params)),
+    setImportJobState: (params) => withMongoError(() => setImportJobState(params)),
+    pushIds,
+    pushMessages,
+    setOperation: (params) => withMongoError(() => setOperation(params)),
+    setOperations: (params) => withMongoError(() => setOperations(params)),
+    addBlobSize: (params) => withMongoError(() => addBlobSize(params)),
+    setBlobSize: (params) => withMongoError(() => setBlobSize(params))
+  };
 
   async function createPrio({correlationId, cataloger, oCatalogerIn, operation, operationSettings}) {
     debugDev('createPrio');
