@@ -112,7 +112,7 @@ export interface MongoLogOperator {
   unprotect: (correlationId: string, blobSequence?: number | string) => Promise<UpdateResult>;
   remove: (correlationId: string, force?: boolean) => Promise<DeleteResult>;
   removeBySequences: (correlationId: string, sequences?: (number | string)[], force?: boolean) => Promise<DeleteResult>;
-  /** Close the Mongo connection (idempotent, always resolves; a stubbed factory is a no-op) */
+  /** Close the Mongo connection (idempotent; a stubbed factory is a no-op; rejects with the raw driver error when the client's close fails) */
   close: () => Promise<void>;
 }
 
@@ -180,8 +180,8 @@ export default async function (MONGO_URI: string, dbName = 'rest-api', deps: {co
     close
   };
 
-  // Close the Mongo connection (idempotent, always resolves: a stubbed
-  // factory has no client, a second call returns immediately). Mirrors the
+  // Close the Mongo connection (idempotent: a stubbed factory has no client,
+  // a second call returns immediately). Mirrors the
   // amqp.ts closeChannel/closeConnection convention: no withMongoError
   // wrapper, a live client.close() rejection propagates raw.
   async function close() {
