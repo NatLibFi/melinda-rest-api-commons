@@ -1,0 +1,95 @@
+//import assert from 'node:assert';
+import {READERS} from '@natlibfi/fixura';
+import mongoFixturesFactory from '@natlibfi/fixura-mongo';
+import generateTests from '@natlibfi/fixugen';
+import createDebugLogger from 'debug';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
+
+let mongoFixtures: any;
+const openedOperators: any[] = [];
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:push-messages:test');
+
+generateTests({
+  callback,
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-messages'],
+  recurse: false,
+  useMetadataFile: true,
+  fixura: {
+    failWhenNotFound: true,
+    reader: READERS.JSON
+  },
+  hooks: {
+    before: async () => {
+      //debug(`<< Before`);
+      await initMongofixtures();
+    },
+    beforeEach: async () => {
+      //debug(`<< BeforeEach`);
+      await mongoFixtures.clear();
+    },
+    afterEach: async () => {
+      //debug(`<< AfterEach`);
+      await mongoFixtures.clear();
+    },
+    after: async () => {
+      //debug(`<< After`);
+      // close the operators the tests opened (one per test) before the server
+      for (const op of openedOperators) {
+        await op.close();
+      }
+      await mongoFixtures.close();
+    }
+  }
+});
+
+async function initMongofixtures() {
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-messages'],
+    gridFS: {bucketName: 'foobar'},
+    useObjectId: true
+  });
+}
+
+async function callback(callbackParams: Record<string, any>) {
+  const {
+  getFixture,
+  functionName,
+  params,
+  expectModificationTime = false,
+  preFillDb = false,
+  expectedToThrow = false,
+  expectedErrorMessage = '',
+  expectedErrorStatus = ''
+  } = callbackParams;
+
+  const mongoOperator = await getMongoOperator(mongoFixtures);
+  openedOperators.push(mongoOperator);
+  const expectedResult = await getFixture('expectedResult.json');
+
+  await doPreFillDb(preFillDb);
+
+  async function doPreFillDb(preFillDb: boolean) {
+    if (preFillDb) {
+      await mongoFixtures.populate(getFixture('dbContents.json'));
+      return;
+    }
+    return;
+  }
+
+  if (functionName === 'pushMessages') {
+    try {
+      debug(`pushMessages`);
+      debug(JSON.stringify(params));
+      //{correlationId, messages, messageField = 'messages'}
+      const opResult = await mongoOperator.pushMessages(params);
+      debug(`pushMessages result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+    } catch (error) {
+      handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
+    }
+    return;
+  }
+  throw new Error(`Unknown functionName: ${functionName}`);
+}
