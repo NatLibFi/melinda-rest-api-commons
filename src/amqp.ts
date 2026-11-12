@@ -115,28 +115,41 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
 
   // the recursive healthCheck loop is never awaited and kept firing
   // ~every 200 ms even after the connection was closed. This flag is cleared
-  // by closeChannel/closeConnection so the loop short-circuits on graceful
-  // shutdown instead of running until the closed channel throws.
+  // on graceful shutdown (closeChannel/closeConnection and their expected
+  // 'close' events) so the loop short-circuits instead of running until the
+  // closed channel throws.
   let healthCheckRunning = runHealthCheck;
+  // set by closeChannel/closeConnection before the intentional close, so the
+  // 'close' listeners and the healthCheck catch can tell an expected close
+  // (graceful shutdown) from an unexpected one (link death / broker loss).
+  // Only an expected close cancels the loop and suppresses the fatal
+  // rethrow; on an unexpected close the loop keeps failing and the error
+  // escapes as an unhandled rejection - the documented fast-fail (exit(1)).
+  let shuttingDown = false;
   // failure-path listeners: amqplib emits 'error' on socket loss and 'close'
   // when the link dies. Without these an unhandled 'error' on an EventEmitter
   // would become an uncaughtException, and a dead link with runHealthCheck
   // false would be invisible. 'error' only logs (the deliberate fast-fail
-  // contract of the healthCheck loop is unchanged); 'close' deterministically
-  // cancels the loop so no iterations keep running on a dead link.
+  // contract of the healthCheck loop is unchanged); 'close' cancels the loop
+  // only when the close was expected (shuttingDown) so an unexpected close
+  // leaves the fatal signal intact.
   connection.on('error', (error: Error) => {
     debug(`Connection error: ${error}`);
     logError(error);
   });
   connection.on('close', () => {
-    healthCheckRunning = false;
+    if (shuttingDown) {
+      healthCheckRunning = false;
+    }
   });
   channel.on('error', (error: Error) => {
     debug(`Channel error: ${error}`);
     logError(error);
   });
   channel.on('close', () => {
-    healthCheckRunning = false;
+    if (shuttingDown) {
+      healthCheckRunning = false;
+    }
   });
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
@@ -148,7 +161,9 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
 
   async function closeChannel() {
     // stop the health check loop before closing so it does not keep
-    // firing on a closed channel during graceful shutdown
+    // firing on a closed channel during graceful shutdown; shuttingDown
+    // marks the ensuing 'close' events as expected
+    shuttingDown = true;
     healthCheckRunning = false;
     debug(`Closing channel`);
     await channel.close();
@@ -156,7 +171,9 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
   }
 
   async function closeConnection() {
-    // stop the health check loop before closing
+    // stop the health check loop before closing; shuttingDown
+    // marks the ensuing 'close' events as expected
+    shuttingDown = true;
     healthCheckRunning = false;
     debug(`Closing connection`);
     await connection.close();
@@ -189,8 +206,10 @@ export default async function (AMQP_URL: string, runHealthCheck = false, deps: {
     } catch (error) {
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
       // if we were asked to stop, do not rethrow - a closed channel
-      // throwing during shutdown would keep the process alive / crash it
-      if (!healthCheckRunning) {
+      // throwing during graceful shutdown would keep the process alive /
+      // crash it; anything else (link death / broker loss) rethrows into
+      // the un-awaited loop promise - the documented fast-fail
+      if (shuttingDown) {
         debugHC(`HealthCheck cancelled while erroring, not throwing`);
         return false;
       }
