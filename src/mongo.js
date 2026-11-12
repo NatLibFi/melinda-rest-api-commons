@@ -235,6 +235,16 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   //   {status: 'unchanged', queueItem}  - state was ABORT/ERROR/DONE already,
   //                                       or the item no longer exists
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
@@ -243,11 +253,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       const queueItem = await setState({correlationId, state, errorMessage, errorStatus});
       return {status: 'updated', queueItem};
     }
-    // Read the current item so the caller can tell "aborted by timeout"
-    // apart from "unchanged" and see the resulting document
+    // Pre-read showed a live item, so a false from checkTimeOut means it was
+    // aborted here — unless it was deleted concurrently
     const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
-    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
-    return {status, queueItem};
+    return {status: queueItem ? 'timeout' : 'unchanged', queueItem};
   }
 
   // Check state that the queueItem has not waited too long and set importJobState
@@ -255,6 +264,16 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   //
   // returns a discriminated result, see checkAndSetState
   async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
     // checkTimeOut returns true, if queueItem is fresher than the configured
     // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
@@ -264,9 +283,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       const queueItem = await setImportJobState({correlationId, operation, importJobState});
       return {status: 'updated', queueItem};
     }
+    // Pre-read showed a live item, so a false from checkTimeOut means it was
+    // aborted here — unless it was deleted concurrently
     const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
-    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
-    return {status, queueItem};
+    return {status: queueItem ? 'timeout' : 'unchanged', queueItem};
   }
 
   async function query(params, showParams = {}) {
