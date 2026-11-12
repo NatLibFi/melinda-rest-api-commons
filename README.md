@@ -138,9 +138,9 @@ false returns the plain amqplib message instead of a payload object.
 | `addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})` | Add one record response item to the `records` field of a queue item |
 | `addRecordResponseItems({recordResponseItems, correlationId, mongoOperator})` | Add several record response items in one Mongo operation (avoids write conflicts) |
 
-### Breaking changes since 6.0
+### Breaking changes in 7.0
 
-If you upgrade from 5.x or 6.0, verify these methods — their return shape or
+If you upgrade from 5.x or 6.x, verify these methods — their return shape or
 calling convention changed:
 
 1. `checkAndSetState` / `checkAndSetImportJobState` no longer return a
