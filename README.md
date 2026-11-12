@@ -18,7 +18,8 @@ Everything is exported from the package root (`@natlibfi/melinda-rest-api-common
   `CHUNK_SIZE`, `LOG_ITEM_TYPE`, `CONVERSION_FORMATS` (see
   [Constants](#constants) below)
 - **types** (TypeScript consumers): `MongoOperator`, `QueueItem`,
-  `ImportJobStateValue`, `MongoLogOperator`, `LogItem`, `LogItemType`,
+  `ImportJobStateValue`, `CheckAndSetResult`, `CreateBulkResult`,
+  `MongoLogOperator`, `LogItem`, `LogItemType`,
   `AmqpOperator`, `QueueItemRecordPayload`, `QueueItemMessagePayload`
 
 Invalid input is rejected with an `ApiError` 400; a Mongo failure rejects
