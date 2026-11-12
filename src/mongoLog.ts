@@ -12,21 +12,19 @@ import {LOG_ITEM_TYPE} from './constants.ts';
 export type LogItemType = (typeof LOG_ITEM_TYPE)[keyof typeof LOG_ITEM_TYPE];
 
 /**
- * A log item document in the logs collection.
+ * Management metadata common to every log item type.
  *
- * `logItemType` stays plain string (like the free-form fields of QueueItem
- * in mongo.ts): callers may pass any of the as-const LOG_ITEM_TYPE values,
- * legacy documents may hold values that no longer exist in the constants,
- * and addLogItem stores unknown types with only a warning (see the
- * "warn path" tests in mongoLog-protect.test).
+ * `logItemType` stays plain string: callers may pass any of the as-const
+ * LOG_ITEM_TYPE values, legacy documents may hold values that no longer
+ * exist in the constants, and addLogItem stores unknown types with only a
+ * warning (see the "warn path" tests in mongoLog-protect.test).
  *
- * The blob-sequence fields are modelled flat, NOT as a per-logItemType
- * discriminated union: addLogItem / protect / removeBySequences accept
- * and use any combination of blobSequence / blobSequenceStart /
- * blobSequenceEnd regardless of logItemType (single-sequence items use
- * blobSequence, bulk range items use the Start/End pair).
+ * The blob-sequence fields are modelled flat, NOT per item type:
+ * addLogItem / protect / removeBySequences accept and use any combination
+ * of blobSequence / blobSequenceStart / blobSequenceEnd (single-sequence
+ * items use blobSequence, bulk range items use the Start/End pair).
  */
-export interface LogItem {
+export interface LogItemBase {
   logItemType: string;
   correlationId: string;
   cataloger?: string;
@@ -37,6 +35,30 @@ export interface LogItem {
   creationTime?: Date;
   modificationTime?: Date;
 }
+
+/**
+ * The payload of a log item. The payload varies per logItemType; the
+ * fields below are the known payload fields, the record bodies are left
+ * as unknown (their shape is owned by the producing service), and any
+ * other field is passed through unchanged via the index signature.
+ */
+export interface LogItemPayload {
+  sourceIds?: string[];
+  title?: string;
+  standardIdentifiers?: string[];
+  databaseId?: string;
+  preference?: unknown;
+  incomingRecord?: unknown;
+  databaseRecord?: unknown;
+  mergedRecord?: unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * A log item document in the logs collection: management metadata plus
+ * its (type-specific, open-ended) payload.
+ */
+export type LogItem = LogItemBase & LogItemPayload;
 
 /**
  * Trusted internal query object for query (same convention as QueryParams
