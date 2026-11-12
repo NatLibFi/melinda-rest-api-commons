@@ -25,6 +25,26 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   // by closeChannel/closeConnection so the loop short-circuits on graceful
   // shutdown instead of running until the closed channel throws.
   let healthCheckRunning = runHealthCheck;
+  // failure-path listeners: amqplib emits 'error' on socket loss and 'close'
+  // when the link dies. Without these an unhandled 'error' on an EventEmitter
+  // would become an uncaughtException, and a dead link with runHealthCheck
+  // false would be invisible. 'error' only logs (the deliberate fast-fail
+  // contract of the healthCheck loop is unchanged); 'close' deterministically
+  // cancels the loop so no iterations keep running on a dead link.
+  connection.on('error', (error) => {
+    debug(`Connection error: ${error}`);
+    logError(error);
+  });
+  connection.on('close', () => {
+    healthCheckRunning = false;
+  });
+  channel.on('error', (error) => {
+    debug(`Channel error: ${error}`);
+    logError(error);
+  });
+  channel.on('close', () => {
+    healthCheckRunning = false;
+  });
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
   debug(`Connection: ${connection}`);
