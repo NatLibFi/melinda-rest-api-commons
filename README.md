@@ -39,7 +39,7 @@ Creates the queue-item operator on a Mongo collection. `db` defaults to
 | `query(params, showParams?)` | Query queue items with a trusted internal query object (limit, skip, Mongo operators) | `QueueItem[]` |
 | `createProjection(showParams?)` | Build the Mongo projection used by `query` (internal fields hidden unless shown) | `Record<string, number>` |
 | `queryById({correlationId, checkModTime?})` | Get a queue item by `correlationId` | `QueueItem \| null` |
-| `checkTimeOut(params)` | Abort the queue item when it has not made progress within the [timeout window](#timeout-abort-contract) (sets `ABORT`, `errorStatus` 408) | `boolean` (true when it aborted) |
+| `checkTimeOut(params)` | Abort the queue item when it has not made progress within the [timeout window](#timeout-abort-contract) (sets `ABORT`, `errorStatus` 408) | `boolean` (true when the item is fresh, false when it aborted, is already terminal, or no longer exists) |
 | `remove({correlationId})` | Remove a queue item and its GridFS content | `{removed, deletedContent}` |
 | `readContent(correlationId)` | Read the GridFS content of a queue item | `{contentType, readStream}` |
 | `removeContent({correlationId})` | Remove the GridFS content of a queue item | `boolean` |
@@ -53,7 +53,7 @@ Creates the queue-item operator on a Mongo collection. `db` defaults to
 | `setOperations({correlationId, addOperation, removeOperation?})` | Add and/or remove operations on a queue item | `QueueItem` |
 | `addBlobSize({correlationId})` | Increment the `blobSize` of a queue item waiting for records | `QueueItem \| null` |
 | `setBlobSize({correlationId, blobSize})` | Set the `blobSize` of a queue item | `QueueItem \| null` |
-| `close()` | Close the Mongo connection (idempotent, always resolves) | `void` |
+| `close()` | Close the Mongo connection (idempotent; rejects when the driver close fails) | `void` |
 
 **`CheckAndSetResult`** — the discriminated result of
 `checkAndSetState` / `checkAndSetImportJobState` (branch on `status`, read
@@ -82,12 +82,12 @@ defaults to `'rest-api'`.
 | `getListOfLogs(logItemType?)` | Get the list of `correlationId`s that have logs of a given type (default `MERGE_LOG`) | `string[]` |
 | `getListOfCatalogers()` | Get the list of catalogers over all logs | `string[]` |
 | `getListOfCorrelationIds()` | Get the list of `correlationId`s over all logs | `string[]` |
-| `getExpandedListOfLogs(params)` | Aggregated log list per `correlationId` + `logItemType` with cataloger, creation time and record count; optional filters `logItemTypes`, `catalogers`, `dateBefore`, `dateAfter` (a provided `logItemTypes` is validated element-wise, unknown element rejects with 400) | `ExpandedLogListItem[]` |
+| `getExpandedListOfLogs(params)` | Aggregated log list per `correlationId` + `logItemType` with cataloger, creation time and record count; optional filters `logItemTypes`, `catalogers`, `dateBefore`, `dateAfter` (a provided `logItemTypes` is validated element-wise, unknown element rejects with 400; `dateBefore` is an exclusive upper bound and `dateAfter` an inclusive lower bound on `creationTime`, UTC `'YYYY-MM-DD'` or `Date`, defaults now / epoch = no effective filter) | `ExpandedLogListItem[]` |
 | `protect(correlationId, blobSequence?)` | Mark matching log items as protected (idempotent) | `UpdateResult` |
 | `unprotect(correlationId, blobSequence?)` | Mark matching log items as unprotected, so regular cleaning can remove them | `UpdateResult` |
 | `remove(correlationId, force?)` | Remove log items for a `correlationId`; protected items are kept unless `force` | `DeleteResult` |
 | `removeBySequences(correlationId, sequences?, force?)` | Remove log items for a `correlationId` matching blob sequences; protected items are kept unless `force` | `DeleteResult` |
-| `close()` | Close the Mongo connection (idempotent, always resolves) | `void` |
+| `close()` | Close the Mongo connection (idempotent; rejects when the driver close fails) | `void` |
 
 ### `amqpFactory(AMQP_URL, runHealthCheck?)`
 
@@ -105,7 +105,7 @@ it.
 | `consumeChunk(queue, toRecord)` | Consume a chunk (up to `CHUNK_SIZE` messages) from a queue | `false` \| `{headers, [records,] messages}` |
 | `consumeOne(queue, toRecord)` | Consume one message from a queue | `false` \| message \| `{headers, records, messages}` |
 | `ackMessages(messages)` | Acknowledge consumed messages | `void` |
-| `nackMessages(messages)` | Nack consumed messages (not requeued) | `void` |
+| `nackMessages(messages)` | Nack consumed messages (requeued, the amqplib default) | `void` |
 | `sendToQueue({queue, correlationId, headers?, data})` | Send a message to a queue; rejects with 500 when `queue` is missing | `void` |
 | `removeQueue(queue)` | Remove a queue | `void` |
 | `messagesToRecords(messages)` | Parse the message bodies of consumed messages into MARC records | `MarcRecord[]` |

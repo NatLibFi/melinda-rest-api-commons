@@ -223,7 +223,7 @@ export interface MongoOperator {
   setOperations: (params: {correlationId: string, addOperation: string, removeOperation?: string}) => Promise<WithId<QueueItem>>;
   addBlobSize: (params: {correlationId: string}) => Promise<WithId<QueueItem> | null>;
   setBlobSize: (params: {correlationId: string, blobSize: number}) => Promise<WithId<QueueItem> | null>;
-  /** Close the Mongo connection (idempotent, always resolves; a stubbed factory is a no-op) */
+  /** Close the Mongo connection (idempotent; a stubbed factory is a no-op; rejects with the raw driver error when the client's close fails) */
   close: () => Promise<void>;
 }
 
@@ -298,8 +298,8 @@ export default async function (MONGO_URI: string, collection: string, db = 'rest
     close
   };
 
-  // Close the Mongo connection (idempotent, always resolves: a stubbed
-  // factory has no client, a second call returns immediately). Mirrors the
+  // Close the Mongo connection (idempotent: a stubbed factory has no client,
+  // a second call returns immediately). Mirrors the
   // amqp.ts closeChannel/closeConnection convention: no withMongoError
   // wrapper, a live client.close() rejection propagates raw.
   async function close() {
