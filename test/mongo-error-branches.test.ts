@@ -275,6 +275,37 @@ test('checkAndSetImportJobState reports a pre-existing ABORT as "unchanged" with
   assert.deepStrictEqual(writes, []);
 });
 
+// Known pre-existing concurrency outcome, pinned here as a regression test
+// (a future redesign intentionally changes it): the document is VALIDATING,
+// a concurrent ABORT request comes in and aborts the item, then a second
+// ABORT request comes in. If that second request's pre-read still sees
+// VALIDATING (the first request's abort lands between the pre-read and the
+// internal timeout check), checkTimeOut finds the already-ABORTED document,
+// declines to act, and the post-hoc read still sees ABORT — the second
+// ABORT is reported as 'timeout' (not 'unchanged')
+test('checkAndSetState reports a second concurrent ABORT as "timeout" when the first ABORT lands after its pre-read', async () => {
+  const validDoc = {correlationId: 'FOO', queueItemState: 'VALIDATING'};
+  const abortDoc = {correlationId: 'FOO', queueItemState: 'ABORT', errorStatus: 408, errorMessage: 'Timeout in VALIDATING'};
+  // read order for the second ABORT request: the pre-read still sees
+  // VALIDATING, then the first request's abort lands, so both the timeout
+  // check read and the post-hoc read see ABORT
+  const reads = [validDoc, abortDoc, abortDoc];
+  const writes: unknown[] = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => reads.shift() ?? abortDoc,
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
+        writes.push({filter, update});
+        return abortDoc;
+      }
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.checkAndSetState({correlationId: 'FOO', state: 'ABORT'});
+  assert.deepStrictEqual(result, {status: 'timeout', queueItem: abortDoc});
+  assert.deepStrictEqual(writes, []);
+});
+
 // a pre-existing DONE item is terminal too (like ABORT/ERROR) and must be
 // reported as 'unchanged' without touching the document
 
