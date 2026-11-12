@@ -4,16 +4,15 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToDbEntry, formatQueueItem} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:query-by-id:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:check-timeout:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query-by-id'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-timeout'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -41,18 +40,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query-by-id'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'check-timeout'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -63,8 +58,7 @@ async function callback(callbackParams) {
   expectedErrorMessage = '',
   expectedErrorStatus = '',
   expectedOpResult = undefined,
-  updateStateBeforeTest = undefined,
-  resultIndex = undefined
+  updateStateBeforeTest = undefined
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -72,8 +66,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -81,29 +74,28 @@ async function callback(callbackParams) {
     return;
   }
 
-
-  if (functionName === 'queryById') {
+  if (functionName === 'checkTimeOut') {
     try {
-      debug(`queryById`);
+      debug(`checkTimeOut`);
       debug(JSON.stringify(params));
-      //{correlationId, checkModTime = false}
+      //{correlationId}
+      // timeout
       if (updateStateBeforeTest && params.correlationId) {
         debug(`setState to reset modificationTime`);
         await mongoOperator.setState({correlationId: params.correlationId, state: updateStateBeforeTest});
       }
-      const opResult = await mongoOperator.queryById(params);
-      debug(`queryById result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+      const opResult = await mongoOperator.checkTimeOut(params);
+      debug(`checkTimeOut result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
+
       if (expectedOpResult !== undefined) {
-        assert.deepStrictEqual(formatQueueItem(opResult), formatQueueItem(expectedOpResult));
+        assert.deepStrictEqual(opResult, expectedOpResult);
       }
-      const compareResultIndex = resultIndex ? resultIndex : 0;
-      await compareToDbEntry({mongoFixtures, expectedResult, resultIndex: compareResultIndex, expectModificationTime, formatDates: true});
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
-
   throw new Error(`Unknown functionName: ${functionName}`);
 }

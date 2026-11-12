@@ -4,10 +4,9 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, streamToString} from './testUtils.ts';
 
-/** @type {*} */
-let mongoFixtures;
+let mongoFixtures: any;
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:get-stream:test');
 
 generateTests({
@@ -40,18 +39,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
+  mongoFixtures = await mongoFixturesFactory({
     rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-stream'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -69,8 +64,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;

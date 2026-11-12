@@ -1,18 +1,18 @@
+//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:push-ids:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:remove:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'remove'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -40,18 +40,14 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'push-ids'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'remove'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
@@ -60,7 +56,11 @@ async function callback(callbackParams) {
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = ''
+  expectedErrorStatus = '',
+  contentStream = false,
+  createBulkParams = undefined,
+  expectedFileCount = undefined,
+  expectUndefined = undefined
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -68,8 +68,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -78,14 +77,26 @@ async function callback(callbackParams) {
   }
 
 
-  if (functionName === 'pushIds') {
+  if (functionName === 'remove') {
+
     try {
-      debug(`pushIds`);
+      debug(`remove`);
       debug(JSON.stringify(params));
-      //{correlationId, handledIds, rejectedIds}
-      const opResult = await mongoOperator.pushIds(params);
-      debug(`pushIds result: ${JSON.stringify(opResult)}`);
-      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+      //params: {correlationId}
+
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      }
+
+      const opResult = await mongoOperator.remove(params);
+      debug(`remove result: ${JSON.stringify(opResult)}`);
+      debug(`expectUndefined: ${expectUndefined}`);
+
+      await compareToFirstDbEntry({mongoFixtures, expectedResult: expectUndefined ? undefined : expectedResult, expectModificationTime, formatDates: true, expectedFileCount});
 
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});

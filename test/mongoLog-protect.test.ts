@@ -2,25 +2,24 @@ import assert from 'node:assert';
 import {test, before, after} from 'node:test';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import createMongoLogOperator from '../src/mongoLog.js';
+import createMongoLogOperator from '../src/mongoLog.ts';
+import type {MongoLogOperator} from '../src/mongoLog.ts';
 
-/** @type {*} */
-let mongoFixtures;
-/** @type {*} */
-let mongoLogOperator;
+let mongoFixtures: any;
+let mongoLogOperator: MongoLogOperator;
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
+  mongoFixtures = await mongoFixturesFactory({
     rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongoLog'],
     gridFS: {bucketName: 'blobs'},
     useObjectId: true,
     format: {
       logs: {
-        creationTime: /** @param {*} v */ v => new Date(v),
-        modificationTime: /** @param {*} v */ v => new Date(v)
+        creationTime: v => new Date(String(v)),
+        modificationTime: v => new Date(String(v))
       }
     }
-  }));
+  });
   const mongoUri = await mongoFixtures.getUri();
   mongoLogOperator = await createMongoLogOperator(mongoUri, '');
 }
@@ -53,7 +52,7 @@ test('protect is idempotent: protecting an already protected log keeps it protec
   await mongoLogOperator.protect(logItem.correlationId, logItem.blobSequence);
 
   const {logs} = await mongoFixtures.dump();
-  const own = logs.filter(/** @param {*} doc */ doc => doc.correlationId === logItem.correlationId);
+  const own = logs.filter((doc: any) => doc.correlationId === logItem.correlationId);
   assert.equal(own.length, 1);
   assert.equal(own[0].protected, true);
 });
@@ -72,7 +71,7 @@ test('unprotect sets protected to false after protect', async () => {
   assert.equal(result.modifiedCount, 1);
 
   const {logs} = await mongoFixtures.dump();
-  const own = logs.filter(/** @param {*} doc */ doc => doc.correlationId === logItem.correlationId);
+  const own = logs.filter((doc: any) => doc.correlationId === logItem.correlationId);
   assert.equal(own.length, 1);
   assert.equal(own[0].protected, false);
 });
@@ -87,9 +86,9 @@ test('unprotect without blobSequence unprotects all logs of the correlationId', 
   assert.equal(result.modifiedCount, 2);
 
   const {logs} = await mongoFixtures.dump();
-  const own = logs.filter(/** @param {*} doc */ doc => doc.correlationId === correlationId);
+  const own = logs.filter((doc: any) => doc.correlationId === correlationId);
   assert.equal(own.length, 2);
-  assert.ok(own.every(/** @param {*} doc */ doc => doc.protected === false));
+  assert.ok(own.every((doc: any) => doc.protected === false));
 });
 
 test('getExpandedListOfLogs throws ApiError when logItemTypes is provided but is not an array', async () => {
@@ -98,7 +97,7 @@ test('getExpandedListOfLogs throws ApiError when logItemTypes is provided but is
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 400);
-      assert.ok((/** @type {*} */ (error.payload)).includes('logItemTypes must be an array'));
+      assert.ok((error.payload as string).includes('logItemTypes must be an array'));
       return true;
     }
   );
@@ -110,7 +109,7 @@ test('getExpandedListOfLogs throws ApiError when logItemTypes contains an unknow
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 400);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Unknown logItemType'));
+      assert.ok((error.payload as string).includes('Unknown logItemType'));
       return true;
     }
   );
@@ -132,9 +131,9 @@ test('getExpandedListOfLogs uses Date instances for dateBefore and dateAfter as-
     dateBefore: new Date(Date.now() + 60 * 60 * 1000),
     dateAfter: new Date(Date.now() - 60 * 60 * 1000)
   });
-  const own = result.filter(/** @param {*} entry */ entry => entry.correlationId === logItem.correlationId);
+  const own = result.filter(entry => entry.correlationId === logItem.correlationId);
   assert.equal(own.length, 1);
-  assert.equal(own[0].logCount, 1);
+  assert.equal(own[0]?.logCount, 1);
 });
 
 test('getListOfLogs throws ApiError 500 for an unknown logItemType', async () => {
@@ -143,7 +142,7 @@ test('getListOfLogs throws ApiError 500 for an unknown logItemType', async () =>
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 500);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Unknown logItemType'));
+      assert.ok((error.payload as string).includes('Unknown logItemType'));
       return true;
     }
   );
@@ -161,7 +160,7 @@ test('addLogItem with an unknown logItemType does not throw (warn path)', async 
   await mongoLogOperator.addLogItem(logItem);
 
   const {logs} = await mongoFixtures.dump();
-  const own = logs.filter(/** @param {*} doc */ doc => doc.correlationId === logItem.correlationId);
+  const own = logs.filter((doc: any) => doc.correlationId === logItem.correlationId);
   assert.equal(own.length, 1);
   assert.equal(own[0].logItemType, 'BOGUS_LOG');
 });
@@ -175,9 +174,9 @@ test('getExpandedListOfLogs with a valid logItemTypes array still works', async 
   };
   await mongoLogOperator.addLogItem(logItem);
   const result = await mongoLogOperator.getExpandedListOfLogs({logItemTypes: ['MERGE_LOG'], catalogers: ['IMP_TEST1'], dateBefore: new Date(Date.now() + 60 * 60 * 1000)});
-  const own = result.filter(/** @param {*} entry */ entry => entry.correlationId === logItem.correlationId);
+  const own = result.filter(entry => entry.correlationId === logItem.correlationId);
   assert.equal(own.length, 1);
-  assert.equal(own[0].logItemType, 'MERGE_LOG');
-  assert.equal(own[0].cataloger, 'IMP_TEST1');
-  assert.equal(own[0].logCount, 1);
+  assert.equal(own[0]?.logItemType, 'MERGE_LOG');
+  assert.equal(own[0]?.cataloger, 'IMP_TEST1');
+  assert.equal(own[0]?.logCount, 1);
 });

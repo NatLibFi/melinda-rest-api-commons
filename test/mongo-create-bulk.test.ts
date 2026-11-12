@@ -1,19 +1,16 @@
-//import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
 import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
-
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:add-blob-size:test');
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test:create-bulk');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'add-blob-size'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-bulk'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -41,28 +38,24 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'add-blob-size'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'create-bulk'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
-    getFixture,
-    functionName,
-    params,
-    expectModificationTime = false,
-    preFillDb = false,
-    expectedToThrow = false,
-    expectedErrorMessage = '',
-    expectedErrorStatus = ''
-
+  getFixture,
+  functionName,
+  params,
+  preFillDb = false,
+  expectedToThrow = false,
+  expectedErrorMessage = '',
+  expectedErrorStatus = '',
+  contentStream = false,
+  expectedFileCount = undefined
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
@@ -70,8 +63,7 @@ async function callback(callbackParams) {
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -79,19 +71,22 @@ async function callback(callbackParams) {
     return;
   }
 
-  if (functionName === 'addBlobSize') {
+  if (functionName === 'createBulk') {
     try {
-      debug(`addBlobSize`);
+      debug(`CreateBulk`);
       debug(JSON.stringify(params));
-      //{correlationId}
-      const opResult = await mongoOperator.addBlobSize(params);
-      debug(`addBlobSize result: ${JSON.stringify(opResult)}`);
-      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+      //{correlationId, cataloger, oCatalogerIn, operation, contentType, recordLoadParams, stream, operationSettings}
+      const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : params.stream;
+      const params2 = {...params, stream};
+      const opResult = await mongoOperator.createBulk(params2);
+      debug(`createBulkResult: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, formatDates: true, expectedFileCount});
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
+
   throw new Error(`Unknown functionName: ${functionName}`);
 }

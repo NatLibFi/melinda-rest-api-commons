@@ -1,18 +1,18 @@
-import assert from 'node:assert';
+//import assert from 'node:assert';
+import createDebugLogger from 'debug';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import createDebugLogger from 'debug';
 //import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
-import {getMongoOperator, handleError} from './testUtils.js';
+import {getMongoOperator, handleError, compareToFirstDbEntry} from './testUtils.ts';
 
-/** @type {*} */
-let mongoFixtures;
-const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
+
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:set-state:test');
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -40,36 +40,31 @@ generateTests({
 });
 
 async function initMongofixtures() {
-  mongoFixtures = await mongoFixturesFactory(/** @type {*} */ ({
-    recurse: false,
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'query'],
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'set-state'],
     gridFS: {bucketName: 'foobar'},
     useObjectId: true
-  }));
+  });
 }
 
-/**
- * @param {*} callbackParams
- */
-async function callback(callbackParams) {
+async function callback(callbackParams: Record<string, any>) {
   const {
   getFixture,
   functionName,
   params,
+  expectModificationTime = false,
   preFillDb = false,
   expectedToThrow = false,
   expectedErrorMessage = '',
-  expectedErrorStatus = '',
-  expectedOpResult = undefined
+  expectedErrorStatus = ''
   } = callbackParams;
 
   const mongoOperator = await getMongoOperator(mongoFixtures);
-  //const expectedResult = await getFixture('expectedResult.json');
+  const expectedResult = await getFixture('expectedResult.json');
 
   await doPreFillDb(preFillDb);
 
-  /** @param {boolean} preFillDb */
-  async function doPreFillDb(preFillDb) {
+  async function doPreFillDb(preFillDb: boolean) {
     if (preFillDb) {
       await mongoFixtures.populate(getFixture('dbContents.json'));
       return;
@@ -78,26 +73,20 @@ async function callback(callbackParams) {
   }
 
 
-  if (functionName === 'query') {
+  if (functionName === 'setState') {
     try {
-      debug(`query`);
+      debug(`setState`);
       debug(JSON.stringify(params));
-      //params, showParams = {}
-      //params: skip, limit, rest (rest: actual mongo queryParams)
-      //showParams: {showAll = 0, showOperations = 0, showOperationSettings = 0, showRecordLoadParams = 0, showImportJobState = 0} = showParams;
-      debug(`${JSON.stringify(params.params)}`);
-      debug(`${JSON.stringify(params.showParams)}`);
-      const opResult = await mongoOperator.query(params.params, params.showParams);
-      debug(`query result: ${JSON.stringify(opResult)} (it should be: ${JSON.stringify(expectedOpResult)})}`);
-      if (expectedOpResult !== undefined) {
-        assert.deepStrictEqual(opResult, expectedOpResult);
-      }
+      //{correlationId, state, errorMessage = undefined, errorStatus = undefined}
+      const opResult = await mongoOperator.setState(params);
+      debug(`setState result: ${JSON.stringify(opResult)}`);
+      await compareToFirstDbEntry({mongoFixtures, expectedResult, expectModificationTime, formatDates: true});
+
     } catch (error) {
       handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
       return;
     }
     return;
   }
-
   throw new Error(`Unknown functionName: ${functionName}`);
 }

@@ -1,17 +1,19 @@
-
 import assert from 'node:assert';
 import {test} from 'node:test';
 import {Readable, PassThrough} from 'node:stream';
 import httpStatus from 'http-status';
 import {MongoDriverError} from 'mongodb';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import createMongo from '../src/mongo.js';
-import createMongoLog from '../src/mongoLog.js';
+import createMongo from '../src/mongo.ts';
+import createMongoLog from '../src/mongoLog.ts';
 
 const DUMMY_URI = 'mongodb://stub:27017/rest-api';
 const COLLECTION = 'foobar';
 
-function makeOperator(overrides = {}) {
+// the deps seam takes unknown-typed dependencies, so plain stub objects
+// are fine to inject (the driver types are never exercised here)
+
+function makeOperator(overrides: Record<string, any> = {}) {
   return {
     insertOne: async () => ({acknowledged: true, insertedId: 1}),
     deleteOne: async () => ({acknowledged: true, deletedCount: 1}),
@@ -19,7 +21,7 @@ function makeOperator(overrides = {}) {
   };
 }
 
-function makeGridFSBucket(overrides = {}) {
+function makeGridFSBucket(overrides: Record<string, any> = {}) {
   return {
     find: () => ({toArray: async () => []}),
     openDownloadStreamByName: () => {
@@ -30,12 +32,16 @@ function makeGridFSBucket(overrides = {}) {
 }
 
 /**
- * @param {*} deps
- * @returns {Promise<*>}
+ * @param deps the injected stub operator/gridFSBucket
  */
-async function makeMongo(deps) {
+async function makeMongo(deps: Record<string, any>) {
   return createMongo(DUMMY_URI, COLLECTION, 'rest-api', deps);
 }
+
+// The 400-guard tests pass intentionally malformed inputs (non-string
+// correlationId, non-array ids, ...) that break the operator param types on
+// purpose; this helper bypasses the type check for those objects
+const asMalformed = <T>(params: any): T => params as T;
 
 test('createPrio: insertOne with acknowledged=false throws ApiError 500', async () => {
   const mongo = await makeMongo({
@@ -64,7 +70,7 @@ test('createPrio: insertOne rejecting throws ApiError 500 with "Mongo errored" m
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
+      assert.ok((error.payload as string).includes('Mongo errored'));
       return true;
     }
   );
@@ -109,15 +115,12 @@ test('remove: MongoDriverError "File not found" deletes queueItem and reports wh
 });
 
 test('remove: returns {removed: true, deletedContent: true} when the queueItem and its GridFS file both exist', async () => {
-  /** @type {any[]} */
-  const deletedFiles = [];
+  const deletedFiles: any[] = [];
   const mongo = await makeMongo({
     operator: makeOperator({deleteOne: async () => ({acknowledged: true, deletedCount: 1})}),
     gridFSBucket: makeGridFSBucket({
       find: () => ({toArray: async () => [{_id: 'file-1', filename: 'FOO'}]}),
-      delete: /**
-       * @param {*} id
-       */ async (id) => {
+      delete: async (id: unknown) => {
         deletedFiles.push(id);
         return true;
       }
@@ -153,7 +156,7 @@ test('remove: MongoDriverError with other message throws ApiError 500', async ()
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('some other driver error'));
+      assert.ok((error.payload as string).includes('some other driver error'));
       return true;
     }
   );
@@ -196,7 +199,7 @@ test('getStream rejects with ApiError 500 when openDownloadStreamByName throws',
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
+      assert.ok((error.payload as string).includes('Mongo errored'));
       return true;
     }
   );
@@ -238,11 +241,11 @@ test('checkAndSetImportJobState returns {status: "unchanged", queueItem: null} w
 
 test('checkAndSetState reports a pre-existing ABORT as "unchanged" without writing', async () => {
   const doc = {correlationId: 'FOO', queueItemState: 'ABORT', errorStatus: 408, errorMessage: 'Timeout in VALIDATING'};
-  const writes = [];
+  const writes: unknown[] = [];
   const mongo = await makeMongo({
     operator: makeOperator({
       findOne: async () => doc,
-      findOneAndUpdate: async (filter, update) => {
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
         writes.push({filter, update});
         return doc;
       }
@@ -256,11 +259,11 @@ test('checkAndSetState reports a pre-existing ABORT as "unchanged" without writi
 
 test('checkAndSetImportJobState reports a pre-existing ABORT as "unchanged" without writing', async () => {
   const doc = {correlationId: 'FOO', queueItemState: 'ABORT', errorStatus: 408, errorMessage: 'Timeout in VALIDATING'};
-  const writes = [];
+  const writes: unknown[] = [];
   const mongo = await makeMongo({
     operator: makeOperator({
       findOne: async () => doc,
-      findOneAndUpdate: async (filter, update) => {
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
         writes.push({filter, update});
         return doc;
       }
@@ -287,11 +290,11 @@ test('checkAndSetState reports a second concurrent ABORT as "timeout" when the f
   // VALIDATING, then the first request's abort lands, so both the timeout
   // check read and the post-hoc read see ABORT
   const reads = [validDoc, abortDoc, abortDoc];
-  const writes = [];
+  const writes: unknown[] = [];
   const mongo = await makeMongo({
     operator: makeOperator({
       findOne: async () => reads.shift() ?? abortDoc,
-      findOneAndUpdate: async (filter, update) => {
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
         writes.push({filter, update});
         return abortDoc;
       }
@@ -308,11 +311,11 @@ test('checkAndSetState reports a second concurrent ABORT as "timeout" when the f
 
 test('checkAndSetState reports a pre-existing DONE as "unchanged" without writing', async () => {
   const doc = {correlationId: 'FOO', queueItemState: 'DONE'};
-  const writes = [];
+  const writes: unknown[] = [];
   const mongo = await makeMongo({
     operator: makeOperator({
       findOne: async () => doc,
-      findOneAndUpdate: async (filter, update) => {
+      findOneAndUpdate: async (filter: unknown, update: unknown) => {
         writes.push({filter, update});
         return doc;
       }
@@ -418,8 +421,7 @@ test('checkTimeOut honours MONGO_TIMEOUT_MINUTES (older item than the window is 
 // (orphan partial chunks). Both are now wired to reject + cleanup.
 
 test('createBulk rejects with ApiError 500 when input stream errors mid-upload, and cleans up the partial file', async () => {
-  /** @type {any[]} */
-  const deletedFiles = [];
+  const deletedFiles: any[] = [];
   // errors itself once flowing mode starts
   const input = new Readable({
     read() {
@@ -431,9 +433,7 @@ test('createBulk rejects with ApiError 500 when input stream errors mid-upload, 
     gridFSBucket: makeGridFSBucket({
       openUploadStream: () => new PassThrough(),
       find: () => ({toArray: async () => [{_id: 'partial-1', filename: 'FOO'}]}),
-      delete: /**
-       * @param {*} id
-       */ async (id) => {
+      delete: async (id: unknown) => {
         deletedFiles.push(id);
         return true;
       }
@@ -452,7 +452,7 @@ test('createBulk rejects with ApiError 500 when input stream errors mid-upload, 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('input stream boom'));
+      assert.ok((error.payload as string).includes('input stream boom'));
       return true;
     }
   );
@@ -484,7 +484,7 @@ test('createBulk rejects with ApiError 500 when the GridFS output stream errors 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('disk on fire'));
+      assert.ok((error.payload as string).includes('disk on fire'));
       return true;
     }
   );
@@ -496,7 +496,8 @@ test('createBulk rejects with ApiError 500 when the GridFS output stream errors 
 test('pushIds rejects with ApiError 400 when handledIds is not an array', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.pushIds({correlationId: 'FOO', handledIds: 'nope', rejectedIds: []}),
+    // intentionally malformed input: handledIds must be string[]
+    () => mongo.pushIds(asMalformed({correlationId: 'FOO', handledIds: 'nope', rejectedIds: []})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -508,7 +509,8 @@ test('pushIds rejects with ApiError 400 when handledIds is not an array', async 
 test('pushIds rejects with ApiError 400 when rejectedIds is not an array', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.pushIds({correlationId: 'FOO', handledIds: [], rejectedIds: undefined}),
+    // intentionally malformed input: rejectedIds must be string[]
+    () => mongo.pushIds(asMalformed({correlationId: 'FOO', handledIds: [], rejectedIds: undefined})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -529,8 +531,8 @@ test('pushIds rejects with ApiError 500 "Mongo errored" when updateOne throws', 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
-      assert.ok((/** @type {*} */ (error.payload)).includes('pushIds boom'));
+      assert.ok((error.payload as string).includes('Mongo errored'));
+      assert.ok((error.payload as string).includes('pushIds boom'));
       return true;
     }
   );
@@ -539,7 +541,8 @@ test('pushIds rejects with ApiError 500 "Mongo errored" when updateOne throws', 
 test('pushMessages rejects with ApiError 400 when messages is not an array', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.pushMessages({correlationId: 'FOO', messages: 'nope'}),
+    // intentionally malformed input: messages must be an array
+    () => mongo.pushMessages(asMalformed({correlationId: 'FOO', messages: 'nope'})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -560,8 +563,8 @@ test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne thro
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
-      assert.ok((/** @type {*} */ (error.payload)).includes('pushMessages boom'));
+      assert.ok((error.payload as string).includes('Mongo errored'));
+      assert.ok((error.payload as string).includes('pushMessages boom'));
       return true;
     }
   );
@@ -573,7 +576,8 @@ test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne thro
 test('checkAndSetState rejects with ApiError 400 when correlationId is not a string', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.checkAndSetState({correlationId: {'$ne': ''}, state: 'VALIDATING'}),
+    // intentionally malformed input: correlationId must be a string
+    () => mongo.checkAndSetState(asMalformed({correlationId: {'$ne': ''}, state: 'VALIDATING'})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -585,7 +589,8 @@ test('checkAndSetState rejects with ApiError 400 when correlationId is not a str
 test('getOne rejects with ApiError 400 when queueItemState is not a string', async () => {
   const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.getOne({queueItemState: {'$ne': ''}}),
+    // intentionally malformed input: queueItemState must be a string
+    () => mongo.getOne(asMalformed({queueItemState: {'$ne': ''}})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -597,7 +602,8 @@ test('getOne rejects with ApiError 400 when queueItemState is not a string', asy
 test('getOne rejects with ApiError 400 when importJobState is not an object', async () => {
   const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.getOne({importJobState: 'IN_QUEUE'}),
+    // intentionally malformed input: importJobState must be an object
+    () => mongo.getOne(asMalformed({importJobState: 'IN_QUEUE'})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -631,12 +637,9 @@ test('getOne rejects with ApiError 400 when an importJobState value is not a str
 });
 
 test('getOne queries findOne with a valid importJobState filter', async () => {
-  /** @type {any[]} */
-  const filters = [];
+  const filters: any[] = [];
   const mongo = await makeMongo({
-    operator: makeOperator({findOne: /**
-      * @param {*} filter
-      */ async (filter) => {
+    operator: makeOperator({findOne: async (filter: unknown) => {
       filters.push(filter);
       return null;
     }}),
@@ -650,7 +653,8 @@ test('getOne queries findOne with a valid importJobState filter', async () => {
 test('setBlobSize rejects with ApiError 400 when blobSize is not a number', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.setBlobSize({correlationId: 'FOO', blobSize: '7'}),
+    // intentionally malformed input: blobSize must be a number
+    () => mongo.setBlobSize(asMalformed({correlationId: 'FOO', blobSize: '7'})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -660,13 +664,9 @@ test('setBlobSize rejects with ApiError 400 when blobSize is not a number', asyn
 });
 
 test('setBlobSize stores a real number when blobSize is a number', async () => {
-  /** @type {any[]} */
-  const updates = [];
+  const updates: any[] = [];
   const mongo = await makeMongo({
-    operator: makeOperator({findOneAndUpdate: /**
-      * @param {*} filter
-      * @param {*} update
-      */ async (filter, update) => {
+    operator: makeOperator({findOneAndUpdate: async (filter: unknown, update: unknown) => {
       updates.push({filter, update});
       return {correlationId: 'FOO', blobSize: 7};
     }}),
@@ -681,7 +681,8 @@ test('setBlobSize stores a real number when blobSize is a number', async () => {
 test('pushMessages rejects with ApiError 400 when messageField is not a string', async () => {
   const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
   await assert.rejects(
-    () => mongo.pushMessages({correlationId: 'FOO', messages: ['m1'], messageField: 42}),
+    // intentionally malformed input: messageField must be a string
+    () => mongo.pushMessages(asMalformed({correlationId: 'FOO', messages: ['m1'], messageField: 42})),
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.BAD_REQUEST);
@@ -714,7 +715,7 @@ test('createBulk (stream): insertOne with acknowledged=false throws ApiError 500
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
+      assert.ok((error.payload as string).includes('Mongo errored'));
       return true;
     }
   );
@@ -751,8 +752,8 @@ test('createBulk (stream): a failing GridFS cleanup does not mask the original u
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('input stream boom'));
-      assert.ok(!(/** @type {*} */ (error.payload)).includes('gridfs cleanup boom'));
+      assert.ok((error.payload as string).includes('input stream boom'));
+      assert.ok(!(error.payload as string).includes('gridfs cleanup boom'));
       return true;
     }
   );
@@ -770,7 +771,7 @@ test('remove: non-MongoDriverError from deleteOne throws ApiError 500 with the e
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((/** @type {*} */ (error.payload)).includes('plain delete boom'));
+      assert.ok((error.payload as string).includes('plain delete boom'));
       return true;
     }
   );
@@ -789,7 +790,7 @@ test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null'
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.NOT_FOUND);
-      assert.ok((/** @type {*} */ (error.payload)).message.includes('not found'));
+      assert.ok((error.payload as {message: string}).message.includes('not found'));
       return true;
     }
   );
@@ -844,7 +845,7 @@ test('mongo checkTimeOut: MongoDriverError from findOne rejects with ApiError 50
 // db.collection('logs') call routes to the injected object. These tests
 // cover the catch blocks that re-wrap driver failures as ApiError 500.
 
-function makeLogCollection(overrides = {}) {
+function makeLogCollection(overrides: Record<string, any> = {}) {
   return {
     insertOne: async () => ({acknowledged: true, insertedId: 1}),
     updateMany: async () => ({acknowledged: true, matchedCount: 0, modifiedCount: 0}),
@@ -854,23 +855,18 @@ function makeLogCollection(overrides = {}) {
 }
 
 /**
- * @param {*} deps
- * @returns {Promise<*>}
+ * @param deps the injected stub collection
  */
-async function makeMongoLog(deps) {
+async function makeMongoLog(deps: Record<string, any>) {
   return createMongoLog(DUMMY_URI, 'rest-api', deps);
 }
 
-/**
- * @param {string} text
- * @returns {(error: unknown) => boolean}
- */
-function mongoErrored500(text) {
-  return (error) => {
+function mongoErrored500(text: string) {
+  return (error: unknown) => {
     assert.ok(error instanceof ApiError);
     assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-    assert.ok((/** @type {*} */ (error.payload)).includes('Mongo errored'));
-    assert.ok((/** @type {*} */ (error.payload)).includes(text));
+    assert.ok((error.payload as string).includes('Mongo errored'));
+    assert.ok((error.payload as string).includes(text));
     return true;
   };
 }
@@ -986,13 +982,10 @@ test('mongoLog removeBySequences: deleteMany rejecting throws ApiError 500 with 
 });
 
 test('mongoLog protect: injected collection routes the update and returns its result', async () => {
-  /** @type {any[]} */
-  const filters = [];
+  const filters: any[] = [];
   const result = {acknowledged: true, matchedCount: 1, modifiedCount: 1};
   const mongoLog = await makeMongoLog({
-    collection: makeLogCollection({updateMany: /**
-      * @param {*} filter
-      */ async (filter) => {
+    collection: makeLogCollection({updateMany: async (filter: unknown) => {
       filters.push(filter);
       return result;
     }})
