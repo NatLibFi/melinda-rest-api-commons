@@ -539,13 +539,11 @@ test('healthCheck error while running rethrows into the un-awaited loop promise'
   assert.ok(stdout.endsWith('OK'), `expected child output to end with OK, got: ${stdout}`);
 });
 
-test('broker loss (error + close events) logs the error and close cancels the health check', async () => {
-  // Failure-path listeners on the amqplib connection/channel:
-  // - 'error' must only log: without a handler an unhandled EventEmitter
-  //   'error' would become an uncaughtException, and the error alone must
-  //   NOT stop the loop (the fast-fail contract is unchanged)
-  // - 'close' must cancel the health check loop so no iterations keep
-  //   running on a dead link (matters for runHealthCheck: false consumers)
+test('graceful shutdown: expected close events cancel the loop without a fatal signal', async () => {
+  // closeChannel/closeConnection set shuttingDown before the intentional
+  // close, so the 'close' events amqplib emits for the expected close cancel
+  // the health check loop instead of leaving it to fail on a closed channel.
+  // The whole shutdown must not leak the fatal rejection.
   const handlers = {};
   const makeOn = (target) => (event, handler) => {
     const key = `${target}:${event}`;
@@ -553,41 +551,134 @@ test('broker loss (error + close events) logs the error and close cancels the he
     list.push(handler);
     return {off: () => {}};
   };
+  let closed = false;
   let healthCheckCalls = 0;
   const channel = makeChannel({
     on: makeOn('channel'),
     assertQueue: async (name) => {
       if (name === 'HEALTHCHECK') {
+        // eslint-disable-next-line functional/immutable-data
         healthCheckCalls += 1;
+        if (closed) {
+          throw new Error('channel closed');
+        }
       }
       return {messageCount: 0};
+    },
+    close: async () => {
+      // eslint-disable-next-line functional/immutable-data
+      closed = true;
     }
   });
-  await createAmqp(DUMMY_URL, true, {
-    connection: {createChannel: async () => channel, close: async () => {}, on: makeOn('connection')},
-    channel
+  const unhandled = [];
+  const onUnhandledRejection = (error) => unhandled.push(error);
+  process.on('unhandledRejection', onUnhandledRejection);
+  try {
+    const amqpOperator = await createAmqp(DUMMY_URL, true, {
+      connection: {createChannel: async () => channel, close: async () => {}, on: makeOn('connection')},
+      channel
+    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    assert.ok(healthCheckCalls > 0, 'health check should have run before close');
+    await amqpOperator.closeChannel();
+    // the expected close events: they must not change the already-cancelled
+    // state into a fatal one
+    for (const handler of handlers['channel:close'] ?? []) handler();
+    for (const handler of handlers['connection:close'] ?? []) handler();
+    // wait longer than the 200 ms loop interval
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  } finally {
+    process.off('unhandledRejection', onUnhandledRejection);
+  }
+  assert.deepStrictEqual(unhandled, [], 'no unhandled rejections on graceful shutdown');
+});
+
+test('broker loss (error + close events) preserves the healthCheck fast-fail', async () => {
+  // Failure-path listeners on the amqplib connection/channel:
+  // - 'error' must only log: without a handler an unhandled EventEmitter
+  //   'error' would become an uncaughtException
+  // - an UNEXPECTED 'close' (link death / broker loss, shuttingDown false)
+  //   must NOT cancel the health check loop: the loop keeps failing on the
+  //   dead broker and the error escapes as an unhandled rejection - the
+  //   documented fast-fail (exit(1)). Only an intentional
+  //   closeChannel/closeConnection cancels the loop and suppresses the
+  //   rethrow.
+  // The escape is verified in a child node process that installs its own
+  // unhandledRejection handler before triggering the loss (the node test
+  // runner fails a test on any in-process unhandled rejection).
+  const script = `
+    import createAmqp from '${AMQP_MODULE_PATH}';
+    const handlers = {};
+    const makeOn = (target) => (event, handler) => {
+      const key = target + ':' + event;
+      const list = handlers[key] ?? (handlers[key] = []);
+      list.push(handler);
+      return {off: () => {}};
+    };
+    let brokerLost = false;
+    let healthCheckCalls = 0;
+    const channel = {
+      assertQueue: /** @param {*} name */ async (name) => {
+        if (name === 'HEALTHCHECK') {
+          healthCheckCalls += 1;
+          if (brokerLost) {
+            throw new Error('broker lost');
+          }
+        }
+        return {messageCount: 0};
+      },
+      checkQueue: async () => ({messageCount: 0}),
+      get: async () => false,
+      ack: () => {},
+      nack: () => {},
+      purgeQueue: async () => {},
+      close: async () => {},
+      sendToQueue: async () => {},
+      on: makeOn('channel')
+    };
+    const captured = [];
+    process.on('unhandledRejection', (err) => captured.push(err));
+    await createAmqp('amqp://stub:5672/', true, {
+      connection: {createChannel: async () => channel, close: async () => {}, on: makeOn('connection')},
+      channel
+    });
+    // all four listeners must be attached (connection + channel, error + close)
+    const attached = Object.keys(handlers).sort();
+    const listenersOk = JSON.stringify(attached) === JSON.stringify(['channel:close', 'channel:error', 'connection:close', 'connection:error']);
+    // let the loop run a couple of iterations, then simulate broker loss the
+    // way amqplib signals it: an 'error' event followed by an unexpected
+    // 'close' (no closeChannel/closeConnection was called)
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    for (const handler of handlers['channel:error'] ?? []) handler(new Error('socket lost'));
+    for (const handler of handlers['connection:error'] ?? []) handler(new Error('socket lost'));
+    for (const handler of handlers['channel:close'] ?? []) handler();
+    for (const handler of handlers['connection:close'] ?? []) handler();
+    // the unexpected close must NOT cancel the loop: it keeps running on the
+    // still-healthy stub (wait longer than the 200 ms loop interval)
+    const callsAfterClose = healthCheckCalls;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const keptRunning = healthCheckCalls > callsAfterClose;
+    // now the broker is actually gone: the next failed assert must escape as
+    // the unhandled rejection (the documented fast-fail)
+    brokerLost = true;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const ok =
+      listenersOk &&
+      healthCheckCalls > 0 &&
+      keptRunning &&
+      captured.length === 1 &&
+      /broker lost/.test(String(captured[0] && captured[0].message));
+    process.stdout.write(ok ? 'OK' : 'FAIL:' + JSON.stringify({attached, healthCheckCalls, rejections: captured.map((e) => String(e && e.message))}));
+    process.exit(ok ? 0 : 1);
+  `;
+  const {code, stdout} = await new Promise((resolve) => {
+    const child = execFile(process.execPath, ['--input-type=module', '-e', script], (err, out) => {
+      resolve({code: err ? (err.code ?? 1) : 0, stdout: out ?? ''});
+    });
+    void child;
   });
-  // all four listeners must be attached (connection + channel, error + close)
-  assert.deepStrictEqual(Object.keys(handlers).sort(), [
-    'channel:close',
-    'channel:error',
-    'connection:close',
-    'connection:error'
-  ]);
-  // let the loop run a couple of iterations, then simulate broker loss the
-  // way amqplib signals it: an 'error' event followed by 'close'
-  await new Promise((resolve) => setTimeout(resolve, 350));
-  for (const handler of handlers['channel:error'] ?? []) handler(new Error('socket lost'));
-  for (const handler of handlers['connection:error'] ?? []) handler(new Error('socket lost'));
-  // the 'error' events alone must not cancel the loop
-  const callsAfterError = healthCheckCalls;
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  assert.ok(healthCheckCalls > 0, 'health check should have run before the broker loss');
-  assert.ok(healthCheckCalls > callsAfterError, 'health check keeps running after the error events');
-  for (const handler of handlers['channel:close'] ?? []) handler();
-  for (const handler of handlers['connection:close'] ?? []) handler();
-  const callsAfterClose = healthCheckCalls;
-  // wait longer than the 200 ms loop interval - no further health checks may fire
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  assert.equal(healthCheckCalls, callsAfterClose, 'no health checks after the close events');
+  assert.equal(code, 0, `child process output: ${stdout}`);
+  // the error listeners and handleAmqpErrors log to stdout before the escape,
+  // so only the tail matters
+  assert.ok(stdout.endsWith('OK'), `expected child output to end with OK, got: ${stdout}`);
 });
