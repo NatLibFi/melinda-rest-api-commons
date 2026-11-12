@@ -2,6 +2,7 @@ import {describe, it} from 'node:test';
 import assert from 'node:assert';
 import createDebugLogger from 'debug';
 import {amqpFactory} from '../src/index.js';
+import type {AmqpOperator} from '../src/amqp.ts';
 
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp:test');
@@ -36,11 +37,10 @@ describe('HealthCheck: amqpOperator should error if channel or connection fails'
     await amqpOperator.closeConnection();
 
     /**
-     * @param {*} amqpOperator
-     * @param {boolean} close
-     * @returns {Promise<void>}
+     * @param amqpOperator
+     * @param close
      */
-    async function awaitTime(amqpOperator, close) {
+    async function awaitTime(amqpOperator: AmqpOperator, close: boolean): Promise<void> {
       if (close) {
         // wrap the wait so any error thrown by the (cancelled) loop fails the test
         await amqpOperator.closeChannel();
@@ -58,4 +58,3 @@ describe('HealthCheck: amqpOperator should error if channel or connection fails'
 
   });
 });
-

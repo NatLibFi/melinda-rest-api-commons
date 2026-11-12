@@ -2,7 +2,7 @@
 
 import mongoFactory from './mongo.js';
 import mongoLogFactory from './mongoLog.js';
-import amqpFactory from './amqp.js';
+import amqpFactory from './amqp.ts';
 import conversions from './helpers/conversion.ts';
 import validations from './helpers/validation.ts';
 import * as fixes from './helpers/fix.ts';
