@@ -253,10 +253,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       const queueItem = await setState({correlationId, state, errorMessage, errorStatus});
       return {status: 'updated', queueItem};
     }
-    // Pre-read showed a live item, so a false from checkTimeOut means it was
-    // aborted here — unless it was deleted concurrently
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
     const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
-    return {status: queueItem ? 'timeout' : 'unchanged', queueItem};
+    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
+    return {status, queueItem};
   }
 
   // Check state that the queueItem has not waited too long and set importJobState
@@ -283,10 +287,14 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       const queueItem = await setImportJobState({correlationId, operation, importJobState});
       return {status: 'updated', queueItem};
     }
-    // Pre-read showed a live item, so a false from checkTimeOut means it was
-    // aborted here — unless it was deleted concurrently
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
     const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
-    return {status: queueItem ? 'timeout' : 'unchanged', queueItem};
+    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
+    return {status, queueItem};
   }
 
   async function query(params, showParams = {}) {
