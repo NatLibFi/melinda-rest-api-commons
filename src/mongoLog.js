@@ -20,7 +20,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   const client = await MongoClient.connect(MONGO_URI);
   const db = client.db(dbName);
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, remove, removeBySequences};
+  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
 
   /**
    * Add log item to collection
@@ -64,6 +64,10 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     logger.debug(`Query params: ${JSON.stringify(rest)}`);
     logger.debug(`Limit and skip params: ${limit} | ${skip}`);
     checkLogItemType(rest.logItemType, false, false);
+    // rest is an internal, trusted query object built by the calling service:
+    // callers must not splice raw user input into it. Its keys may legitimately
+    // use dot notation and $-operators, which is why rest is not
+    // field-sanitized here.
     const result = await db.collection(collection)
       .find(rest)
       .sort({creationTime: 1})
@@ -108,7 +112,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     //logger.debug(logItemType);
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
-      .distinct('correlationId', {logItemType: `${logItemType}`});
+      .distinct('correlationId', {logItemType: logItemType});
     logger.debug(`Query result for getListOfLogs: ${result.length > 0 ? `Found ${result.length} correlationIds for ${logItemType}!` : 'Not found!'}`);
     return result;
   }
@@ -142,21 +146,40 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
 
   /**
    * Get filtered list of logs with extra info. Give params in Object
-   * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
+   * @param {[String]} logItemTypes: String array of logItemTypes. Defaults [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]. When provided, must be an array and every element is validated (unknown types throw)
    * @param {[String]} catalogers: String array of wanted catalogers. Defaults []
-   * @param {String} dateBefore: String date schema 'YYYY-MM-DD'. Defaults new Date()
-   * @param {String} dateAfter: String date schema 'YYYY-MM-DD'. Defaults '2000-01-01'
-   * @param {Boolean} test: Boolean is this test run. Defaults false
+   * @param {String|Date} dateBefore: upper bound, the day itself is EXCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults new Date()
+   * @param {String|Date} dateAfter: lower bound, the day itself is INCLUDED. 'YYYY-MM-DD' or Date, anchored to UTC. Defaults '1970-01-01' (no lower bound)
+   * @param {Boolean} test: kept for backwards compatibility only; no longer changes the match
    * @returns Parsed Object {'correlationId', 'logItemType', 'creationTime', 'cataloger', 'logCount'}
    */
-  async function getExpandedListOfLogs({logItemTypes = [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG], catalogers = [], dateBefore = new Date(), dateAfter = '2000-01-01', test = false}) {
-    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(logItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
-    logger.silly(JSON.stringify(generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter})));
-    //checkLogItemType(logItemType, false, false);
+  // test no longer changes the match behaviour (kept in the
+  // signature for backwards compatibility only)
+  // eslint-disable-next-line no-unused-vars
+  async function getExpandedListOfLogs({logItemTypes, catalogers = [], dateBefore = new Date(), dateAfter = '1970-01-01', test = false}) {
+    // An explicitly provided logItemTypes is validated per element (unknown
+    // types throw); when it is omitted, the trusted default pair is used so
+    // legacy callers that never pass it keep working unchanged
+    const wantedLogItemTypes = logItemTypes === undefined
+      ? [LOG_ITEM_TYPE.MERGE_LOG, LOG_ITEM_TYPE.MATCH_LOG]
+      : logItemTypes;
+    if (!Array.isArray(wantedLogItemTypes)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `logItemTypes must be an array: ${logItemTypes}`);
+    }
+    if (logItemTypes !== undefined) {
+      logItemTypes.forEach(logItemType => {
+        if (Object.values(LOG_ITEM_TYPE).includes(logItemType)) {
+          return;
+        }
+        throw new ApiError(httpStatus.BAD_REQUEST, `Unknown logItemType: ${logItemType}`);
+      });
+    }
+    logger.debug(`commons/getExpandedListOfLogs: logItemTypes: ${JSON.stringify(wantedLogItemTypes)}, dateAfter: ${dateAfter}, dateBefore: ${dateBefore}}, catalogers: ${JSON.stringify(catalogers)}`);
+    logger.silly(JSON.stringify(generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter})));
     //logger.debug(`Getting expanded list of logs`);
     const pipeline = [
       // currently return only MERGE_LOG and MATCH_LOG
-      generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test}),
+      generateMatchObject({logItemTypes: wantedLogItemTypes, catalogers, dateBefore, dateAfter}),
       {
         '$sort':
           {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
@@ -170,9 +193,11 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           'logCount': {'$sum': 1}
         }
       },
+      // after $group the output has no top-level correlationId /
+      // logItemType, so the sort must address them via _id
       {
         '$sort':
-          {'correlationId': 1, 'logItemType': 1, 'creationTime': 1}
+          {'_id.correlationId': 1, '_id.logItemType': 1, 'creationTime': 1}
       }
     ];
 
@@ -196,29 +221,64 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
      * Generate match object for aggregation pipeline
      * @param {[String]} logItemTypes: String array of logItemTypes.
      * @param {[String]} catalogers: String array of wanted catalogers
-     * @param {String} dateBefore: String date schema 'YYYY-MM-DD'
-     * @param {String} dateAfter: String date schema 'YYYY-MM-DD'
-     * @param {Boolean} test: Boolean is this test run. Defaults false
+     * @param {String|Date} dateBefore: upper bound. Date strings are anchored at UTC midnight of the day after; Date instances are used as-is
+     * @param {String|Date} dateAfter: lower bound. Date strings are anchored at UTC midnight of that day (inclusive); Date instances are used as-is
      * @returns Match Object
      */
-    function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter, test = false}) {
-      const matchOptions = {
-        '$match': {
-          'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
-          'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
-          'creationTime': {
-            '$gte': test ? new Date(dateAfter).toISOString() : new Date(dateAfter),
-            '$lte': test ? new Date(dateBefore).toISOString() : new Date(dateBefore)
-          }
-        }
-      };
+      function generateMatchObject({logItemTypes, catalogers, dateBefore, dateAfter}) {
+       const matchOptions = {
+         '$match': {
+           'logItemType': logItemTypes.length > 0 ? {'$in': logItemTypes} : /.*/ui,
+           'cataloger': catalogers.length > 0 ? {'$in': catalogers} : /.*/ui,
+           // creationTime is stored as a Date, so the bounds must be
+           // Dates too (the old test=true branch compared against ISO strings
+           // and never matched; the old non-test branch relied on
+           // local-timezone parsing of new Date('YYYY-MM-DD')). Date strings
+           // are anchored at UTC midnight so the result is deterministic
+           // regardless of the server timezone.
+           'creationTime': {
+             '$gte': dateToUtcStartOfDay(dateAfter),
+             '$lt': dateToUtcExclusiveUpperBound(dateBefore)
+           }
+         }
+       };
 
-      return matchOptions;
-    }
+       return matchOptions;
+
+       // Date string 'YYYY-MM-DD' -> UTC midnight of that day (inclusive
+       // lower bound). Date instance or any other string format -> parsed
+       // with Date (a timestamp, not a day).
+       function dateToUtcStartOfDay(value) {
+         if (value instanceof Date) {
+           return value;
+         }
+         const parts = String(value).slice(0, 10).split('-');
+         if (parts.length === 3) {
+           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').toDate();
+         }
+         return new Date(value);
+       }
+
+       // Date string 'YYYY-MM-DD' -> UTC midnight of the NEXT day (exclusive
+       // upper bound). Date instance or any other string format -> parsed
+       // with Date (a timestamp, not a day).
+       function dateToUtcExclusiveUpperBound(value) {
+         if (value instanceof Date) {
+           return value;
+         }
+         const parts = String(value).slice(0, 10).split('-');
+         if (parts.length === 3) {
+           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').add(1, 'day').toDate();
+         }
+         return new Date(value);
+       }
+     }
   }
 
   /**
-   * Protect logs from cleaning. Forced cleaning defaults 30days
+   * Protect logs from cleaning. Idempotent: always sets protected to true
+   * (a second call leaves the logs protected, unlike the old toggle).
+   * Forced cleaning defaults 30days
    * @param {String} correlationId
    * @param {Integer} blobSequence
    * @returns result
@@ -236,7 +296,41 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
           {
             $set: {
               modificationTime: moment().toDate(),
-              protected: {$not: '$protected'}
+              // plain true, not a $not toggle: protect must be idempotent
+              protected: true
+            }
+          }
+        ]
+      );
+      return result;
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Unprotect logs so regular (non-forced) cleaning can remove them.
+   * Same signature and behavior as protect, but sets protected to false.
+   * @param {String} correlationId
+   * @param {Integer} blobSequence
+   * @returns result
+   */
+  async function unprotect(correlationId, blobSequence) {
+    logger.info(`Unprotecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
+    const cleanCorrelationId = sanitize(correlationId);
+    const cleanBlobSequence = sanitize(blobSequence);
+    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+
+    try {
+      const result = await db.collection(collection).updateMany(
+        filter,
+        [
+          {
+            $set: {
+              modificationTime: moment().toDate(),
+              protected: false
             }
           }
         ]
@@ -280,15 +374,27 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function removeBySequences(correlationId, sequences = [], force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
     const clean = sanitize(correlationId);
+    // NOTE: this matches only single-sequence items (blobSequence), NOT bulk
+    // range items (blobSequenceStart/blobSequenceEnd); a requested sequence
+    // inside a bulk range will not match and its logs are kept
     // blobSequences are integers that start from 1
     // we accept also strings that are convertilble to integers greated than 0
-    const cleanSequences = sequences.filter(sequence => Number.isInteger(Number(sequence)) && sequence > 0);
+    // validate consistently via Number() and store the
+    // converted numbers, since blobSequence is stored as a number in Mongo
+    const cleanSequences = sequences
+      .map(sequence => Number(sequence))
+      .filter(sequence => Number.isInteger(sequence) && sequence > 0);
 
     if (sequences.length !== cleanSequences.length) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Invalid sequences in removeBySequences. Sequences should be positive integers`);
     }
 
-    const filter = force ? {correlationId: clean, blobSequence: {$in: cleanSequences}} : {correlationId: clean, blobSequence: {$in: sequences}, protected: {$ne: true}};
+    // use the numeric cleanSequences in BOTH branches (the non-forced
+    // branch used to pass raw `sequences`, so string inputs like '1' would
+    // never match the stored numeric blobSequence)
+    const filter = force
+      ? {correlationId: clean, blobSequence: {$in: cleanSequences}}
+      : {correlationId: clean, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);

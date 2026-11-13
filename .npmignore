@@ -5,4 +5,4 @@ test-fixtures
 .drone.yml
 .travis.yml
 
-zoo/
+workspace/

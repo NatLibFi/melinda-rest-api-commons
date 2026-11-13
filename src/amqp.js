@@ -20,6 +20,44 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   const connection = deps.connection ?? await amqplib.connect(AMQP_URL);
   const channel = deps.channel ?? await connection.createChannel();
 
+  // the recursive healthCheck loop is never awaited and kept firing
+  // ~every 200 ms even after the connection was closed. This flag is cleared
+  // on graceful shutdown (closeChannel/closeConnection and their expected
+  // 'close' events) so the loop short-circuits instead of running until the
+  // closed channel throws.
+  let healthCheckRunning = runHealthCheck;
+  // set by closeChannel/closeConnection before the intentional close, so the
+  // 'close' listeners and the healthCheck catch can tell an expected close
+  // (graceful shutdown) from an unexpected one (link death / broker loss).
+  // Only an expected close cancels the loop and suppresses the fatal
+  // rethrow; on an unexpected close the loop keeps failing and the error
+  // escapes as an unhandled rejection - the documented fast-fail (exit(1)).
+  let shuttingDown = false;
+  // failure-path listeners: amqplib emits 'error' on socket loss and 'close'
+  // when the link dies. Without these an unhandled 'error' on an EventEmitter
+  // would become an uncaughtException, and a dead link with runHealthCheck
+  // false would be invisible. 'error' only logs (the deliberate fast-fail
+  // contract of the healthCheck loop is unchanged); 'close' cancels the loop
+  // only when the close was expected (shuttingDown) so an unexpected close
+  // leaves the fatal signal intact.
+  connection.on('error', (error) => {
+    debug(`Connection error: ${error}`);
+    logError(error);
+  });
+  connection.on('close', () => {
+    if (shuttingDown) {
+      healthCheckRunning = false;
+    }
+  });
+  channel.on('error', (error) => {
+    debug(`Channel error: ${error}`);
+    logError(error);
+  });
+  channel.on('close', () => {
+    if (shuttingDown) {
+      healthCheckRunning = false;
+    }
+  });
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 
   debug(`Connection: ${connection}`);
@@ -29,18 +67,32 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   return {checkQueue, consumeChunk, consumeOne, ackMessages, nackMessages, sendToQueue, removeQueue, messagesToRecords, closeChannel, closeConnection};
 
   async function closeChannel() {
+    // stop the health check loop before closing so it does not keep
+    // firing on a closed channel during graceful shutdown; shuttingDown
+    // marks the ensuing 'close' events as expected
+    shuttingDown = true;
+    healthCheckRunning = false;
     debug(`Closing channel`);
     await channel.close();
     debug(`Channel: ${channel}`);
   }
 
   async function closeConnection() {
+    // stop the health check loop before closing; shuttingDown
+    // marks the ensuing 'close' events as expected
+    shuttingDown = true;
+    healthCheckRunning = false;
     debug(`Closing connection`);
     await connection.close();
     debug(`Connection: ${connection}`);
   }
 
   async function healthCheck(wait = false) {
+    // cancellable - closeChannel/closeConnection set this to false
+    if (!healthCheckRunning) {
+      debugHC(`HealthCheck cancelled, not running`);
+      return false;
+    }
     if (wait) {
       await setTimeoutPromise(wait);
       return healthCheck(false);
@@ -53,6 +105,14 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       return healthCheck(200);
     } catch (error) {
       debugHC(`HealthCheck error ${JSON.stringify(error)}`);
+      // if we were asked to stop, do not rethrow - a closed channel
+      // throwing during graceful shutdown would keep the process alive /
+      // crash it; anything else (link death / broker loss) rethrows into
+      // the un-awaited loop promise - the documented fast-fail
+      if (shuttingDown) {
+        debugHC(`HealthCheck cancelled while erroring, not throwing`);
+        return false;
+      }
       handleAmqpErrors(error);
     }
   }
@@ -128,12 +188,19 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       // getData: next chunk (100) messages
       const messages = await getData(queue);
 
+      // queue can drain before/during the pump -> nothing to return,
+      // matches the `false` contract checkQueue uses for an empty queue
+      if (messages.length === 0) {
+        debug(`consumeChunk: queue ${queue} drained, returning false`);
+        return false;
+      }
+
       // Note: headers are from the first message of the chunk
       const headers = getHeaderInfo(messages[0]);
       debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) ${toRecord ? 'to records' : 'just messages'}`);
 
       if (toRecord) {
-        const records = await messagesToRecords(messages);
+        const records = messagesToRecords(messages);
         return {headers, records, messages};
       }
 
@@ -198,6 +265,11 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       debug(`Asserting queue: ${queue}`);
       await channel.assertQueue(queue, {durable: true});
 
+      // `correlationId` is deliberately delivered ONLY via AMQP message
+      // properties (headers) — it is NOT included in the message body
+      // (which is just `JSON.stringify({data})`). Consumers MUST read it from
+      // `message.properties.correlationId`, not from the body. Do not add it
+      // to the body without changing the message contract.
       debug(`Actually sendToQueue: ${queue}`);
       await channel.sendToQueue(
         queue,
@@ -225,17 +297,19 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
     // deleteQueue borks the channel if the queue does not exist
     // -> use throwaway tempChannel to avoid killing actual channel in use
     // this might be doable also with assertQueue before deleteQueue
-    const tempChannel = await connection.createChannel();
-    logger.verbose(`Removing queue ${queue}.`);
-    debug(`Removing queue ${queue}.`);
-    await tempChannel.deleteQueue(queue);
-
-    if (tempChannel) {
-      await tempChannel.close();
-      return;
+    let tempChannel;
+    try {
+      tempChannel = await connection.createChannel();
+      logger.verbose(`Removing queue ${queue}.`);
+      debug(`Removing queue ${queue}.`);
+      await tempChannel.deleteQueue(queue);
+    } finally {
+      // if deleteQueue throws (e.g. the queue does not exist) the
+      // throwaway channel used to leak -> always close it
+      if (tempChannel) {
+        await tempChannel.close();
+      }
     }
-
-    return;
   }
 
   // ----------------
@@ -275,12 +349,21 @@ export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
       }
 
       const message = await channel.get(queue);
+      // queue can drain between the messageCount read and channel.get
+      // (race, purge, other consumer) -> channel.get returns null
+      if (!message) {
+        return results;
+      }
+
       const identifier = {
         correlationId: message.properties.correlationId,
         deliveryTag: message.fields.deliveryTag
       };
-      // Filter not unique messages
-      if (identifiers.includes(identifier)) {
+      // filter not unique messages (compare by key, not by object reference)
+      const isDuplicate = identifiers.some(
+        i => i.correlationId === identifier.correlationId && i.deliveryTag === identifier.deliveryTag
+      );
+      if (isDuplicate) {
         return pump(count - 1, results, identifiers);
       }
 

@@ -35,6 +35,22 @@ Shared modules for microservices of Melinda rest api import system
 
 *IMPORT_JOB_STATEs: EMPTY or IN_QUEUE, PROCESSING -> final: DONE, ERROR, ABORT
 
+#### Timeout (ABORT) contract
+
+A queue item that has not made progress for longer than the timeout window is
+set to `ABORT` (with `errorStatus` 408 and `errorMessage`
+`Timeout in <state>`). The window is the time since the last write to the
+item's `modificationTime` (each Mongo write done by the importer -
+`pushMessages`, `pushIds`, `addBlobSize`, `setBlobSize`, `setState`,
+`setImportJobState` - refreshes it). The window defaults to **1 minute** and
+can be made longer with the `MONGO_TIMEOUT_MINUTES` env var, which large bulk
+imports (see the CHUNK_SIZE benchmark below: ~9248 records / ~597 sec) may
+need:
+
+```sh
+MONGO_TIMEOUT_MINUTES=10 # abort only after 10 minutes without progress
+```
+
 ### CHUNK_SIZE
 Chunck size to execution time ratio (From file to queue: ~450 records in 15sec)
 

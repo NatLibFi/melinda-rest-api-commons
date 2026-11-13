@@ -43,6 +43,15 @@ import {logError} from './utils.js';
 
 export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}) {
   const logger = createLogger();
+  // the checkTimeOut "no progress" window used to be a hardcoded
+  // 1 minute, which is too short for large bulk imports (README benchmark:
+  // ~9248 records can take ~10 minutes). Now configurable via the
+  // MONGO_TIMEOUT_MINUTES env var (default: 1 minute). Each importer chunk
+  // that writes (pushMessages / pushIds / setImportJobState / addBlobSize /
+  // setBlobSize / setState ...) refreshes modificationTime, so the timeout
+  // only triggers when there is genuinely no progress.
+  const timeoutMinutes = Number.parseInt(process.env.MONGO_TIMEOUT_MINUTES, 10) || 1;
+  logger.debug(`checkTimeOut window: ${timeoutMinutes} minute(s) (override with MONGO_TIMEOUT_MINUTES)`);
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
 
@@ -139,11 +148,25 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     if (stream) {
       debug(`Creating streamBulk`);
       try {
+        // NOTE: on success this returns the SAME normalized shape as
+        // the no-stream path below: {correlationId, acknowledged, queueItemState}
         await new Promise((resolve, reject) => {
           const outputStream = gridFSBucket.openUploadStream(correlationId);
 
+          // an upload stream error used to hang the promise forever
+          // (no error handler on outputStream) -> wire it to reject
+          outputStream.on('error', (error) => {
+            outputStream.destroy();
+            reject(error);
+          });
+
           stream
-            .on('error', reject)
+            .on('error', (error) => {
+              // input failed mid-upload -> abort, do not leave the
+              // partial GridFS upload stream running
+              outputStream.destroy();
+              reject(error);
+            })
             .on('data', chunk => outputStream.write(chunk))
             .on('end', () => outputStream.end(undefined, undefined, () => {
               resolve(correlationId);
@@ -151,11 +174,32 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         });
         logger.info(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
         debug(`New BULK queue item for ${operation} ${correlationId} has been made in ${collection}!`);
-        return operator.insertOne(newQueueItem);
+        const result = await operator.insertOne(newQueueItem);
+        if (!result.acknowledged) {
+          // TEST-COVERAGE: this error is not (currently) tested
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        // normalize the return shape to the same one the no-stream
+        // path returns - do not leak the driver InsertOneResult
+        return {correlationId, acknowledged: result.acknowledged, queueItemState: newQueueItem.queueItemState};
       } catch (error) {
         const errorMessage = error.payload || error.message || '';
         logError(error);
+        // best-effort cleanup of a partial GridFS file
+        await removePartialContent(correlationId);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+      }
+    }
+
+    async function removePartialContent(correlationId) {
+      try {
+        const files = await gridFSBucket.find({filename: correlationId}).toArray();
+        for (const file of files) {
+          await gridFSBucket.delete(file._id);
+          logger.debug(`mongo/createBulk: removed partial GridFS file for ${correlationId}`);
+        }
+      } catch (cleanupError) {
+        logger.debug(`mongo/createBulk: partial GridFS cleanup failed for ${correlationId}: ${cleanupError.message}`);
       }
     }
 
@@ -167,7 +211,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         if (result.acknowledged) {
           logger.info(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
           debug(`New noStream BULK queue item for ${operation} ${correlationId} has been made in ${collection}`);
-          return {correlationId, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
+          // same normalized shape as the stream path above
+          return {correlationId, acknowledged: result.acknowledged, queueItemState: QUEUE_ITEM_STATE.VALIDATOR.WAITING_FOR_RECORDS};
         }
         // TEST-COVERAGE: this error is not (currently) tested
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR);
@@ -182,27 +227,74 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
   // Check state that the queueItem has not waited too long and set state
   // Optionally set also queueItems errorStatus & errorMessage
+  //
+  // returns a discriminated result instead of a bare boolean so
+  // callers can tell the three outcomes apart:
+  //   {status: 'updated',   queueItem}  - state was set
+  //   {status: 'timeout',   queueItem}  - item was aborted by checkTimeOut
+  //   {status: 'unchanged', queueItem}  - state was ABORT/ERROR/DONE already,
+  //                                       or the item no longer exists
   async function checkAndSetState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
-    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
+    // checkTimeOut returns true, if queueItem is fresher than the configured
+    // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and add errorStatus and errorMessage (408, 'Timeout')
     const timeOut = await checkTimeOut({correlationId});
     if (timeOut) {
-      return setState({correlationId, state, errorMessage, errorStatus});
+      const queueItem = await setState({correlationId, state, errorMessage, errorStatus});
+      return {status: 'updated', queueItem};
     }
-    return false;
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
+    const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
+    return {status, queueItem};
   }
 
   // Check state that the queueItem has not waited too long and set importJobState
   // Note: checkAndSetImportJobState cannot be used to set queueItems errorStatus & errorMessage (expect in case of a TimeOut)
+  //
+  // returns a discriminated result, see checkAndSetState
   async function checkAndSetImportJobState({correlationId, operation, importJobState}) {
-    // checkTimeOut returns true, if queueItem is fresher than 1 minute and it's state is not ABORT/ERROR/DONE
+    // If the item is missing or already terminal, checkTimeOut would no-op
+    // and return false; report 'unchanged' up front instead of
+    // misattributing a pre-existing ABORT as a timeout caused by this call
+    const existing = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    if (!existing ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ABORT ||
+        existing.queueItemState === QUEUE_ITEM_STATE.ERROR ||
+        existing.queueItemState === QUEUE_ITEM_STATE.DONE) {
+      return {status: 'unchanged', queueItem: existing};
+    }
+    // checkTimeOut returns true, if queueItem is fresher than the configured
+    // timeout window and it's state is not ABORT/ERROR/DONE
     // otherwise it sets queueItem and importJobStates to state ABORT and errorStatue and errorMessage (408, 'Timeout')
     logger.debug(`${correlationId}, ${importJobState}, ${operation}`);
     const timeOut = await checkTimeOut({correlationId, operation, importJobState});
     if (timeOut) {
-      return setImportJobState({correlationId, operation, importJobState});
+      const queueItem = await setImportJobState({correlationId, operation, importJobState});
+      return {status: 'updated', queueItem};
     }
-    return false;
+    // A concurrent writer may have moved the item to another terminal state
+    // (e.g. DONE/ERROR) between the pre-read and checkTimeOut's own read, in
+    // which case a false from checkTimeOut only means "not timed out here" —
+    // classify by state so those are reported as 'unchanged', and only an ABORT
+    // (the state checkTimeOut itself writes) counts as a timeout
+    const queueItem = await operator.findOne({correlationId: sanitize(correlationId)}, {projection: {_id: 0}});
+    const status = queueItem && queueItem.queueItemState === QUEUE_ITEM_STATE.ABORT ? 'timeout' : 'unchanged';
+    return {status, queueItem};
   }
 
   async function query(params, showParams = {}) {
@@ -210,6 +302,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(`Querying: ${JSON.stringify(params)}, ${JSON.stringify(showParams)}`);
     const {limit = 1000, skip = 0, ...rest} = params;
 
+    // rest is an internal, trusted query object built by the calling service:
+    // callers must not splice raw user input into it. Its keys may legitimately
+    // use dot notation and $-operators, which is why rest is not
+    // field-sanitized here.
     const result = await operator.find(rest, {projection: createProjection(showParams)})
       .limit(parseInt(limit, 10))
       .skip(parseInt(skip, 10))
@@ -239,7 +335,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(`showAll: ${showAll}, showOperations: ${showOperations}, showOperationSettings: ${showOperationSettings}, showRecordLoadParams: ${showRecordLoadParams}, showImportJobState: ${showImportJobState}`);
     debug(`${JSON.stringify(combinedShowParams)}`);
 
-    // NOTE: parseBoolean parses any non-empty, non-"false" string as true!
+    // NOTE: the show-* params are parsed with the shared parseBoolean, whose
+    // semantics are: undefined -> false, numeric strings via Boolean(Number(v))
+    // ('0' -> false, '1' -> true), other non-empty non-'false' strings -> true.
     if (parseBoolean(showAll)) {
       //if (showAll === true || showAll === '1' || showAll === 1) {
       debug(`ShowAll: ${showAll}`);
@@ -288,15 +386,23 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   }
 
   // Check that if the item has waited too long
-  // If the last modification time for the queueItem is older than 1 minute
+  // If the last modification time for the queueItem is older than the
+  // configured window (MONGO_TIMEOUT_MINUTES, default 1 minute)
   // set state to ABORT and return false, otherwise return true
   // If the state is already ABORT or ERROR or DONE return false
+  // if the item does not exist (deleted concurrently) return false
+  // instead of crashing on destructuring of null
 
   async function checkTimeOut({correlationId}) {
-    // B-7: coalesce a missing importJobState (legacy rows written before the
+    const queueItem = await operator.findOne({correlationId});
+    if (!queueItem) {
+      logger.silly(`${correlationId} not found in ${collection} - not a timeout`);
+      return false;
+    }
+    // coalesce a missing importJobState (legacy rows written before the
     // importJobState shape existed) to all-EMPTY so .CREATE/.UPDATE/.FIX never
     // read off undefined and crash the pipeline.
-    const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = await operator.findOne({correlationId});
+    const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = queueItem;
     //debug(`${modificationTime} - oldState: ${oldState}`);
     // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {
@@ -304,7 +410,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       return false;
     }
 
-    const timeoutTime = moment(modificationTime).add(1, 'm');
+    // configurable "no progress" window (default 1 minute)
+    const timeoutTime = moment(modificationTime).add(timeoutMinutes, 'm');
     logger.silly(`${correlationId} timeOut @ ${timeoutTime}`);
 
     if (timeoutTime.isBefore()) {
@@ -342,13 +449,15 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     try {
       //const metadataResult = await getFileMetadata({filename: clean});
       //logger.debug(`mongo/remove: metadataResult: ${JSON.stringify(metadataResult)}`);
-      const noContent = await removeContent({correlationId: params.correlationId});
-      debug(`noContent (removeContent result): ${JSON.stringify(noContent)}`);
-      if (noContent) {
-        const deleteResult = await operator.deleteOne({correlationId: clean});
-        debug(`deleteResult: ${JSON.stringify(deleteResult)}`);
-        return true;
-      }
+      // true only when a GridFS file was actually deleted, false when there
+      // was no content to delete
+      const removedContent = await removeContent({correlationId: params.correlationId});
+      debug(`removedContent (removeContent result): ${JSON.stringify(removedContent)}`);
+      const deleteResult = await operator.deleteOne({correlationId: clean});
+      debug(`deleteResult: ${JSON.stringify(deleteResult)}`);
+      // callers need to tell "nothing was there" apart from "a queueItem was
+      // deleted" (the old bare `true` said both)
+      return {removed: deleteResult.deletedCount > 0, deletedContent: removedContent};
     } catch (err) {
       // TEST-COVERAGE: this error is not (currently) tested
       if (err instanceof MongoDriverError) {
@@ -356,8 +465,8 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
         if (err.message.indexOf('File not found for id') !== -1) {
           logger.silly(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
           debug(`mongo/remove: File not found, removing queueItem ${JSON.stringify(clean)} from ${collection}`);
-          await operator.deleteOne({correlationId: clean});
-          return true;
+          const deleteResult = await operator.deleteOne({correlationId: clean});
+          return {removed: deleteResult.deletedCount > 0, deletedContent: false};
         }
         logger.error(err.message);
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
@@ -377,9 +486,21 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     debug(result);
     if (result) {
       const {operationSettings} = result;
-      if (operationSettings.prio === false && operationSettings.noStream === false) {
+      // createBulk never sets operationSettings.noStream (phantom flag,
+      // always undefined). Derive the condition from the GridFS file instead:
+      // bulk content is available only when a file was actually uploaded.
+      let files = [];
+      if (operationSettings.prio === false) {
+        files = await gridFSBucket.find({filename: clean}).toArray();
+      }
+      const hasContent = files.length > 0;
+      if (hasContent) {
         return {
           contentType: result.contentType,
+          // the file existence was verified by the find() above; a
+          // 'error' event on the returned stream (e.g. file deleted
+          // concurrently) is an unhandled event for the caller -> the
+          // contract is: the caller MUST attach an 'error' handler.
           readStream: gridFSBucket.openDownloadStreamByName(clean)
         };
       }
@@ -411,7 +532,9 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
 
     logger.debug(`No files for ${params.correlationId} to delete`);
-    return true;
+    // false: there was no content to delete (the old `true` here made callers
+    // unable to tell "file deleted" apart from "no file existed")
+    return false;
   }
 
   function getOne({queueItemState, importJobState = undefined}) {
@@ -454,14 +577,29 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }
   }
 
-  function getStream(correlationId) {
+  // a missing GridFS file is reported by openDownloadStreamByName as an
+  // async 'error' event, which would be an unhandled error event (a process
+  // crash) if the caller never attaches a handler. Pre-check the file
+  // existence here and throw NOT_FOUND synchronously instead. Note: this
+  // makes getStream async (callers must await it). The contract for the
+  // returned stream is the same as readContent: the caller MUST attach an
+  // 'error' handler.
+  async function getStream(correlationId) {
     logger.info(`Forming stream from mongo for ${correlationId} in ${collection}`);
     const clean = sanitize(correlationId);
     try {
+      const files = await gridFSBucket.find({filename: clean}).toArray();
+      if (files.length === 0) {
+        logger.info(`getStream: file ${clean} not found in ${collection}`);
+        throw new ApiError(httpStatus.NOT_FOUND, {message: `File ${clean} not found in ${collection}`});
+      }
       // Return content stream
       return gridFSBucket.openDownloadStreamByName(clean);
     } catch (error) {
       // TEST-COVERAGE: this error is not (currently) tested
+      if (error instanceof ApiError) {
+        throw error;
+      }
       const errorMessage = error.payload || error.message || '';
       logError(error);
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
@@ -469,38 +607,60 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
   }
 
   async function pushIds({correlationId, handledIds, rejectedIds}) {
+    // validate array inputs before dereferencing .length (guard is
+    // outside the try so the 400 is not re-wrapped as a 500)
+    if (!Array.isArray(handledIds) || !Array.isArray(rejectedIds)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'pushIds: handledIds and rejectedIds must be arrays');
+    }
     logger.verbose(`Push ids (${handledIds.length}) and rejectedIds (${rejectedIds.length}) ${correlationId} to ${collection}`);
     logger.debug(`ids (${handledIds.length}): ${JSON.stringify(handledIds)}, rejectedIds ${rejectedIds.length}: ${JSON.stringify(rejectedIds)}`);
     const clean = sanitize(correlationId);
-    await operator.updateOne({
-      correlationId: clean
-    }, {
-      $set: {
-        modificationTime: moment().toDate()
-      },
-      $push: {
-        handledIds: {$each: handledIds},
-        rejectedIds: {$each: rejectedIds}
-      }
-    });
+    try {
+      await operator.updateOne({
+        correlationId: clean
+      }, {
+        $set: {
+          modificationTime: moment().toDate()
+        },
+        $push: {
+          handledIds: {$each: handledIds},
+          rejectedIds: {$each: rejectedIds}
+        }
+      });
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
   }
 
   async function pushMessages({correlationId, messages, messageField = 'messages'}) {
+    // validate array input before dereferencing .length (guard is
+    // outside the try so the 400 is not re-wrapped as a 500)
+    if (!Array.isArray(messages)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'pushMessages: messages must be an array');
+    }
     logger.verbose(`Push messages (${messages.length}) to ${messageField} ${correlationId} to ${collection}`);
-    logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}}`);
+    logger.silly(`Messages (${messages.length}): ${JSON.stringify(messages)}`);
     const clean = sanitize(correlationId);
     const cleanMessageField = sanitize(messageField);
     debug(`${messageField} -> ${cleanMessageField}`);
-    await operator.updateOne({
-      correlationId: clean
-    }, {
-      $set: {
-        modificationTime: moment().toDate()
-      },
-      $push: {
-        [cleanMessageField]: {$each: messages}
-      }
-    });
+    try {
+      await operator.updateOne({
+        correlationId: clean
+      }, {
+        $set: {
+          modificationTime: moment().toDate()
+        },
+        $push: {
+          [cleanMessageField]: {$each: messages}
+        }
+      });
+    } catch (error) {
+      const errorMessage = error.payload || error.message || '';
+      logError(error);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+    }
   }
 
   function setState({correlationId, state, errorMessage = undefined, errorStatus = undefined}) {
@@ -523,6 +683,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       errorStatus
     };
 
+    // errorMessage/errorStatus are sticky: transitions that do not set them
+    // (undefined) drop the keys from the $set instead of clearing the fields,
+    // so a later state change intentionally keeps the previous values and the
+    // last error stays visible on the queueItem.
     // Do not update value that are undefined
     Object.keys(updateValues).forEach(key => updateValues[key] === undefined && delete updateValues[key]);
 
@@ -580,9 +744,28 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
     }, {projection: {_id: 0}, returnDocument: 'after'});
   }
 
+  // `findOneAndUpdate` (mongodb v6) returns the resulting document
+  // directly, or `null` when nothing matched. The old `result.ok || result`
+  // was v3 debris: a non-matching correlationId came back as a silent `null`
+  // and callers could not tell "no match" from success. Now a `null` result
+  // is mapped to an ApiError 404, and the document itself is returned on
+  // success (no more `{ok, value}` shape to worry about).
+  function unwrapAndUpdateResult(result, correlationId) {
+    if (result === null || result === undefined) {
+      logger.info(`Queue item ${correlationId} not found in ${collection}`);
+      throw new ApiError(httpStatus.NOT_FOUND, {message: `Job ${correlationId} not found.`});
+    }
+    return result;
+  }
+
   async function setOperation({correlationId, operation}) {
     const newOperation = operation;
-    const {operation: oldOperation} = await operator.findOne({correlationId});
+    const existing = await operator.findOne({correlationId});
+    if (!existing) {
+      logger.info(`Setting queue-item operation: queue item ${correlationId} not found in ${collection}`);
+      throw new ApiError(httpStatus.NOT_FOUND, {message: `Job ${correlationId} not found.`});
+    }
+    const {operation: oldOperation} = existing;
     logger.info(`Setting queue-item operation from ${oldOperation} to ${newOperation} for ${correlationId} to ${collection}`);
     const cleanCorrelationId = sanitize(correlationId);
     const cleanNewOperation = sanitize(newOperation);
@@ -596,7 +779,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
-    return result.ok || result;
+    return unwrapAndUpdateResult(result, correlationId);
     // logger.debug(JSON.stringify(result));
   }
 
@@ -605,6 +788,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
 
     const queueItem = await operator.findOne({correlationId: cleanCorrelationId});
     logger.silly(`We found a queueItem: ${JSON.stringify(queueItem)}`);
+    if (!queueItem) {
+      logger.info(`Setting queue-item operations: queue item ${correlationId} not found in ${collection}`);
+      throw new ApiError(httpStatus.NOT_FOUND, {message: `Job ${correlationId} not found.`});
+    }
 
     const oldOperations = queueItem.operations;
 
@@ -625,7 +812,7 @@ export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}
       }
     }, {projection: {_id: 0}, returnDocument: 'after'});
     debugDev(`${JSON.stringify(result)}`);
-    return result.ok || result;
+    return unwrapAndUpdateResult(result, correlationId);
     // logger.debug(JSON.stringify(result));
   }
 
