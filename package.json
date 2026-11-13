@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "@natlibfi/fixugen": "^4.0.0",
-    "@natlibfi/fixura": "^5.0.0",
+    "@natlibfi/fixura": "^5.1.0-alpha.1",
     "@natlibfi/fixura-mongo": "^4.0.2",
     "@types/node": "^25.9.9",
     "cross-env": "^10.1.0",

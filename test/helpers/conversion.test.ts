@@ -2,7 +2,6 @@ import assert from 'node:assert';
 import {describe, it} from 'node:test';
 import fixtureFactory from '@natlibfi/fixura';
 import {MarcRecord} from '@natlibfi/marc-record';
-import type {MarcRecordObject} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import createConversionService from '../../src/helpers/conversion.ts';
 import {CONVERSION_FORMATS} from '../../src/constants.ts';
@@ -20,11 +19,11 @@ describe('services/conversion', () => {
   });
   const conversionService = createConversionService();
 
-  const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']}) as string) as MarcRecordObject, {subfieldValues: false});
-  const marcXml = getFixture({components: ['marcxml1']}) as string;
-  const iso2709 = getFixture({components: ['iso2709_1']}) as string;
-  const json = getFixture({components: ['json1']}) as string;
-  const alephSeq = getFixture({components: ['aleph_sequential']}) as string;
+  const marcRecord = new MarcRecord(JSON.parse(getFixture({components: ['json1']})!), {subfieldValues: false});
+  const marcXml = getFixture({components: ['marcxml1']})!;
+  const iso2709 = getFixture({components: ['iso2709_1']})!;
+  const json = getFixture({components: ['json1']})!;
+  const alephSeq = getFixture({components: ['aleph_sequential']})!;
 
 
   describe('factory', () => {
