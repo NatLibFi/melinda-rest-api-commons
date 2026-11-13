@@ -13,5 +13,5 @@ export * from './constants.ts';
 // re-exported alongside the factories; `export *` from constants.ts already
 // carries over any types declared there.
 export type {AmqpOperator, QueueItemMessagePayload, QueueItemRecordPayload} from './amqp.ts';
-export type {ImportJobStateValue, MongoOperator, QueueItem} from './mongo.ts';
+export type {CheckAndSetResult, CreateBulkResult, ImportJobStateValue, MongoOperator, QueueItem} from './mongo.ts';
 export type {LogItem, LogItemBase, LogItemPayload, LogItemType, MongoLogOperator} from './mongoLog.ts';
