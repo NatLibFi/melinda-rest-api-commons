@@ -1,0 +1,14 @@
+{
+  "description": "Function: remove, params [correlationId as OBJECT {\"$ne\": \"\"}] throws ApiError 400 (entry-point type guard rejects a non-string correlationId)",
+  "only": false,
+  "skip": false,
+  "functionName": "remove",
+  "preFillDb": false,
+  "expectError": true,
+  "expectedErrorStatus": 400,
+  "params": [
+    {
+      "$ne": ""
+    }
+  ]
+}

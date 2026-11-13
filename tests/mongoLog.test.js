@@ -52,11 +52,39 @@ async function callback({
   functionName,
   params,
   preFillDb = false,
-  expectError = false
+  expectError = false,
+  expectedErrorStatus = 500
 }) {
   const mongoUri = await mongoFixtures.getUri();
   const mongoLogOperator = await createMongoLogOperator(mongoUri, '');
   const expectedResult = expectError ? undefined : await getFixture('expectedResult.json');
+
+  if (expectError) {
+    // assert the throw (like the removeBySequences branch below)
+    if (functionName === 'protect') {
+      const [correlationId, blobSequence] = params;
+      return assert.rejects(
+        () => mongoLogOperator.protect(correlationId, blobSequence),
+        error => error instanceof ApiError && error.status === expectedErrorStatus
+      );
+    }
+    if (functionName === 'remove') {
+      const [correlationId, force] = params;
+      return assert.rejects(
+        () => mongoLogOperator.remove(correlationId, force),
+        error => error instanceof ApiError && error.status === expectedErrorStatus
+      );
+    }
+    if (functionName === 'removeBySequences') {
+      const [correlationId, sequences, force] = params;
+      return assert.rejects(
+        () => mongoLogOperator.removeBySequences(correlationId, sequences, force),
+        error => error instanceof ApiError && error.status === expectedErrorStatus
+      );
+    }
+    throw new Error(`Unknown functionName with expectError: ${functionName}`);
+  }
+
   // console.log(typeof mongoUri); // eslint-disable-line
 
   if (preFillDb) {
@@ -131,13 +159,6 @@ async function callback({
 
   if (functionName === 'removeBySequences') {
     const [correlationId, sequences, force] = params;
-    if (expectError) {
-      // assert the throw, like in tests/utils.test.js
-      return assert.rejects(
-        async () => mongoLogOperator.removeBySequences(correlationId, sequences, force),
-        error => error instanceof ApiError && error.status === 500
-      );
-    }
     const result = await mongoLogOperator.removeBySequences(correlationId, sequences, force);
     assert.deepEqual(result, expectedResult);
     return assert.deepEqual(await dumpRemaining(), getFixture('expectedRemaining.json'));

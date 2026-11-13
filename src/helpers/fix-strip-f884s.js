@@ -133,6 +133,8 @@ export function stripF884s(newRecord, options) {
 
         };
       }
+      // Defensive: results is keyed from the same f884Melindas array, so
+      // convSource is always present when truthy.
       debug(`Not found: ${convSource}`);
       return field;
     });

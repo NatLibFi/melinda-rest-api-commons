@@ -6,6 +6,7 @@ import httpStatus from 'http-status';
 import {MongoDriverError} from 'mongodb';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createMongo from '../src/mongo.js';
+import createMongoLog from '../src/mongoLog.js';
 
 const DUMMY_URI = 'mongodb://stub:27017/rest-api';
 const COLLECTION = 'foobar';
@@ -556,4 +557,424 @@ test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne thro
       return true;
     }
   );
+});
+
+// Entry-point type guards: a non-scalar (e.g. object) correlationId must be
+// rejected with 400 before it can be spliced into a query as a $-operator.
+
+test('checkAndSetState rejects with ApiError 400 when correlationId is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.checkAndSetState({correlationId: {'$ne': ''}, state: 'VALIDATING'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when queueItemState is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({queueItemState: {'$ne': ''}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when importJobState is not an object', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: 'IN_QUEUE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when importJobState has a $-operator key', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: {'$ne': ''}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne rejects with ApiError 400 when an importJobState value is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator({findOne: async () => null}), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.getOne({importJobState: {'importJobState.UPDATE': {'$gt': ''}}}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('getOne queries findOne with a valid importJobState filter', async () => {
+  const filters = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async (filter) => {
+      // eslint-disable-next-line functional/immutable-data
+      filters.push(filter);
+      return null;
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  const result = await mongo.getOne({importJobState: {'importJobState.UPDATE': 'IN_QUEUE'}});
+  assert.strictEqual(result, null);
+  assert.deepStrictEqual(filters, [{'importJobState.UPDATE': 'IN_QUEUE'}]);
+});
+
+test('setBlobSize rejects with ApiError 400 when blobSize is not a number', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.setBlobSize({correlationId: 'FOO', blobSize: '7'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('setBlobSize stores a real number when blobSize is a number', async () => {
+  const updates = [];
+  const mongo = await makeMongo({
+    operator: makeOperator({findOneAndUpdate: async (filter, update) => {
+      // eslint-disable-next-line functional/immutable-data
+      updates.push({filter, update});
+      return {correlationId: 'FOO', blobSize: 7};
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await mongo.setBlobSize({correlationId: 'FOO', blobSize: 7});
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0].update.$set.blobSize, 7);
+  assert.strictEqual(typeof updates[0].update.$set.blobSize, 'number');
+});
+
+test('pushMessages rejects with ApiError 400 when messageField is not a string', async () => {
+  const mongo = await makeMongo({operator: makeOperator(), gridFSBucket: makeGridFSBucket()});
+  await assert.rejects(
+    () => mongo.pushMessages({correlationId: 'FOO', messages: ['m1'], messageField: 42}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.BAD_REQUEST);
+      return true;
+    }
+  );
+});
+
+test('createBulk (stream): insertOne with acknowledged=false throws ApiError 500', async () => {
+  const input = new Readable({
+    read() {
+      this.push(Buffer.from('chunk'));
+      this.push(null);
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator({insertOne: async () => ({acknowledged: false})}),
+    gridFSBucket: makeGridFSBucket({openUploadStream: () => new PassThrough()})
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('Mongo errored'));
+      return true;
+    }
+  );
+});
+
+test('createBulk (stream): a failing GridFS cleanup does not mask the original upload error', async () => {
+  // input errors mid-upload AND the partial-file cleanup (gridFSBucket.find)
+  // throws too: the cleanup error is only logged, the original error must
+  // still propagate
+  const input = new Readable({
+    read() {
+      setImmediate(() => this.emit('error', new Error('input stream boom')));
+    }
+  });
+  const mongo = await makeMongo({
+    operator: makeOperator(),
+    gridFSBucket: makeGridFSBucket({
+      openUploadStream: () => new PassThrough(),
+      find: () => {
+        throw new Error('gridfs cleanup boom');
+      }
+    })
+  });
+  await assert.rejects(
+    () => mongo.createBulk({
+      correlationId: 'FOO',
+      cataloger: 'xxx',
+      oCatalogerIn: 'xxx',
+      operation: 'CREATE',
+      contentType: 'application/json',
+      recordLoadParams: {},
+      stream: input
+    }),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('input stream boom'));
+      assert.ok(!error.payload.includes('gridfs cleanup boom'));
+      return true;
+    }
+  );
+});
+
+test('remove: non-MongoDriverError from deleteOne throws ApiError 500 with the error message', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({deleteOne: async () => {
+      throw new Error('plain delete boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.remove({correlationId: 'FOO'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      assert.ok(error.payload.includes('plain delete boom'));
+      return true;
+    }
+  );
+});
+
+test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({
+      findOne: async () => ({correlationId: 'FOO', operation: 'CREATE'}),
+      findOneAndUpdate: async () => null
+    }),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.setOperation({correlationId: 'FOO', operation: 'UPDATE'}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.NOT_FOUND);
+      assert.ok(error.payload.message.includes('not found'));
+      return true;
+    }
+  );
+});
+
+// Q-3: previously-unwrapped public methods now reject with ApiError 500
+// ("Mongo errored: ...") when the driver fails, instead of leaking the raw
+// MongoDriverError. Non-driver errors (400/404 ApiErrors) still pass
+// through unchanged.
+
+test('mongo query: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({find: () => {
+      throw new MongoDriverError('query driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.query({}),
+    mongoErrored500('query driver boom')
+  );
+});
+
+test('mongo queryById: MongoDriverError from findOne rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => {
+      throw new MongoDriverError('queryById driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.queryById({correlationId: 'FOO'}),
+    mongoErrored500('queryById driver boom')
+  );
+});
+
+test('mongo checkTimeOut: MongoDriverError from findOne rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongo = await makeMongo({
+    operator: makeOperator({findOne: async () => {
+      throw new MongoDriverError('checkTimeOut driver boom');
+    }}),
+    gridFSBucket: makeGridFSBucket()
+  });
+  await assert.rejects(
+    () => mongo.checkTimeOut({correlationId: 'FOO'}),
+    mongoErrored500('checkTimeOut driver boom')
+  );
+});
+
+// mongoLog: same deps-seam convention as mongo (factory last param). When
+// deps.collection is provided no real connection is made and every
+// db.collection('logs') call routes to the injected object. These tests
+// cover the catch blocks that re-wrap driver failures as ApiError 500.
+
+function makeLogCollection(overrides = {}) {
+  return {
+    insertOne: async () => ({acknowledged: true, insertedId: 1}),
+    updateMany: async () => ({acknowledged: true, matchedCount: 0, modifiedCount: 0}),
+    deleteMany: async () => ({acknowledged: true, deletedCount: 0}),
+    ...overrides
+  };
+}
+
+async function makeMongoLog(deps) {
+  return createMongoLog(DUMMY_URI, 'rest-api', deps);
+}
+
+function mongoErrored500(text) {
+  return (error) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+    assert.ok(error.payload.includes('Mongo errored'));
+    assert.ok(error.payload.includes(text));
+    return true;
+  };
+}
+
+test('mongoLog addLogItem: insertOne with acknowledged=false throws ApiError 500', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({insertOne: async () => ({acknowledged: false})})
+  });
+  await assert.rejects(
+    () => mongoLog.addLogItem({correlationId: 'FOO', logItemType: 'MERGE_LOG', blobSequence: 1}),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
+      return true;
+    }
+  );
+});
+
+test('mongoLog addLogItem: insertOne rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({insertOne: async () => {
+      throw new Error('addLogItem boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.addLogItem({correlationId: 'FOO', logItemType: 'MERGE_LOG', blobSequence: 1}),
+    mongoErrored500('addLogItem boom')
+  );
+});
+
+test('mongoLog query: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({find: () => {
+      throw new MongoDriverError('mongoLog query driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.query({}),
+    mongoErrored500('mongoLog query driver boom')
+  );
+});
+
+test('mongoLog queryById: MongoDriverError from find rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({find: () => {
+      throw new MongoDriverError('mongoLog queryById driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.queryById('FOO'),
+    mongoErrored500('mongoLog queryById driver boom')
+  );
+});
+
+test('mongoLog getListOfCatalogers: MongoDriverError from distinct rejects with ApiError 500 "Mongo errored"', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({distinct: async () => {
+      throw new MongoDriverError('mongoLog distinct driver boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.getListOfCatalogers(),
+    mongoErrored500('mongoLog distinct driver boom')
+  );
+});
+
+test('mongoLog protect: updateMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async () => {
+      throw new Error('protect boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.protect('FOO'),
+    mongoErrored500('protect boom')
+  );
+});
+
+test('mongoLog unprotect: updateMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async () => {
+      throw new Error('unprotect boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.unprotect('FOO'),
+    mongoErrored500('unprotect boom')
+  );
+});
+
+test('mongoLog remove: deleteMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({deleteMany: async () => {
+      throw new Error('remove boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.remove('FOO'),
+    mongoErrored500('remove boom')
+  );
+});
+
+test('mongoLog removeBySequences: deleteMany rejecting throws ApiError 500 with "Mongo errored" message', async () => {
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({deleteMany: async () => {
+      throw new Error('removeBySequences boom');
+    }})
+  });
+  await assert.rejects(
+    () => mongoLog.removeBySequences('FOO', [1, 2]),
+    mongoErrored500('removeBySequences boom')
+  );
+});
+
+test('mongoLog protect: injected collection routes the update and returns its result', async () => {
+  const filters = [];
+  const result = {acknowledged: true, matchedCount: 1, modifiedCount: 1};
+  const mongoLog = await makeMongoLog({
+    collection: makeLogCollection({updateMany: async (filter) => {
+      // eslint-disable-next-line functional/immutable-data
+      filters.push(filter);
+      return result;
+    }})
+  });
+  const mongoLogResult = await mongoLog.protect('FOO');
+  assert.deepStrictEqual(mongoLogResult, result);
+  assert.deepStrictEqual(filters, [{correlationId: 'FOO'}]);
 });

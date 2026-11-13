@@ -1,25 +1,69 @@
 import {MongoClient} from 'mongodb';
-import moment from 'moment';
 import httpStatus from 'http-status';
-import sanitize from 'mongo-sanitize';
 import {createLogger, Error as ApiError} from '@natlibfi/melinda-commons';
-import {logError} from './utils.js';
+import {logError, assertString} from './utils.js';
+import {withMongoError} from './mongoError.js';
 import {LOG_ITEM_TYPE} from './constants.js';
 
 /**
  * Create log operator
  * @param {String} MONGO_URI connnection address to mongo
  * @param {String} dbName Mongo DB name, defaults 'rest-api'
+ * @param {Object} deps optional dependencies, defaults {}. When deps.collection (a Mongo collection object) is provided, no real Mongo connection is made (used by unit tests)
  * @returns {Object} containing all log handling functions
  */
-export default async function (MONGO_URI, dbName = 'rest-api') {
+export default async function (MONGO_URI, dbName = 'rest-api', deps = {}) {
   const logger = createLogger();
 
-  // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI);
-  const db = client.db(dbName);
+  // blobSequence filters: falsy/undefined keeps the legacy behaviour (no
+  // blobSequence in the filter). Otherwise a number or a string parseable
+  // to an integer (existing parseInt behaviour) is accepted, anything else
+  // is rejected with 400.
+  function buildBlobSequenceFilter(correlationId, blobSequence) {
+    if (!blobSequence) {
+      return {correlationId};
+    }
+    if (typeof blobSequence === 'number') {
+      return {correlationId, blobSequence: parseInt(blobSequence, 10)};
+    }
+    if (typeof blobSequence === 'string') {
+      const parsed = parseInt(blobSequence, 10);
+      if (!Number.isNaN(parsed)) {
+        return {correlationId, blobSequence: parsed};
+      }
+    }
+    throw new ApiError(httpStatus.BAD_REQUEST, 'blobSequence must be a number or a numeric string');
+  }
+
+  // Connect to mongo (MONGO), unless the logs collection is injected via
+  // deps (used by unit tests to avoid a real connection)
   const collection = 'logs';
-  return {addLogItem, query, queryById, getListOfLogs, getListOfCatalogers, getListOfCorrelationIds, getExpandedListOfLogs, protect, unprotect, remove, removeBySequences};
+  let db;
+  if (deps.collection) {
+    db = {collection: () => deps.collection};
+  } else {
+    const client = await MongoClient.connect(MONGO_URI);
+    db = client.db(dbName);
+  }
+  // The previously-unwrapped public methods are wrapped with the shared
+  // withMongoError helper so a Mongo driver failure rejects with
+  // ApiError 500 ('Mongo errored: ...') instead of a raw driver error;
+  // validation errors (400) pass through unchanged. The pre-wrapped
+  // methods (addLogItem, protect, unprotect, remove, removeBySequences)
+  // keep their inline handling.
+  return {
+    addLogItem,
+    query: (params) => withMongoError(() => query(params)),
+    queryById: (correlationId, logItemType, skip, limit) => withMongoError(() => queryById(correlationId, logItemType, skip, limit)),
+    getListOfLogs: (logItemType) => withMongoError(() => getListOfLogs(logItemType)),
+    getListOfCatalogers: () => withMongoError(() => getListOfCatalogers()),
+    getListOfCorrelationIds: () => withMongoError(() => getListOfCorrelationIds()),
+    getExpandedListOfLogs: (params) => withMongoError(() => getExpandedListOfLogs(params)),
+    protect,
+    unprotect,
+    remove,
+    removeBySequences
+  };
 
   /**
    * Add log item to collection
@@ -27,7 +71,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns void
    */
   async function addLogItem(logItem) {
-    const time = moment().toDate();
+    const time = new Date();
     const newLogItem = {
       ...logItem,
       creationTime: time,
@@ -62,7 +106,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
   async function query({limit = 5, skip = 0, ...rest}) {
     logger.debug(`Query params: ${JSON.stringify(rest)}`);
     logger.debug(`Limit and skip params: ${limit} | ${skip}`);
-    checkLogItemType(rest.logItemType, false, false);
+    checkLogItemType(rest.logItemType, false);
     // rest is an internal, trusted query object built by the calling service:
     // callers must not splice raw user input into it. Its keys may legitimately
     // use dot notation and $-operators, which is why rest is not
@@ -88,6 +132,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns query result array
    */
   async function queryById(correlationId, logItemType = LOG_ITEM_TYPE.MERGE_LOG, skip = 0, limit = 1) {
+    assertString(correlationId, 'correlationId');
     logger.debug(`QueryById: ${correlationId}, logItemType: ${logItemType}, skip: ${skip}, limit: ${limit}`);
     const result = await db.collection(collection)
       .find({correlationId, logItemType})
@@ -107,7 +152,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * @returns Array of query results
    */
   async function getListOfLogs(logItemType = LOG_ITEM_TYPE.MERGE_LOG) {
-    checkLogItemType(logItemType, true, true);
+    checkLogItemType(logItemType, true);
     //logger.debug(logItemType);
     // console.log(`${JSON.stringify(logItemType)}`);
     const result = await db.collection(collection)
@@ -253,7 +298,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
          }
          const parts = String(value).slice(0, 10).split('-');
          if (parts.length === 3) {
-           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').toDate();
+           return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
          }
          return new Date(value);
        }
@@ -267,7 +312,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
          }
          const parts = String(value).slice(0, 10).split('-');
          if (parts.length === 3) {
-           return moment.utc({year: parts[0], month: parts[1] - 1, day: parts[2]}).startOf('day').add(1, 'day').toDate();
+           return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]) + 86400000);
          }
          return new Date(value);
        }
@@ -284,9 +329,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function protect(correlationId, blobSequence) {
     logger.info(`Protecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
-    const cleanCorrelationId = sanitize(correlationId);
-    const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+    assertString(correlationId, 'correlationId');
+    const filter = buildBlobSequenceFilter(correlationId, blobSequence);
 
     try {
       const result = await db.collection(collection).updateMany(
@@ -294,7 +338,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
         [
           {
             $set: {
-              modificationTime: moment().toDate(),
+              modificationTime: new Date(),
               // plain true, not a $not toggle: protect must be idempotent
               protected: true
             }
@@ -318,9 +362,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function unprotect(correlationId, blobSequence) {
     logger.info(`Unprotecting in Mongo (${collection}) correlationId: ${correlationId}, blobSequence: ${blobSequence}`);
-    const cleanCorrelationId = sanitize(correlationId);
-    const cleanBlobSequence = sanitize(blobSequence);
-    const filter = blobSequence ? {correlationId: cleanCorrelationId, blobSequence: parseInt(cleanBlobSequence, 10)} : {correlationId: cleanCorrelationId};
+    assertString(correlationId, 'correlationId');
+    const filter = buildBlobSequenceFilter(correlationId, blobSequence);
 
     try {
       const result = await db.collection(collection).updateMany(
@@ -328,7 +371,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
         [
           {
             $set: {
-              modificationTime: moment().toDate(),
+              modificationTime: new Date(),
               protected: false
             }
           }
@@ -350,8 +393,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function remove(correlationId, force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}`);
-    const clean = sanitize(correlationId);
-    const filter = force ? {correlationId: clean} : {correlationId: clean, protected: {$ne: true}};
+    assertString(correlationId, 'correlationId');
+    const filter = force ? {correlationId} : {correlationId, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
@@ -372,7 +415,7 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    */
   async function removeBySequences(correlationId, sequences = [], force = false) {
     logger.info(`Removing from Mongo (${collection}) correlationId: ${correlationId}, sequences: ${sequences.length}`);
-    const clean = sanitize(correlationId);
+    assertString(correlationId, 'correlationId');
     // NOTE: this matches only single-sequence items (blobSequence), NOT bulk
     // range items (blobSequenceStart/blobSequenceEnd); a requested sequence
     // inside a bulk range will not match and its logs are kept
@@ -392,8 +435,8 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
     // branch used to pass raw `sequences`, so string inputs like '1' would
     // never match the stored numeric blobSequence)
     const filter = force
-      ? {correlationId: clean, blobSequence: {$in: cleanSequences}}
-      : {correlationId: clean, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
+      ? {correlationId, blobSequence: {$in: cleanSequences}}
+      : {correlationId, blobSequence: {$in: cleanSequences}, protected: {$ne: true}};
 
     try {
       const result = await db.collection(collection).deleteMany(filter);
@@ -409,10 +452,9 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
    * Checks existence and validity of logItemType
    * @param {String} logItemType constant LOG_ITEM_TYPE
    * @param {Boolean} errorUnknown defaults false
-   * @param {Boolean} errorNotExisting defaults false
    * @returns void
    */
-  function checkLogItemType(logItemType, errorUnknown = false, errorNotExisting = false) {
+  function checkLogItemType(logItemType, errorUnknown = false) {
     if (logItemType) {
       const typeInLogItemTypes = Object.values(LOG_ITEM_TYPE).indexOf(logItemType) > -1;
       if (typeInLogItemTypes) {
@@ -424,9 +466,6 @@ export default async function (MONGO_URI, dbName = 'rest-api') {
       return logger.debug(`WARN: We have unknown logType: ${logItemType}`);
     }
 
-    if (errorNotExisting) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `No logItemType: ${logItemType}`);
-    }
     return logger.debug(`No logItemType: ${logItemType}`);
   }
 }
