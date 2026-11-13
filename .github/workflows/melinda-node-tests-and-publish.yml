@@ -40,8 +40,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: mikaelvesavuori/license-compliance-action@v1.0.3
+      - uses: mikaelvesavuori/license-compliance-action@v1.0.5
         with:
+          direct: true
           # default action list + BlueOak-1.0.0 (sax, via xml2js in
           # marc-record-serializers) + MIT-0 — OSI-approved permissive
           allow_licenses: 'MIT;ISC;0BSD;BSD-2-Clause;BSD-3-Clause;Apache-2.0;BlueOak-1.0.0;MIT-0'
