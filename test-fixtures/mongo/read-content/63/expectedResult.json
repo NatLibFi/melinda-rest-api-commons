@@ -1,0 +1,26 @@
+{
+  "correlationId": "b10-no-stream-bulk-0001-0000-0000-000000000000",
+  "cataloger": "readContentTest",
+  "oCatalogerIn": "IMP_TEST",
+  "operation": "CREATE",
+  "operationSettings": {
+    "prio": false
+  },
+  "blobSize": 0,
+  "errorMessage": "",
+  "errorStatus": "",
+  "importJobState": {
+    "CREATE": "EMPTY",
+    "FIX": "EMPTY",
+    "UPDATE": "EMPTY"
+  },
+  "operations": [
+    "CREATE"
+  ],
+  "queueItemState": "WAITING_FOR_RECORDS",
+  "records": [],
+  "contentType": "foobar",
+  "recordLoadParams": "",
+  "creationTime": "",
+  "modificationTime": ""
+}

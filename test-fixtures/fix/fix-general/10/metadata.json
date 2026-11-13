@@ -1,0 +1,8 @@
+{
+    "description": "skip-branch: stripF984s enabled but the record has no 984 field, so nothing is removed and the record is returned unchanged",
+    "settings": {
+        "stripF984s": true
+    },
+    "skip": false,
+    "only": false
+}

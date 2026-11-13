@@ -1,0 +1,11 @@
+{
+  "description": "Function: removeBySequences, params [correlationId, [1, 2]] force=false removes seq 1, keeps protected seq 2",
+  "only": false,
+  "skip": false,
+  "functionName": "removeBySequences",
+  "preFillDb": true,
+  "params": [
+    "11111111-1111-4111-8111-111111111111",
+    [1, 2]
+  ]
+}

@@ -8,7 +8,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {CHUNK_SIZE} from './constants.js';
 import {logError} from './utils.js';
 
-export default async function (AMQP_URL, runHealthCheck = false) {
+export default async function (AMQP_URL, runHealthCheck = false, deps = {}) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons:amqp');
   const debugHC = debug.extend('HC');
@@ -16,8 +16,9 @@ export default async function (AMQP_URL, runHealthCheck = false) {
   const setTimeoutPromise = promisify(setTimeout);
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
-  const connection = await amqplib.connect(AMQP_URL);
-  const channel = await connection.createChannel();
+  // deps allows injecting stubbed connection/channel in unit tests
+  const connection = deps.connection ?? await amqplib.connect(AMQP_URL);
+  const channel = deps.channel ?? await connection.createChannel();
 
   const healthCheckLoop = runHealthCheck ? healthCheck() : false;
 

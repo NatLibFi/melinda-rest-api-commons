@@ -1,0 +1,20 @@
+{
+    "description": "Function: readContent - B-10: a no-stream bulk job (createBulk never sets noStream, so it is undefined) still throws BAD_REQUEST 400 (documents current behaviour; phantom noStream flag)",
+    "only": false,
+    "skip": false,
+    "functionName": "readContent",
+    "preFillDb": false,
+    "expectedToThrow": true,
+    "expectedErrorMessage": "Content is only available for streamBulk jobs. b10-no-stream-bulk-0001-0000-0000-000000000000 is not a streamBulk job.",
+    "expectedErrorStatus": 400,
+    "createBulkParams": {
+        "correlationId": "b10-no-stream-bulk-0001-0000-0000-000000000000",
+        "cataloger": "readContentTest",
+        "oCatalogerIn": "IMP_TEST",
+        "operation": "CREATE",
+        "contentType": "foobar",
+        "recordLoadParams": "",
+        "operationSettings": {}
+    },
+    "params": "b10-no-stream-bulk-0001-0000-0000-000000000000"
+}

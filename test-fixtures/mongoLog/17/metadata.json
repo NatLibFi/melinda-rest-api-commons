@@ -1,0 +1,8 @@
+{
+  "description": "Function: getListOfCorrelationIds, no params, returns 2 distinct correlationIds from 3 logs",
+  "only": false,
+  "skip": false,
+  "functionName": "getListOfCorrelationIds",
+  "preFillDb": true,
+  "params": []
+}

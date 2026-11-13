@@ -1,0 +1,10 @@
+[
+  {
+    "logItemType": "MERGE_LOG",
+    "cataloger": "IMP_TEST2",
+    "correlationId": "22222222-2222-4222-8222-222222222222",
+    "blobSequence": 1,
+    "creationTime": "2023-08-09T10:00:00.000Z",
+    "protected": false
+  }
+]

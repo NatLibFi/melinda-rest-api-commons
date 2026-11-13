@@ -63,6 +63,24 @@ Executed on test server using bridge to docker server and back to server
 | p_z07_priority_year | pZ07PriorityYear  | 1998        | 1990        | 2099        | 2099        | Override indexing priority                              |
 | p_redirection_field | pRedirectionField |             |             |             |             |                                                         |
 
+## Running the tests
+
+There are three test suites. The base suite runs anywhere; the two AMQP
+suites need a running RabbitMQ broker on `127.0.0.1:5672` (guest/guest) and
+are therefore excluded from the base glob and from CI.
+
+| Command                 | What it runs                                                        | Requirements          |
+|-------------------------|---------------------------------------------------------------------|-----------------------|
+| `npm run test:base`     | all `tests/**/*.test.js` with coverage + thresholds                 | none                  |
+| `npm test`              | `npm run lint` then `test:base` (what CI runs)                      | none                  |
+| `npm run test:local`    | `tests/amqp.*.localtest.js`, AMQP operator against a live broker    | RabbitMQ on localhost |
+| `npm run test:healthcheck` | `tests/amqp.healthtest.js`, healthCheck loop vs live broker     | RabbitMQ on localhost |
+
+`test:base` enforces minimum coverage thresholds via
+`--test-coverage-lines/--test-coverage-branches/--test-coverage-functions`
+(currently 88 / 88 / 90 over `src`); raise them in [`package.json`](package.json)
+as coverage grows.
+
 ## License and copyright
 
 Copyright (c) 2020-2026 **University Of Helsinki (The National Library Of Finland)**

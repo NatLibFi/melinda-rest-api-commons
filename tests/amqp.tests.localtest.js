@@ -82,7 +82,7 @@ async function callback({
       const {headers, records} = await queueCheckNextMessage();
       const nextMessage = {headers, records};
       const expectedNextMessage = getFixture('expectedMessage.json');
-      assert.equal(nextMessage, expectedNextMessage);
+      assert.deepStrictEqual(nextMessage, expectedNextMessage);
       return;
     }
 

@@ -41,16 +41,25 @@ import {logError} from './utils.js';
 }
 */
 
-export default async function (MONGO_URI, collection, db = 'rest-api') {
+export default async function (MONGO_URI, collection, db = 'rest-api', deps = {}) {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo');
   const debugDev = debug.extend(':dev');
 
-  // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI);
-  const dbConnection = client.db(db);
-  const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
-  const operator = dbConnection.collection(collection);
+  // Connect to mongo (MONGO), unless operator and gridFSBucket are both
+  // injected via deps (used by unit tests to avoid a real connection)
+  const stubbed = Boolean(deps.operator) && Boolean(deps.gridFSBucket);
+  const dbConnection = stubbed
+    ? {collection: () => deps.operator, db: () => dbConnection}
+    : null;
+  let gridFSBucket = deps.gridFSBucket;
+  let operator = deps.operator;
+  if (!stubbed) {
+    const client = await MongoClient.connect(MONGO_URI);
+    const realDb = client.db(db);
+    gridFSBucket = gridFSBucket ?? new GridFSBucket(realDb, {bucketName: collection});
+    operator = operator ?? realDb.collection(collection);
+  }
   debugDev(`mongo: ${MONGO_URI}, db: ${db}, collection: ${collection}`);
 
   return {createPrio, createBulk, checkAndSetState, checkAndSetImportJobState, query, createProjection, queryById, checkTimeOut, remove, readContent, removeContent, getOne, getStream, setState, setImportJobState, pushIds, pushMessages, setOperation, setOperations, addBlobSize, setBlobSize};
@@ -284,7 +293,10 @@ export default async function (MONGO_URI, collection, db = 'rest-api') {
   // If the state is already ABORT or ERROR or DONE return false
 
   async function checkTimeOut({correlationId}) {
-    const {modificationTime, queueItemState: oldState, importJobState} = await operator.findOne({correlationId});
+    // B-7: coalesce a missing importJobState (legacy rows written before the
+    // importJobState shape existed) to all-EMPTY so .CREATE/.UPDATE/.FIX never
+    // read off undefined and crash the pipeline.
+    const {modificationTime, queueItemState: oldState, importJobState = {CREATE: IMPORT_JOB_STATE.EMPTY, UPDATE: IMPORT_JOB_STATE.EMPTY, FIX: IMPORT_JOB_STATE.EMPTY}} = await operator.findOne({correlationId});
     //debug(`${modificationTime} - oldState: ${oldState}`);
     // should we check for DONE too?
     if ([QUEUE_ITEM_STATE.ABORT, QUEUE_ITEM_STATE.ERROR, QUEUE_ITEM_STATE.DONE].includes(oldState)) {

@@ -1,0 +1,6 @@
+{
+    "description": "skip-branch: stripF984s has no settings, so the fixer is skipped entirely and the record is returned unchanged (even though it contains a 984 $a ALWAYS-PREFER-IN-MERGE field that would be stripped with settings)",
+    "settings": {},
+    "skip": false,
+    "only": false
+}
