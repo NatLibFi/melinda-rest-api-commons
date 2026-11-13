@@ -1,0 +1,113 @@
+import assert from 'node:assert';
+import {READERS} from '@natlibfi/fixura';
+import mongoFixturesFactory from '@natlibfi/fixura-mongo';
+import generateTests from '@natlibfi/fixugen';
+import createDebugLogger from 'debug';
+//import {handleError, compareToFirstDbEntry, compareToDbEntry, formatQueueItem, streamToString} from './testUtils.js';
+import {getMongoOperator, handleError, streamToString} from './testUtils.ts';
+
+let mongoFixtures: any;
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:get-stream:test');
+
+generateTests({
+  callback,
+  path: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-stream'],
+  recurse: false,
+  useMetadataFile: true,
+  fixura: {
+    failWhenNotFound: true,
+    reader: READERS.JSON
+  },
+  hooks: {
+    before: async () => {
+      //debug(`<< Before`);
+      await initMongofixtures();
+    },
+    beforeEach: async () => {
+      //debug(`<< BeforeEach`);
+      await mongoFixtures.clear();
+    },
+    afterEach: async () => {
+      //debug(`<< AfterEach`);
+      await mongoFixtures.clear();
+    },
+    after: async () => {
+      //debug(`<< After`);
+      await mongoFixtures.close();
+    }
+  }
+});
+
+async function initMongofixtures() {
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'mongo', 'get-stream'],
+    gridFS: {bucketName: 'foobar'},
+    useObjectId: true
+  });
+}
+
+async function callback(callbackParams: Record<string, any>) {
+  const {
+  getFixture,
+  functionName,
+  params,
+  preFillDb = false,
+  expectedToThrow = false,
+  expectedErrorMessage = '',
+  expectedErrorStatus = '',
+  contentStream = false,
+  createBulkParams = undefined
+  } = callbackParams;
+
+  const mongoOperator = await getMongoOperator(mongoFixtures);
+  //const expectedResult = await getFixture('expectedResult.json');
+
+  await doPreFillDb(preFillDb);
+
+  async function doPreFillDb(preFillDb: boolean) {
+    if (preFillDb) {
+      await mongoFixtures.populate(getFixture('dbContents.json'));
+      return;
+    }
+    return;
+  }
+
+
+  if (functionName === 'getStream') {
+    try {
+      debug(`getStream`);
+      debug(JSON.stringify(params));
+      //correlationId
+
+      if (createBulkParams) {
+        const stream = contentStream ? await getFixture({components: ['contentStream'], reader: READERS.STREAM}) : createBulkParams.stream;
+        //debug(stream);
+        const params2 = {...createBulkParams, stream};
+        const createBulkResult = await mongoOperator.createBulk(params2);
+        debug(`createBulkResult: ${JSON.stringify(createBulkResult)}`);
+      }
+      //const {correlationId} = params;
+
+      // getStream is now async (it pre-checks file existence and
+      // throws 404 for a missing file instead of returning a stream that
+      // emits an unhandled 'error' event)
+      const opResult = await mongoOperator.getStream(params);
+      const opResultString = await streamToString(opResult);
+
+      if (contentStream) {
+        const contentStreamString = await getFixture({components: ['contentStream'], reader: READERS.TEXT});
+        //debug(contentStreamString);
+        assert.equal(opResultString, contentStreamString);
+        return;
+      }
+
+
+    } catch (error) {
+      handleError({error, expectedToThrow, expectedErrorMessage, expectedErrorStatus});
+      return;
+    }
+    return;
+  }
+  throw new Error(`Unknown functionName: ${functionName}`);
+}
+

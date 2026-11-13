@@ -53,7 +53,7 @@ MONGO_TIMEOUT_MINUTES=10 # abort only after 10 minutes without progress
 
 #### Full `QUEUE_ITEM_STATE` reference
 
-The flow tables above show the happy-path sequence per service. The full set of `queueItemState` values (see `src/constants.js`):
+The flow tables above show the happy-path sequence per service. The full set of `queueItemState` values (see `src/constants.ts`):
 
 | State | Group | Meaning |
 |-------|-------|---------|
@@ -113,18 +113,32 @@ Executed on test server using bridge to docker server and back to server
 | p_z07_priority_year | pZ07PriorityYear  | 1998        | 1990        | 2099        | 2099        | Override indexing priority                              |
 | p_redirection_field | pRedirectionField |             |             |             |             |                                                         |
 
+## TypeScript toolchain
+
+The source is TypeScript (Node >= 24, native type stripping for tests).
+
+- `npm run build` runs `tsc` (`tsconfig.json`): `src/` -> `dist/`, emitting
+  `.js` + `.js.map` + `.d.ts` + `.d.ts.map` for every module. The published
+  entry point stays `./dist/index.js`; the `.d.ts` files are additive for
+  TypeScript consumers.
+- `npm run typecheck` runs `tsc -p tsconfig.test.json` (typechecks `src/`
+  and `test/`, no emit).
+- `npm test` runs `npm run lint` then `npm run typecheck` then
+  `npm run test:base` (what CI runs).
+
 ## Running the tests
 
 There are three test suites. The base suite runs anywhere; the two AMQP
 suites need a running RabbitMQ broker on `127.0.0.1:5672` (guest/guest) and
-are therefore excluded from the base glob and from CI.
+are therefore excluded from the base glob and from CI. Tests are `.ts`
+files run directly by `node --test` (no loader).
 
 | Command                 | What it runs                                                        | Requirements          |
 |-------------------------|---------------------------------------------------------------------|-----------------------|
-| `npm run test:base`     | all `tests/**/*.test.js` with coverage + thresholds                 | none                  |
-| `npm test`              | `npm run lint` then `test:base` (what CI runs)                      | none                  |
-| `npm run test:local`    | `tests/amqp.*.localtest.js`, AMQP operator against a live broker    | RabbitMQ on localhost |
-| `npm run test:healthcheck` | `tests/amqp.healthtest.js`, healthCheck loop vs live broker     | RabbitMQ on localhost |
+| `npm run test:base`     | all `tests/**/*.test.ts` with coverage + thresholds                 | none                  |
+| `npm test`              | `npm run lint`, `npm run typecheck`, then `test:base` (what CI runs) | none                 |
+| `npm run test:local`    | `tests/amqp.*.localtest.ts`, AMQP operator against a live broker    | RabbitMQ on localhost |
+| `npm run test:healthcheck` | `tests/amqp.healthtest.ts`, healthCheck loop vs live broker      | RabbitMQ on localhost |
 
 `test:base` enforces minimum coverage thresholds via
 `--test-coverage-lines/--test-coverage-branches/--test-coverage-functions`
