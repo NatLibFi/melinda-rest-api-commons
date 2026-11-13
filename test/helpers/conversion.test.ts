@@ -6,6 +6,7 @@ import type {MarcRecordObject} from '@natlibfi/marc-record';
 import {Error as ConversionError} from '@natlibfi/melinda-commons';
 import createConversionService from '../../src/helpers/conversion.ts';
 import {CONVERSION_FORMATS} from '../../src/constants.ts';
+import {payloadText} from '../testUtils.ts';
 
 describe('services/conversion', () => {
   const {getFixture} = fixtureFactory({
@@ -77,7 +78,7 @@ describe('services/conversion', () => {
         assert(error instanceof ConversionError);
         assert.equal(error.status, 400);
         // the payload is a string here: 'Error while serializing record. ...'
-        assert.ok((error.payload as string).includes('Error while serializing record.'));
+        assert.ok(payloadText(error).includes('Error while serializing record.'));
       }
       assert.equal(threw, true);
     });

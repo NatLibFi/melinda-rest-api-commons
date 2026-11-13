@@ -1,10 +1,30 @@
 import assert from 'node:assert';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createDebugLogger from 'debug';
 import type {Readable} from 'node:stream';
 import createMongoOperator from '../src/mongo.ts';
 
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-commons/mongo:test');
+
+/**
+ * The ApiError payload is `unknown` in @natlibfi/melinda-commons. These
+ * check the shape the test actually relies on, so a producer changing the
+ * payload shape fails with a clear assertion instead of a TypeError at the
+ * call site.
+ */
+export function payloadText(error: unknown): string {
+  assert.ok(error instanceof ApiError, `expected an ApiError, got: ${String(error)}`);
+  assert.equal(typeof error.payload, 'string');
+  return error.payload as string;
+}
+
+export function payloadObject<T>(error: unknown): T {
+  assert.ok(error instanceof ApiError, `expected an ApiError, got: ${String(error)}`);
+  assert.equal(typeof error.payload, 'object');
+  assert.ok(error.payload !== null);
+  return error.payload as T;
+}
 
 // the fixura-mongo fixtures object is intentionally untyped in tests
 // (fixture-driven scaffolding, see the eslint house rules for test/)

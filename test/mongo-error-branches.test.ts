@@ -6,6 +6,7 @@ import {MongoDriverError} from 'mongodb';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createMongo from '../src/mongo.ts';
 import createMongoLog from '../src/mongoLog.ts';
+import {payloadObject, payloadText} from './testUtils.ts';
 
 const DUMMY_URI = 'mongodb://stub:27017/rest-api';
 const COLLECTION = 'foobar';
@@ -70,7 +71,7 @@ test('createPrio: insertOne rejecting throws ApiError 500 with "Mongo errored" m
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('Mongo errored'));
+      assert.ok(payloadText(error).includes('Mongo errored'));
       return true;
     }
   );
@@ -156,7 +157,7 @@ test('remove: MongoDriverError with other message throws ApiError 500', async ()
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('some other driver error'));
+      assert.ok(payloadText(error).includes('some other driver error'));
       return true;
     }
   );
@@ -199,7 +200,7 @@ test('getStream rejects with ApiError 500 when openDownloadStreamByName throws',
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('Mongo errored'));
+      assert.ok(payloadText(error).includes('Mongo errored'));
       return true;
     }
   );
@@ -452,7 +453,7 @@ test('createBulk rejects with ApiError 500 when input stream errors mid-upload, 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('input stream boom'));
+      assert.ok(payloadText(error).includes('input stream boom'));
       return true;
     }
   );
@@ -484,7 +485,7 @@ test('createBulk rejects with ApiError 500 when the GridFS output stream errors 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('disk on fire'));
+      assert.ok(payloadText(error).includes('disk on fire'));
       return true;
     }
   );
@@ -531,8 +532,8 @@ test('pushIds rejects with ApiError 500 "Mongo errored" when updateOne throws', 
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('Mongo errored'));
-      assert.ok((error.payload as string).includes('pushIds boom'));
+      assert.ok(payloadText(error).includes('Mongo errored'));
+      assert.ok(payloadText(error).includes('pushIds boom'));
       return true;
     }
   );
@@ -563,8 +564,8 @@ test('pushMessages rejects with ApiError 500 "Mongo errored" when updateOne thro
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('Mongo errored'));
-      assert.ok((error.payload as string).includes('pushMessages boom'));
+      assert.ok(payloadText(error).includes('Mongo errored'));
+      assert.ok(payloadText(error).includes('pushMessages boom'));
       return true;
     }
   );
@@ -715,7 +716,7 @@ test('createBulk (stream): insertOne with acknowledged=false throws ApiError 500
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('Mongo errored'));
+      assert.ok(payloadText(error).includes('Mongo errored'));
       return true;
     }
   );
@@ -752,8 +753,8 @@ test('createBulk (stream): a failing GridFS cleanup does not mask the original u
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('input stream boom'));
-      assert.ok(!(error.payload as string).includes('gridfs cleanup boom'));
+      assert.ok(payloadText(error).includes('input stream boom'));
+      assert.ok(!payloadText(error).includes('gridfs cleanup boom'));
       return true;
     }
   );
@@ -771,7 +772,7 @@ test('remove: non-MongoDriverError from deleteOne throws ApiError 500 with the e
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-      assert.ok((error.payload as string).includes('plain delete boom'));
+      assert.ok(payloadText(error).includes('plain delete boom'));
       return true;
     }
   );
@@ -790,7 +791,7 @@ test('setOperation rejects with ApiError 404 when findOneAndUpdate returns null'
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.equal(error.status, httpStatus.NOT_FOUND);
-      assert.ok((error.payload as {message: string}).message.includes('not found'));
+      assert.ok(payloadObject<{message: string}>(error).message.includes('not found'));
       return true;
     }
   );
@@ -865,8 +866,8 @@ function mongoErrored500(text: string) {
   return (error: unknown) => {
     assert.ok(error instanceof ApiError);
     assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
-    assert.ok((error.payload as string).includes('Mongo errored'));
-    assert.ok((error.payload as string).includes(text));
+    assert.ok(payloadText(error).includes('Mongo errored'));
+    assert.ok(payloadText(error).includes(text));
     return true;
   };
 }

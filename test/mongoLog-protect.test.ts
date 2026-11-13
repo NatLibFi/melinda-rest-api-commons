@@ -4,6 +4,7 @@ import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createMongoLogOperator from '../src/mongoLog.ts';
 import type {MongoLogOperator} from '../src/mongoLog.ts';
+import {payloadText} from './testUtils.ts';
 
 let mongoFixtures: any;
 let mongoLogOperator: MongoLogOperator;
@@ -97,7 +98,7 @@ test('getExpandedListOfLogs throws ApiError when logItemTypes is provided but is
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 400);
-      assert.ok((error.payload as string).includes('logItemTypes must be an array'));
+      assert.ok(payloadText(error).includes('logItemTypes must be an array'));
       return true;
     }
   );
@@ -109,7 +110,7 @@ test('getExpandedListOfLogs throws ApiError when logItemTypes contains an unknow
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 400);
-      assert.ok((error.payload as string).includes('Unknown logItemType'));
+      assert.ok(payloadText(error).includes('Unknown logItemType'));
       return true;
     }
   );
@@ -142,7 +143,7 @@ test('getListOfLogs throws ApiError 500 for an unknown logItemType', async () =>
     (error) => {
       assert.ok(error instanceof ApiError);
       assert.strictEqual(error.status, 500);
-      assert.ok((error.payload as string).includes('Unknown logItemType'));
+      assert.ok(payloadText(error).includes('Unknown logItemType'));
       return true;
     }
   );
